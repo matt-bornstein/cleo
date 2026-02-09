@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-A real-time collaborative rich text editor built with **Next.js** (App Router) and **Convex** (database, file storage, backend functions, auth). The app features a dual-pane layout: a rich text editing panel on the left and an AI assistant chat panel on the right. Documents are stored as ProseMirror JSON (the editor's native format), with no markdown layer. AI communication uses HTML serialization. The app supports granular versioning, real-time collaborative editing, comments, and AI-assisted writing via leading LLM providers.
+A real-time collaborative rich text editor built with **Next.js 16** (App Router) and **Convex** (database, file storage, backend functions, auth). The app features a dual-pane layout: a rich text editing panel on the left and an AI assistant chat panel on the right. Documents are stored as ProseMirror JSON (the editor's native format), with no markdown layer. AI communication uses HTML serialization. The app supports granular versioning, real-time collaborative editing, comments, and AI-assisted writing via leading LLM providers.
 
 ### Key Architectural Decision: No Markdown
 
@@ -20,14 +20,15 @@ The app stores and operates on **ProseMirror's native JSON document model** as t
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14+ (App Router) |
+| Framework | Next.js 16 (App Router) |
+| React | React 19 |
 | Backend / DB / Auth / Storage | Convex |
 | Auth Provider | Google OAuth (via Convex Auth) |
-| Rich Text Editor | Tiptap (ProseMirror-based) |
+| Rich Text Editor | Tiptap 3.x (ProseMirror-based) |
 | Real-time Collaboration | Yjs + y-prosemirror + Convex as sync provider |
 | AI Providers | OpenAI, Anthropic, Google (Gemini) |
 | AI Edit Application | `prosemirror-recreate-steps` (for diffing ProseMirror docs) |
-| Styling | Tailwind CSS + shadcn/ui |
+| Styling | Tailwind CSS 4 + shadcn/ui |
 | Diff Library | `diff-match-patch` (for HTML-level diffing in version history) |
 
 ---
@@ -558,7 +559,7 @@ Every version is stored as a `diffs` record:
 
 ### 8.1 API Keys and Configuration
 - API keys for OpenAI, Anthropic, and Google are stored as **Convex environment variables**, because AI calls happen in Convex actions on the server.
-- Environment variables: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_AI_API_KEY`.
+- Environment variables: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`.
 
 ### 8.2 System Prompt (Draft)
 
@@ -608,7 +609,7 @@ Document:
 Use the official SDKs for each provider within Convex actions:
 - `openai` npm package for OpenAI models
 - `@anthropic-ai/sdk` for Anthropic models
-- `@google/generative-ai` for Gemini models
+- `@google/genai` for Gemini models
 
 Each model call should:
 1. Track token usage (for potential future billing/limits).
@@ -717,7 +718,7 @@ Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
 ## 11. Implementation Phases
 
 ### Phase 1: Foundation
-1. Initialize Next.js project with Tailwind, shadcn/ui.
+1. Initialize Next.js 16 project with Tailwind CSS 4, shadcn/ui.
 2. Set up Convex project and schema.
 3. Implement Google OAuth with Convex Auth.
 4. Create basic layout (toolbar, 2/3 + 1/3 split).
@@ -763,28 +764,29 @@ Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
 ```json
 {
   "dependencies": {
-    "next": "^14.x",
-    "react": "^18.x",
-    "convex": "^1.x",
-    "@convex-dev/auth": "^0.x",
-    "@tiptap/react": "^2.x",
-    "@tiptap/starter-kit": "^2.x",
-    "@tiptap/extension-underline": "^2.x",
-    "@tiptap/extension-task-list": "^2.x",
-    "@tiptap/extension-task-item": "^2.x",
-    "@tiptap/extension-table": "^2.x",
-    "@tiptap/extension-link": "^2.x",
-    "@tiptap/extension-image": "^2.x",
-    "@tiptap/extension-collaboration": "^2.x",
-    "@tiptap/extension-collaboration-cursor": "^2.x",
-    "yjs": "^13.x",
-    "y-prosemirror": "^1.x",
+    "next": "^16.x",
+    "react": "^19.x",
+    "react-dom": "^19.x",
+    "convex": "^1.31.x",
+    "@convex-dev/auth": "^0.0.x",
+    "@tiptap/react": "^3.x",
+    "@tiptap/starter-kit": "^3.x",
+    "@tiptap/extension-underline": "^3.x",
+    "@tiptap/extension-task-list": "^3.x",
+    "@tiptap/extension-task-item": "^3.x",
+    "@tiptap/extension-table": "^3.x",
+    "@tiptap/extension-link": "^3.x",
+    "@tiptap/extension-image": "^3.x",
+    "@tiptap/extension-collaboration": "^3.x",
+    "@tiptap/extension-collaboration-cursor": "^3.x",
+    "yjs": "^13.6.x",
+    "y-prosemirror": "^1.3.x",
     "prosemirror-recreate-steps": "^1.x",
-    "openai": "^4.x",
-    "@anthropic-ai/sdk": "^0.x",
-    "@google/generative-ai": "^0.x",
+    "openai": "^6.x",
+    "@anthropic-ai/sdk": "^0.72.x",
+    "@google/genai": "^1.x",
     "diff-match-patch": "^1.x",
-    "tailwindcss": "^3.x",
+    "tailwindcss": "^4.x",
     "@radix-ui/react-dialog": "^1.x",
     "class-variance-authority": "^0.x",
     "lucide-react": "^0.x"
