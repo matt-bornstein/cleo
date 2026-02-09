@@ -10,7 +10,7 @@ The app stores and operates on **ProseMirror's native JSON document model** as t
 
 1. **Consumer-first UX** — Target users expect a Google Docs-like rich text experience, not a markdown editing experience.
 2. **No roundtrip fidelity issues** — ProseMirror JSON is lossless. What the user sees is exactly what's stored.
-3. **Simplified collaboration** — y-prosemirror syncs the ProseMirror document directly. No translation layer between the collaborative state and the editor.
+3. **Simplified collaboration** — `@convex-dev/prosemirror-sync` syncs the ProseMirror document directly via OT. No translation layer between the collaborative state and the editor.
 4. **Simplified AI integration** — The document is serialized to HTML for AI context, and AI HTML responses are parsed back to ProseMirror. HTML maps more directly to ProseMirror's node model than markdown does, and normalization in the HTML→ProseMirror direction is invisible to users (they only see the rendered view).
 5. **Export is one-way** — Users can export as markdown, HTML, or PDF via a download button. Since it's a one-way operation, formatting normalization is irrelevant.
 
@@ -25,9 +25,9 @@ The app stores and operates on **ProseMirror's native JSON document model** as t
 | Backend / DB / Auth / Storage | Convex |
 | Auth Provider | Google OAuth (via Convex Auth) |
 | Rich Text Editor | Tiptap 3.x (ProseMirror-based) |
-| Real-time Collaboration | Yjs + y-prosemirror + Convex as sync provider |
+| Real-time Collaboration | `@convex-dev/prosemirror-sync` (OT-based, via Tiptap extension) |
+| Presence | Convex Presence (reactive queries + heartbeats, via `convex-presence` pattern) |
 | AI Providers | OpenAI, Anthropic, Google (Gemini) |
-| AI Edit Application | `prosemirror-recreate-steps` (for diffing ProseMirror docs) |
 | Styling | Tailwind CSS 4 + shadcn/ui |
 | Diff Library | `diff-match-patch` (for HTML-level diffing in version history) |
 
@@ -85,30 +85,35 @@ Documents are stored directly in the Convex database as ProseMirror JSON. This i
 
 **Use Convex file storage only for:** uploaded images or other binary assets embedded in documents.
 
-### 3.3 Real-Time Collaboration: Yjs + y-prosemirror
+### 3.3 Real-Time Collaboration: `@convex-dev/prosemirror-sync`
 
-- Use **Yjs** as the CRDT layer for conflict-free merging of concurrent edits.
-- **y-prosemirror** binds Yjs directly to the ProseMirror/Tiptap editor. Edits are Yjs operations; collaboration is seamless.
-- Convex acts as the **sync provider**: Yjs document updates (binary deltas) are sent via Convex mutations and broadcast to other clients via Convex subscriptions.
-- The Yjs document state is periodically serialized to ProseMirror JSON and stored in the `documents` table for AI context, search, and version snapshots.
-- Presence (cursors, selections, usernames) is handled by the Yjs awareness protocol, synced through the same Convex channel.
+- Use **`@convex-dev/prosemirror-sync`** — Convex's official ProseMirror sync component — for conflict-free collaborative editing.
+- The component uses **operational transformations (OT)** to safely merge concurrent edits between clients. No Yjs or CRDTs needed.
+- Integration is via a **Tiptap extension** and a `useTiptapSync` React hook. Edits are synced automatically through Convex's reactive subscription system.
+- The component manages its own internal tables (steps + snapshots) within the Convex database. **Debounced snapshots** allow new clients to load the document without replaying the full step history.
+- **Server-side document transformation** is supported via `prosemirrorSync.transform()`, enabling AI edits to be applied directly on the server and synced to all clients.
+- **Server-side authorization** hooks allow reads, writes, and snapshots to be gated by document permissions.
+- Presence (cursors, selections, usernames) is handled separately via the **Convex presence pattern** (reactive queries + heartbeats), stored in a `presence` table.
 
-### 3.4 AI Edit Flow: HTML Serialization
+### 3.4 AI Edit Flow: Server-Side Transform with HTML Serialization
 
-The AI reads and writes **HTML**, not ProseMirror JSON or markdown. The flow:
+The AI reads and writes **HTML**, not ProseMirror JSON or markdown. With `@convex-dev/prosemirror-sync`, AI edits can be applied **server-side** using the `transform()` API, which is a major simplification over client-side orchestration.
+
+**The flow:**
 
 ```
-ProseMirror doc → serialize to HTML → send to LLM
-                                           │
-LLM returns edited HTML ← ← ← ← ← ← ← ←┘
-                                           │
-Parse HTML → new ProseMirror doc (in memory)
-                                           │
-Diff old vs new ProseMirror doc → minimal Transactions
-                                           │
-Dispatch transactions through editor (via y-prosemirror)
-                                           │
-All clients receive changes as normal collaborative edits ✓
+1. Client sends user prompt + document ID to Convex action
+                         │
+2. Convex action fetches current doc via prosemirrorSync.getDoc()
+                         │
+3. Serialize doc to HTML → send to LLM (in same action)
+                         │
+4. LLM returns edited HTML
+                         │
+5. Apply HTML changes to doc via prosemirrorSync.transform()
+   (parse HTML → build ProseMirror Transform → apply as OT steps)
+                         │
+6. All clients receive changes automatically via prosemirror-sync ✓
 ```
 
 **Why HTML over markdown for AI:**
@@ -118,10 +123,10 @@ All clients receive changes as normal collaborative edits ✓
 - No markdown normalization concerns — what the LLM returns is exactly what the user sees.
 
 **Why this doesn't cause flicker:**
-- AI changes are applied as surgical ProseMirror `Transaction` steps, not via `setContent`.
-- `prosemirror-recreate-steps` diffs the old and new ProseMirror documents and produces the minimal `Step` sequence.
-- These steps go through y-prosemirror, so all clients receive them as normal collaborative edits.
+- AI changes are applied as ProseMirror `Transform` steps via `prosemirrorSync.transform()`, not via `setContent`.
+- The OT layer in `prosemirror-sync` handles conflict resolution if a user is editing concurrently.
 - Cursors, selections, and scroll positions outside the changed region are preserved for all users.
+- Changes propagate to all clients as normal collaborative edit steps.
 
 ---
 
@@ -142,16 +147,31 @@ export default defineSchema({
   }).index("by_email", ["email"]),
 
   // --- Documents ---
+  // Note: The prosemirror-sync component manages its own internal tables
+  // (steps + snapshots) for real-time sync. This table stores metadata
+  // and a cached content snapshot for AI context, search, and versioning.
   documents: defineTable({
     title: v.string(),
-    content: v.string(),              // ProseMirror JSON (stringified)
-    yjsState: v.optional(v.bytes()),  // serialized Yjs doc state
+    content: v.string(),              // ProseMirror JSON (stringified) — cached snapshot
     ownerId: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerId"])
     .index("by_updatedAt", ["updatedAt"]),
+
+  // --- Presence ---
+  // Ephemeral presence data (cursors, selections, online status).
+  // Uses the Convex presence pattern with heartbeats for cleanup.
+  presence: defineTable({
+    documentId: v.id("documents"),
+    visitorId: v.string(),            // unique per-session identifier
+    userId: v.id("users"),
+    data: v.any(),                    // { cursor: number, selection: { from, to }, color: string, name: string }
+    updatedAt: v.number(),
+  })
+    .index("by_document", ["documentId"])
+    .index("by_visitor", ["visitorId"]),
 
   // --- Document Permissions ---
   permissions: defineTable({
@@ -227,9 +247,11 @@ export default defineSchema({
 
 **Why `snapshotAfter` in diffs:** Every diff record includes a full ProseMirror JSON snapshot of the document after the change. This allows any version to be restored without replaying the entire diff chain. Storage cost is acceptable for text documents.
 
-**Comment anchoring:** Comments use ProseMirror positions (`anchorFrom`, `anchorTo`) which are stable within a document version. For collaborative editing, Yjs relative positions should be used client-side to track comment anchors as the document changes. The `anchorText` field is a fallback for re-anchoring if positions are lost.
+**Comment anchoring:** Comments use ProseMirror positions (`anchorFrom`, `anchorTo`) which are stable within a document version. For collaborative editing, ProseMirror's mapping capabilities (via the steps stored by `prosemirror-sync`) can be used to remap comment positions as the document changes. The `anchorText` field is a fallback for re-anchoring if positions drift.
 
-**No separate presence table:** Presence (cursors, selections) is handled entirely by the Yjs awareness protocol, which is ephemeral and in-memory. No need to persist it in the database.
+**Presence table:** Presence is stored in a `presence` table using the Convex presence pattern. Heartbeats (default 5-second interval) keep entries fresh. Stale entries (no update in 10+ seconds) are considered offline and filtered out client-side. The `data` field is schemaless (`v.any()`) to allow flexible presence payloads (cursor position, selection range, user color, etc.).
+
+**prosemirror-sync internal tables:** The `@convex-dev/prosemirror-sync` component manages its own tables (steps and snapshots) via the Convex component system. These are separate from the app schema and do not need to be defined manually.
 
 ---
 
@@ -255,8 +277,8 @@ export default defineSchema({
 #### Rich Text Editor (Tiptap)
 - Rich text editor powered by **Tiptap** (ProseMirror-based).
 - Formatting toolbar with buttons: bold, italic, underline, strikethrough, headings (H1-H3), bullet list, ordered list, task list, code block, blockquote, horizontal rule, link, image, table.
-- Yjs binding via `y-prosemirror` for real-time collaboration.
-- Collaborator cursors and selections rendered as colored overlays with name labels.
+- Real-time collaboration via `@convex-dev/prosemirror-sync` Tiptap extension (OT-based sync through Convex).
+- Collaborator cursors and selections rendered as colored overlays with name labels (via Convex presence).
 
 #### Formatting Toolbar Design
 - Fixed toolbar at the top of the editor panel (below the main app toolbar).
@@ -269,7 +291,7 @@ export default defineSchema({
 - On trigger, serialize the current ProseMirror doc to HTML, compute a diff between the last saved HTML snapshot and the current HTML.
 - If changes are detected, store a new `diffs` record with `source: "manual"`.
 - Update the document's `content` field (ProseMirror JSON) and `updatedAt` timestamp.
-- Implementation: `useEffect` with a debounced callback watching Yjs updates.
+- Implementation: `useEffect` with a debounced callback watching editor updates. Note: `prosemirror-sync` already handles debounced snapshots internally, but the diff records for version history are a separate concern.
 
 ### 5.4 AI Assistant Panel (Right, 1/3 Width)
 
@@ -292,44 +314,52 @@ export default defineSchema({
 User submits prompt
         │
         ▼
-┌─────────────────────────────────────┐
-│ 1. Build context:                   │
-│    - System prompt                  │
-│    - Document as HTML               │
-│    - User's prompt                  │
-│ 2. Call selected model              │
-│ 3. Parse response (extract HTML)    │
-│ 4. Diff old ↔ new ProseMirror docs  │
-│ 5. Apply as Transactions (via Yjs)  │
-│ 6. Save diff record (source: "ai")  │
-└───────────┬─────────────────────────┘
+┌──────────────────────────────────────────┐
+│ Convex action (server-side):             │
+│ 1. Fetch doc via prosemirrorSync.getDoc()│
+│ 2. Serialize to HTML                     │
+│ 3. Build context (system prompt + HTML   │
+│    + user prompt)                        │
+│ 4. Call selected model                   │
+│ 5. Parse response (extract HTML edits)   │
+│ 6. Apply via prosemirrorSync.transform() │
+│    (parse new HTML → ProseMirror doc →   │
+│     build Transform → OT merges it)      │
+│ 7. Save diff record (source: "ai")       │
+│ 8. Save AI message record                │
+└───────────┬──────────────────────────────┘
             │
             ▼
-┌─────────────────────────────────────┐
-│ Verification loop (up to 3x):      │
-│ 1. Send updated doc HTML + prompt:  │
-│    "Check that the change has been  │
-│    implemented correctly. Say OK    │
-│    if so, or make more changes."    │
-│ 2. If model says OK → stop          │
-│ 3. If model makes changes →         │
-│    apply, save diff, repeat         │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ Verification loop (up to 3x):            │
+│ 1. Re-fetch updated doc, serialize HTML  │
+│ 2. Send to model with verification prompt│
+│ 3. If model says OK → stop               │
+│ 4. If model makes changes →              │
+│    apply via transform(), save diff,     │
+│    repeat                                │
+└──────────────────────────────────────────┘
+            │
+            ▼
+  All clients receive changes automatically
+  via prosemirror-sync reactive subscriptions ✓
 ```
 
 #### Applying AI Responses (Detailed)
 
-**Step-by-step process:**
+**Step-by-step process (all server-side in a Convex action):**
 
-1. **Serialize** the current ProseMirror document to HTML using Tiptap's `editor.getHTML()`.
-2. **Send** the HTML + user prompt + system prompt to the selected model.
-3. **Parse** the model's response to extract the edited HTML (from a code fence or the full response).
-4. **Create** a temporary ProseMirror document by parsing the response HTML using `DOMParser` from ProseMirror (not the browser's DOMParser).
-5. **Diff** the current ProseMirror doc against the new one using `prosemirror-recreate-steps` to produce a minimal list of `Step` objects.
-6. **Dispatch** these steps as a ProseMirror `Transaction` through the editor. Since y-prosemirror is active, these steps are automatically synced to all collaborators.
-7. **Save** a diff record with the HTML-level diff (for version history) and the new ProseMirror JSON snapshot.
+1. **Fetch** the current ProseMirror document via `prosemirrorSync.getDoc(ctx, id, schema)`.
+2. **Serialize** the document to HTML using ProseMirror's `DOMSerializer`.
+3. **Send** the HTML + user prompt + system prompt to the selected model.
+4. **Parse** the model's response to extract the edited HTML (search/replace blocks or full HTML from a code fence).
+5. **Apply** the changes via `prosemirrorSync.transform(ctx, id, schema, (doc) => { ... })`:
+   - Parse the response HTML into a new ProseMirror document using ProseMirror's `DOMParser`.
+   - Build a `Transform` that replaces the relevant content (either surgical replacements for search/replace blocks, or a full `replaceWith` for complete rewrites).
+   - Return the Transform. The component applies it as OT steps and syncs to all clients.
+6. **Save** a diff record with the HTML-level diff (for version history) and the new ProseMirror JSON snapshot.
 
-**Fallback for large changes:** If `prosemirror-recreate-steps` fails or produces too many steps (indicating a near-total rewrite), fall back to `editor.commands.setContent()` wrapped in a Yjs transaction. This may briefly disrupt collaborator cursors but ensures the change is applied.
+**Conflict handling:** If a user is editing concurrently, `prosemirrorSync.transform()` handles OT rebasing automatically. The callback may be re-invoked with an updated `doc` if the document changed between fetch and apply. The second argument to the callback provides the current version, which can be compared to detect concurrent changes.
 
 #### AI Response Format
 
@@ -404,15 +434,16 @@ Every version is stored as a `diffs` record:
 - Threaded replies are supported (via `parentCommentId`).
 - Comments can be resolved (hidden but not deleted).
 - Real-time: Comments are stored in Convex and appear instantly for all collaborators via reactive queries.
-- Comment anchor positions are tracked using Yjs relative positions on the client side, so they survive concurrent edits.
+- Comment anchor positions can be remapped using ProseMirror's step mapping (via the steps stored by `prosemirror-sync`) so they survive concurrent edits.
 
 ### 5.8 Presence
 
 - Each user's cursor position, selection range, and name/color are broadcast to all collaborators viewing the same document.
-- Implemented via **Yjs awareness protocol**, synced through the Convex-based Yjs provider.
+- Implemented via the **Convex presence pattern**: a `presence` table with periodic heartbeats (5-second interval) and single-flighted updates for back-pressure under load.
+- A `usePresence` hook provides a `useState`-like API: `[myPresence, othersPresence, updateMyPresence]`.
 - Cursors and selections are rendered as colored overlays in the Tiptap editor, with a small name label next to each remote cursor.
-- Stale awareness states (no update in 30s) are automatically cleaned up by Yjs.
-- No database table needed — awareness is ephemeral.
+- Stale presence entries (no update in 10+ seconds) are considered offline and filtered out client-side.
+- Presence updates are throttled via single-flighting: only the latest update is sent, skipping intermediate states. This provides graceful degradation as the number of concurrent users increases.
 
 ---
 
@@ -438,7 +469,7 @@ Every version is stored as a `diffs` record:
 │   │   ├── EditorPanel.tsx       # Container for Tiptap editor
 │   │   ├── RichTextEditor.tsx    # Tiptap editor instance + config
 │   │   ├── FormattingToolbar.tsx # Bold, italic, headings, etc.
-│   │   └── CollaboratorCursors.tsx
+│   │   └── RemoteCursors.tsx       # Renders remote user cursors/selections via presence data
 │   ├── ai/
 │   │   ├── AIPanel.tsx           # AI assistant container
 │   │   ├── ChatMessages.tsx      # Message list
@@ -458,32 +489,33 @@ Every version is stored as a `diffs` record:
 │
 ├── convex/
 │   ├── schema.ts                 # Database schema
+│   ├── convex.config.ts          # Convex app config (installs prosemirror-sync component)
 │   ├── auth.ts                   # Auth configuration (Google OAuth)
 │   ├── users.ts                  # User queries/mutations
 │   ├── documents.ts              # Document CRUD, permissions checks
+│   ├── prosemirrorSync.ts        # prosemirror-sync API (exposes sync endpoints with auth)
+│   ├── presence.ts               # Presence mutations/queries (cursor, selection, heartbeat)
 │   ├── diffs.ts                  # Diff storage, version history
 │   ├── comments.ts               # Comment CRUD
 │   ├── permissions.ts            # Permission management
-│   ├── ai.ts                     # AI actions (model calls)
+│   ├── ai.ts                     # AI actions (model calls + server-side doc transform)
 │   └── _generated/               # Convex generated files
 │
 ├── lib/
 │   ├── ai/
 │   │   ├── prompts.ts            # System prompts, templates
 │   │   ├── models.ts             # Model definitions and config
-│   │   ├── parseResponse.ts      # Parse search/replace or full-doc HTML responses
-│   │   └── applyChanges.ts       # Diff ProseMirror docs, apply as Transactions
+│   │   └── parseResponse.ts      # Parse search/replace or full-doc HTML responses
 │   ├── editor/
-│   │   ├── yjs-convex-provider.ts # Custom Yjs provider using Convex
 │   │   ├── extensions.ts         # Tiptap extension configuration
 │   │   └── diffing.ts            # HTML diff computation for version history
 │   ├── permissions.ts            # Permission checking utilities
 │   └── utils.ts                  # General utilities
 │
 ├── hooks/
-│   ├── useDocument.ts            # Document loading and subscription
 │   ├── useIdleSave.ts            # 5-second idle auto-save with diff
 │   ├── useAIChat.ts              # AI chat interaction logic
+│   ├── usePresence.ts            # Presence hook (cursor, selection, heartbeat)
 │   └── useComments.ts            # Comments management
 │
 ├── public/
@@ -506,13 +538,33 @@ Every version is stored as a `diffs` record:
 
 | Function | Type | Description |
 |---|---|---|
-| `create` | mutation | Create a new document (title, empty ProseMirror JSON, set owner). |
+| `create` | mutation | Create a new document (title, empty ProseMirror JSON, set owner). Also calls `prosemirrorSync.create()` to initialize the sync document. |
 | `get` | query | Get a document by ID (with permission check). |
 | `list` | query | List documents accessible to the current user. |
-| `updateContent` | mutation | Update document ProseMirror JSON and `updatedAt` (with editor permission check). |
-| `updateYjsState` | mutation | Store serialized Yjs state (called periodically by the sync provider). |
-| `applyYjsUpdate` | mutation | Apply a Yjs binary delta and broadcast to subscribers. |
-| `delete` | mutation | Delete a document (owner only). |
+| `updateContent` | mutation | Update cached document ProseMirror JSON and `updatedAt` (with editor permission check). Called by idle-save. |
+| `delete` | mutation | Delete a document (owner only). Also cleans up prosemirror-sync data. |
+
+### 7.2a ProseMirror Sync (`convex/prosemirrorSync.ts`)
+
+Exposes the `@convex-dev/prosemirror-sync` API with authorization hooks:
+
+```typescript
+const prosemirrorSync = new ProsemirrorSync(components.prosemirrorSync);
+export const { getSnapshot, submitSnapshot, latestVersion, getSteps, submitSteps } =
+  prosemirrorSync.syncApi({
+    // Authorization: check that the user has at least viewer access
+    // for reads, and editor access for writes
+  });
+```
+
+### 7.2b Presence (`convex/presence.ts`)
+
+| Function | Type | Description |
+|---|---|---|
+| `update` | mutation | Upsert presence data (cursor, selection, color, name) for a user in a document room. Also serves as heartbeat. |
+| `heartbeat` | mutation | Touch the `updatedAt` timestamp without changing data. |
+| `list` | query | List all presence entries for a document. Clients filter stale entries (>10s old). |
+| `remove` | mutation | Remove presence entry on disconnect/navigation away. |
 
 ### 7.3 Diffs (`convex/diffs.ts`)
 
@@ -527,12 +579,12 @@ Every version is stored as a `diffs` record:
 
 | Function | Type | Description |
 |---|---|---|
-| `submitPrompt` | action | Main AI flow: receive HTML + prompt, call model, return response. |
+| `submitPrompt` | action | Main AI flow: fetch doc, serialize to HTML, call LLM, parse response, apply changes via `prosemirrorSync.transform()`, save diff and message records. |
 | `callModel` | (internal) | Call the appropriate AI provider API based on model selection. |
 | `saveMessage` | mutation | Store an AI chat message. |
 | `getMessages` | query | Get chat history for a document. |
 
-> **Note:** `submitPrompt` is a Convex **action** (not a mutation) because it makes external HTTP calls to AI APIs. It calls mutations internally to save messages. The actual ProseMirror diffing and transaction application happens **client-side** (where the Tiptap editor instance lives), not in the Convex action.
+> **Note:** `submitPrompt` is a Convex **action** (not a mutation) because it makes external HTTP calls to AI APIs. It calls mutations internally to save messages. With `@convex-dev/prosemirror-sync`, the AI edit flow is now **server-side**: the action fetches the current document via `prosemirrorSync.getDoc()`, sends it to the LLM, and applies the response via `prosemirrorSync.transform()`. No client-side ProseMirror instance is needed for applying AI edits.
 
 ### 7.5 Comments (`convex/comments.ts`)
 
@@ -624,55 +676,101 @@ For a good UX, AI responses should stream to the client:
 - The chat panel displays tokens as they arrive.
 - Document changes are applied only after the full response is received and parsed (not during streaming), to avoid partial/broken HTML being applied to the editor.
 
-### 8.6 Client-Side AI Orchestration
+### 8.6 Server-Side AI Orchestration
 
-The AI flow is orchestrated **client-side** (in the `useAIChat` hook), not entirely server-side:
+The AI flow is orchestrated **server-side** in a single Convex action, thanks to `prosemirrorSync.transform()`:
 
-1. Client serializes the ProseMirror doc to HTML.
-2. Client calls the Convex `submitPrompt` action, which calls the LLM and returns the response.
-3. Client parses the response (search/replace blocks or full HTML).
-4. Client applies changes to the local Tiptap editor as ProseMirror Transactions.
-5. Client saves the diff record via a Convex mutation.
-6. Client repeats for verification loop iterations.
+1. Client calls the Convex `submitPrompt` action with the document ID, user prompt, and selected model.
+2. The action fetches the current document via `prosemirrorSync.getDoc()` and serializes it to HTML.
+3. The action calls the LLM with the system prompt + document HTML + user prompt.
+4. The action parses the response (search/replace blocks or full HTML).
+5. The action applies changes via `prosemirrorSync.transform()`, which handles OT and syncs to all clients.
+6. The action saves the diff record and AI message record via mutations.
+7. The action repeats steps 2-6 for verification loop iterations.
 
-This approach keeps the Tiptap editor instance (which only exists client-side) in the loop for applying changes. The Convex action is a pure AI-calling function — it doesn't need to know about ProseMirror.
+This is a major simplification over client-side orchestration: no ProseMirror instance is needed on the client for AI edits, the entire flow is a single action call, and the client simply receives the changes as normal collaborative edits via the sync extension.
+
+**Client role:** The `useAIChat` hook on the client just calls the action and displays the streaming response in the chat panel. It does not need to parse HTML or apply ProseMirror transactions.
 
 ---
 
-## 9. Yjs + Convex Integration
+## 9. Real-Time Sync + Presence Integration
 
-This is the most technically challenging piece. A custom Yjs provider must be built that uses Convex as the transport and persistence layer.
+### 9.1 `@convex-dev/prosemirror-sync` Setup
 
-### 9.1 Architecture
+The collaborative editing layer uses Convex's official ProseMirror sync component, which handles all the complexity of multi-client document synchronization.
+
+**Architecture:**
 
 ```
-Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
-     │                        │                    │
-     └── y-prosemirror ───────┘──── y-prosemirror ─┘
-         (Tiptap)                       (Tiptap)
-                              │
-                    ┌─────────┴──────────┐
-                    │  documents table    │
-                    │  - yjsState (bytes) │
-                    │  - content (string) │ ← ProseMirror JSON
-                    └────────────────────┘
+Client A (Tiptap + sync ext)  ←──→  Convex  ←──→  Client B (Tiptap + sync ext)
+                                       │
+                              ┌────────┴─────────┐
+                              │ prosemirror-sync  │
+                              │  internal tables: │
+                              │  - steps          │
+                              │  - snapshots      │
+                              ├──────────────────-┤
+                              │  app tables:      │
+                              │  - documents      │
+                              │  - presence       │
+                              └──────────────────-┘
 ```
 
-### 9.2 Sync Protocol
+**Setup steps:**
 
-1. **On document open:** Client fetches the Yjs state from `documents.yjsState` and initializes a local Yjs doc from it.
-2. **On local edit:** The Yjs doc emits an update (binary delta). The client sends this delta to Convex via a mutation (`documents.applyYjsUpdate`).
-3. **Convex mutation:** Merges the delta into the stored Yjs state. The mutation is reactive, so all subscribed clients receive the new state.
-4. **On remote update:** Clients subscribed to the document receive the merged Yjs state and apply it to their local Yjs doc. y-prosemirror translates this into ProseMirror transactions automatically.
-5. **Periodic snapshot:** Every N updates (or every M seconds), the ProseMirror JSON is extracted from the editor and written to `documents.content` for use by AI, search, and diffs.
+1. Install: `npm install @convex-dev/prosemirror-sync`
+2. Register the component in `convex/convex.config.ts`:
+   ```typescript
+   import { defineApp } from "convex/server";
+   import prosemirrorSync from "@convex-dev/prosemirror-sync/convex.config.js";
+   const app = defineApp();
+   app.use(prosemirrorSync);
+   export default app;
+   ```
+3. Expose the sync API in `convex/prosemirrorSync.ts` with authorization hooks.
+4. Use the `useTiptapSync` hook in the editor component:
+   ```tsx
+   const sync = useTiptapSync(api.prosemirrorSync, documentId);
+   // sync.extension → add to Tiptap extensions
+   // sync.initialContent → set as editor content
+   // sync.isLoading → show loading state
+   // sync.create(content) → create new document
+   ```
 
-### 9.3 Considerations
+### 9.2 Sync Protocol (Handled by the Component)
 
-- **Bandwidth:** Yjs updates are compact binary deltas (typically bytes to low KB). Convex mutations handle this well.
+1. **On document open:** The `useTiptapSync` hook fetches the latest snapshot and any subsequent steps from the component's internal tables. The Tiptap editor is initialized with this content plus the sync extension.
+2. **On local edit:** The sync extension captures ProseMirror steps and submits them to Convex via the exposed `submitSteps` mutation.
+3. **On remote edit:** Convex reactive subscriptions push new steps to all connected clients. The sync extension applies them as ProseMirror transactions automatically.
+4. **Debounced snapshots:** The component periodically writes a snapshot of the full document state so new clients don't need to replay the entire step history.
+5. **Server-side transforms:** AI edits are applied via `prosemirrorSync.transform()`, which creates steps that are synced to all clients like any other edit.
+
+### 9.3 Convex Presence
+
+Presence is handled separately from document sync using the Convex presence pattern.
+
+**Implementation:**
+
+1. A `presence` table stores ephemeral data (cursor position, selection range, user name, color) per user per document.
+2. A `usePresence` hook on the client:
+   - Sends presence updates (cursor/selection changes) via single-flighted mutations.
+   - Subscribes to presence data for the current document room via a reactive query.
+   - Sends periodic heartbeats (every 5 seconds) to signal the user is still online.
+3. Remote cursors and selections are rendered as colored overlays in the Tiptap editor using a custom Tiptap extension or a decoration plugin.
+4. Stale entries (>10s since last update) are filtered out client-side.
+
+**Performance considerations:**
+- **Single-flighting** ensures that rapid cursor movements don't flood the server — only the latest update is sent, and intermediate positions are skipped.
+- **Cache efficiency:** Convex caches query results by function arguments. The presence query for a given document is recomputed once per room per update, not once per user — so the cost scales linearly, not quadratically, with the number of collaborators.
+- **Cursor rendering:** Remote cursor positions may be slightly behind (50-200ms) due to network latency. A CSS transition can smooth the visual movement.
+
+### 9.4 Considerations
+
 - **Latency:** Convex reactive queries typically deliver updates in ~50-100ms, which is acceptable for collaborative editing.
-- **Conflict resolution:** Handled entirely by Yjs CRDT — no server-side merge logic needed.
-- **Offline support:** Yjs supports offline editing natively. When the client reconnects, accumulated updates are synced.
-- **Awareness (presence):** Cursor positions, selections, and user info are synced via the Yjs awareness protocol through the same Convex channel. No separate presence table needed.
+- **Conflict resolution:** Handled entirely by OT within `prosemirror-sync` — no manual merge logic needed.
+- **Offline support:** `prosemirror-sync` supports offline document creation. Full offline editing support (caching local changes in `sessionStorage`) is a planned future feature of the component.
+- **Scalability:** The component uses incremental step syncing and debounced snapshots. Old steps and snapshots can be cleaned up via the deletion API.
 
 ---
 
@@ -736,16 +834,16 @@ Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
 2. Implement Convex actions for calling OpenAI, Anthropic, Google APIs.
 3. Implement prompt building (system prompt + HTML serialized document + user prompt).
 4. Implement response parsing (HTML search/replace blocks + full-HTML fallback).
-5. Implement change application: parse response HTML → ProseMirror doc → diff → Transactions.
+5. Implement server-side change application via `prosemirrorSync.transform()` (parse response HTML → ProseMirror Transform → synced to all clients).
 6. Implement verification loop (up to 3 iterations).
 7. Add streaming support for AI responses in the chat panel.
 
 ### Phase 4: Collaboration
-1. Build custom Yjs-Convex sync provider.
-2. Integrate y-prosemirror with Tiptap for collaborative editing.
-3. Implement presence (cursors, selections, collaborator labels) via Yjs awareness.
+1. Install and configure `@convex-dev/prosemirror-sync` component (convex.config.ts, sync API with auth hooks).
+2. Integrate `useTiptapSync` hook with the Tiptap editor for real-time collaborative editing.
+3. Implement presence (cursors, selections, collaborator labels) via Convex presence pattern (`usePresence` hook + presence table).
 4. Implement Share modal with permission management.
-5. Add permission checks to all Convex functions.
+5. Add permission checks to all Convex functions (including prosemirror-sync authorization hooks).
 6. Implement comments (create, thread, resolve, anchor tracking).
 
 ### Phase 5: Polish
@@ -769,6 +867,7 @@ Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
     "react-dom": "^19.x",
     "convex": "^1.31.x",
     "@convex-dev/auth": "^0.0.x",
+    "@convex-dev/prosemirror-sync": "^0.2.x",
     "@tiptap/react": "^3.x",
     "@tiptap/starter-kit": "^3.x",
     "@tiptap/extension-underline": "^3.x",
@@ -777,11 +876,6 @@ Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
     "@tiptap/extension-table": "^3.x",
     "@tiptap/extension-link": "^3.x",
     "@tiptap/extension-image": "^3.x",
-    "@tiptap/extension-collaboration": "^3.x",
-    "@tiptap/extension-collaboration-cursor": "^3.x",
-    "yjs": "^13.6.x",
-    "y-prosemirror": "^1.3.x",
-    "prosemirror-recreate-steps": "^1.x",
     "openai": "^6.x",
     "@anthropic-ai/sdk": "^0.72.x",
     "@google/genai": "^1.x",
@@ -794,19 +888,27 @@ Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
 }
 ```
 
+**Packages removed (replaced by `@convex-dev/prosemirror-sync` + Convex presence pattern):**
+- `yjs` — CRDT layer no longer needed; prosemirror-sync uses OT.
+- `y-prosemirror` — ProseMirror ↔ Yjs binding no longer needed.
+- `@tiptap/extension-collaboration` — Replaced by prosemirror-sync's Tiptap extension.
+- `@tiptap/extension-collaboration-cursor` — Replaced by Convex presence + custom cursor rendering.
+- `prosemirror-recreate-steps` — No longer needed; AI edits use `prosemirrorSync.transform()` with ProseMirror's built-in `Transform` API.
+
 ---
 
 ## 13. Risks and Mitigations
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Yjs + Convex integration complexity | High | Prototype the sync provider early (Phase 4). Consider using `y-websocket` as a reference implementation. If Convex sync latency is too high, consider a dedicated WebSocket server for Yjs and use Convex only for persistence. |
-| `prosemirror-recreate-steps` failing on complex diffs | Medium | Fall back to `setContent` inside a Yjs transaction for near-total rewrites. Test with many AI response patterns. Consider maintaining a fork if the library needs fixes. |
+| `prosemirror-sync` component limitations | Medium | The component is relatively new (v0.2.x). Monitor for edge cases in OT merging. The component is open-source and maintained by the Convex team, so issues can be reported and patched. |
 | AI models returning unparseable HTML | Medium | Implement robust parsing with fallback to full-doc replacement. Validate HTML structure before applying. Add retry logic. |
+| Server-side `transform()` callback re-invocation | Medium | The `transform()` callback may be re-invoked if the document changes concurrently. Ensure the callback is idempotent and doesn't perform slow operations internally (do AI calls beforehand, only build the Transform in the callback). |
 | Document too large for AI context | Medium | Defer to large-context models (Gemini 2.5 Pro). Implement truncation warning. |
 | ProseMirror JSON size in database | Low | ProseMirror JSON is ~2-3x larger than raw text, but well within Convex's 1 MB limit for any reasonable document. Monitor and warn for extreme cases. |
-| Comment anchor drift during concurrent edits | Medium | Use Yjs relative positions for anchoring client-side. Store `anchorText` as fallback for re-anchoring. |
+| Comment anchor drift during concurrent edits | Medium | Use ProseMirror step mapping to remap positions. Store `anchorText` as fallback for re-anchoring if positions drift. |
 | HTML injection / XSS from AI responses | Medium | ProseMirror's DOMParser sanitizes HTML by only allowing known node/mark types. Untrusted HTML tags are stripped. Validate responses before applying. |
+| Presence scalability with many collaborators | Low | Single-flighted mutations + Convex query caching (per-room, not per-user) keeps costs linear. Throttle presence updates if needed. |
 
 ---
 
@@ -816,7 +918,7 @@ Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
 
 2. **AI response streaming UX:** When the AI is making changes, should the document update live as tokens stream in, or should the changes be applied all at once after the full response is received? Live updates look impressive but could be disorienting for collaborators. Batch application is safer but less responsive.
 
-3. **Conflict between AI edits and concurrent human edits:** If a user is typing while the AI is also modifying the document, how should conflicts be handled? Options: (a) Lock the document during AI edits, (b) Let Yjs CRDT merge both, (c) Apply AI changes as a separate "user" in the CRDT and let the merge happen naturally. Option (c) is most elegant but may produce unexpected results if edits overlap.
+3. **Conflict between AI edits and concurrent human edits:** If a user is typing while the AI is also modifying the document, how should conflicts be handled? `prosemirrorSync.transform()` handles OT rebasing automatically, and the callback is re-invoked with the updated doc if it changed. This is the simplest approach. If results are unsatisfactory, consider locking the document during AI edits as a fallback.
 
 4. **Verification loop — what if the model keeps making changes?** The current design caps verification at 3 iterations. But what if the model alternates between two states? Should we add a check to detect oscillation (e.g., if the diff of iteration N reverses the diff of iteration N-1, stop)?
 
@@ -826,10 +928,10 @@ Client A (Yjs Doc)  ←──→  Convex  ←──→  Client B (Yjs Doc)
 
 7. **AI chat history persistence:** Should the AI chat history persist permanently for each document, or should there be an option to clear it? Should chat history be included in the context sent to the AI (i.e., multi-turn conversation), and if so, how many past messages?
 
-8. **Real-time presence performance:** How many concurrent collaborators should be supported? Yjs awareness can handle dozens, but Convex mutation rate may become a bottleneck if presence updates fire on every cursor movement. Should presence updates be throttled (e.g., max 5 updates/second per user)?
+8. **Real-time presence performance:** How many concurrent collaborators should be supported? Convex presence uses single-flighting for back-pressure and per-room query caching for efficiency. Should presence updates be throttled beyond single-flighting (e.g., debounced to max 5 updates/second per user)?
 
 9. **Shareable links — public access?** Should shareable links require the recipient to have a Google account and sign in, or should there be an option for "anyone with the link" (public/anonymous) access? The current design assumes all users must authenticate.
 
 10. **Cost management for AI calls:** Should there be any usage limits or rate limiting on AI API calls per user? The verification loop (up to 3 extra calls per prompt) could get expensive. Should users be warned about token costs or have a configurable max token budget?
 
-11. **Offline support scope:** Yjs supports offline editing natively. Should the app explicitly support offline mode (with visible indicator, queue of unsynced changes, etc.), or is it acceptable to require an active connection?
+11. **Offline support scope:** `prosemirror-sync` supports offline document creation, and full offline editing (caching in `sessionStorage`) is a planned future feature of the component. For v1, is it acceptable to require an active connection, or should we implement basic offline caching ourselves?
