@@ -143,6 +143,13 @@ export default defineSchema({
     name: v.string(),
     email: v.string(),
     avatarUrl: v.optional(v.string()),
+    // Global per-user settings (UI preferences, not document properties)
+    settings: v.optional(v.object({
+      theme: v.optional(v.union(v.literal("light"), v.literal("dark"), v.literal("system"))),
+      defaultModel: v.optional(v.string()),    // e.g. "gpt-4o", "claude-sonnet-4-20250514"
+      editorFontSize: v.optional(v.number()),  // display zoom, e.g. 16
+      editorLineSpacing: v.optional(v.number()), // e.g. 1.5
+    })),
     // Convex auth fields are managed automatically
   }).index("by_email", ["email"]),
 
@@ -194,6 +201,7 @@ export default defineSchema({
     userId: v.id("users"),            // who made the change
     patch: v.string(),                // the diff (HTML-level diff via diff-match-patch)
     snapshotAfter: v.string(),        // ProseMirror JSON snapshot after applying the diff
+    titleAfter: v.string(),           // document title after this version (for title versioning)
     source: v.union(
       v.literal("ai"),               // change made by AI assistant
       v.literal("manual"),           // change made by user (idle-save)
@@ -238,6 +246,15 @@ export default defineSchema({
     iteration: v.optional(v.number()), // 0 = initial, 1-3 = verification loop
     createdAt: v.number(),
   }).index("by_document", ["documentId"]),
+
+  // --- AI Chat Clearing ---
+  // Tracks when a user last cleared the chat UI for a document.
+  // Messages before this timestamp are hidden in the UI but remain in the DB.
+  aiChatClears: defineTable({
+    documentId: v.id("documents"),
+    userId: v.id("users"),
+    clearedAt: v.number(),            // messages before this timestamp are hidden in the UI
+  }).index("by_document_user", ["documentId", "userId"]),
 });
 ```
 
@@ -315,12 +332,21 @@ User submits prompt
         │
         ▼
 ┌──────────────────────────────────────────┐
+│ Client-side:                             │
+│ 1. Broadcast "AI (<username>) is         │
+│    working..." indicator to all          │
+│    collaborators via presence            │
+│ 2. Stream AI text response in chat panel │
+└───────────┬──────────────────────────────┘
+            │
+            ▼
+┌──────────────────────────────────────────┐
 │ Convex action (server-side):             │
 │ 1. Fetch doc via prosemirrorSync.getDoc()│
 │ 2. Serialize to HTML                     │
 │ 3. Build context (system prompt + HTML   │
-│    + user prompt)                        │
-│ 4. Call selected model                   │
+│    + last 5 chat messages + user prompt) │
+│ 4. Call user's selected model            │
 │ 5. Parse response (extract HTML edits)   │
 │ 6. Apply via prosemirrorSync.transform() │
 │    (parse new HTML → ProseMirror doc →   │
@@ -331,18 +357,23 @@ User submits prompt
             │
             ▼
 ┌──────────────────────────────────────────┐
-│ Verification loop (up to 3x):            │
+│ Verification loop (up to 3x, cheap model │
+│ e.g. Gemini Flash):                      │
 │ 1. Re-fetch updated doc, serialize HTML  │
-│ 2. Send to model with verification prompt│
+│ 2. Send to cheap model w/ verif. prompt  │
 │ 3. If model says OK → stop               │
 │ 4. If model makes changes →              │
 │    apply via transform(), save diff,     │
 │    repeat                                │
+│ 5. Oscillation detection: if diff N      │
+│    reverses diff N-1, stop early and     │
+│    keep the version before oscillation   │
 └──────────────────────────────────────────┘
             │
             ▼
   All clients receive changes automatically
   via prosemirror-sync reactive subscriptions ✓
+  "AI is working..." indicator cleared.
 ```
 
 #### Applying AI Responses (Detailed)
@@ -412,7 +443,7 @@ Every version is stored as a `diffs` record:
 
 **Diff format:** Diffs are computed at the HTML level using `diff-match-patch`. The HTML is serialized from the ProseMirror doc before and after the change. The patch is stored as a serialized `diff-match-patch` patch string.
 
-**Snapshot strategy:** Every diff record includes `snapshotAfter` — the full ProseMirror JSON of the document after the change. This allows any version to be restored instantly without replaying diffs.
+**Snapshot strategy:** Every diff record includes `snapshotAfter` — the full ProseMirror JSON of the document after the change — and `titleAfter` — the document title at that version. This allows any version (content + title) to be restored instantly without replaying diffs.
 
 **Version history UI** (future consideration): A timeline/list view accessible from the toolbar or a side panel showing all versions, with the ability to preview (render the ProseMirror JSON snapshot) and restore any version.
 
@@ -663,9 +694,11 @@ Use the official SDKs for each provider within Convex actions:
 - `@anthropic-ai/sdk` for Anthropic models
 - `@google/genai` for Gemini models
 
+The initial AI call uses the **user's selected model**. Verification loop calls use a **small/cheap model** (e.g., Gemini Flash) to reduce cost.
+
 Each model call should:
 1. Track token usage (for potential future billing/limits).
-2. Stream responses where possible for better UX.
+2. Stream responses where possible for better UX (initial call only; verification calls do not need streaming).
 3. Handle rate limits with exponential backoff.
 4. Set reasonable timeouts (60s for initial call, 30s for verification).
 
@@ -682,15 +715,16 @@ The AI flow is orchestrated **server-side** in a single Convex action, thanks to
 
 1. Client calls the Convex `submitPrompt` action with the document ID, user prompt, and selected model.
 2. The action fetches the current document via `prosemirrorSync.getDoc()` and serializes it to HTML.
-3. The action calls the LLM with the system prompt + document HTML + user prompt.
-4. The action parses the response (search/replace blocks or full HTML).
-5. The action applies changes via `prosemirrorSync.transform()`, which handles OT and syncs to all clients.
-6. The action saves the diff record and AI message record via mutations.
-7. The action repeats steps 2-6 for verification loop iterations.
+3. The action builds context: system prompt + document HTML + last 5 chat messages (for conversational continuity) + user prompt. Before submitting, check total token count — drop oldest chat history messages first if needed to fit the model's context window (document + system prompt + user prompt always take priority).
+4. The action calls the user's selected model.
+5. The action parses the response (search/replace blocks or full HTML).
+6. The action applies changes via `prosemirrorSync.transform()`, which handles OT and syncs to all clients.
+7. The action saves the diff record and AI message record via mutations.
+8. The action repeats steps 2-7 for verification loop iterations (using a cheap model, e.g. Gemini Flash, instead of the user's selected model).
 
 This is a major simplification over client-side orchestration: no ProseMirror instance is needed on the client for AI edits, the entire flow is a single action call, and the client simply receives the changes as normal collaborative edits via the sync extension.
 
-**Client role:** The `useAIChat` hook on the client just calls the action and displays the streaming response in the chat panel. It does not need to parse HTML or apply ProseMirror transactions.
+**Client role:** The `useAIChat` hook on the client calls the action, displays the streaming response in the chat panel, and manages the "AI (\<username\>) is working..." indicator (broadcast to all collaborators via presence). Document changes are applied as a batch after the full response is received — the client does not need to parse HTML or apply ProseMirror transactions.
 
 ---
 
@@ -769,7 +803,7 @@ Presence is handled separately from document sync using the Convex presence patt
 
 - **Latency:** Convex reactive queries typically deliver updates in ~50-100ms, which is acceptable for collaborative editing.
 - **Conflict resolution:** Handled entirely by OT within `prosemirror-sync` — no manual merge logic needed.
-- **Offline support:** `prosemirror-sync` supports offline document creation. Full offline editing support (caching local changes in `sessionStorage`) is a planned future feature of the component.
+- **Offline support:** v1 is online-only. If the user goes offline, show a "disconnected" banner. No local caching or offline editing. `prosemirror-sync` supports offline document creation, and full offline editing is a planned future feature of the component — revisit when available.
 - **Scalability:** The component uses incremental step syncing and debounced snapshots. Old steps and snapshots can be cleaned up via the deletion API.
 
 ---
@@ -835,7 +869,7 @@ Presence is handled separately from document sync using the Convex presence patt
 3. Implement prompt building (system prompt + HTML serialized document + user prompt).
 4. Implement response parsing (HTML search/replace blocks + full-HTML fallback).
 5. Implement server-side change application via `prosemirrorSync.transform()` (parse response HTML → ProseMirror Transform → synced to all clients).
-6. Implement verification loop (up to 3 iterations).
+6. Implement verification loop (up to 3 iterations, using cheap model e.g. Gemini Flash) with oscillation detection (stop early if a diff reverses the previous one).
 7. Add streaming support for AI responses in the chat panel.
 
 ### Phase 4: Collaboration
@@ -916,22 +950,22 @@ Presence is handled separately from document sync using the Convex presence patt
 
 > **Question 1 (Markdown fidelity / editor approach) — RESOLVED:** Using pure ProseMirror/Tiptap with ProseMirror JSON as the storage format. No markdown. HTML serialization for AI communication. No raw editing mode.
 
-2. **AI response streaming UX:** When the AI is making changes, should the document update live as tokens stream in, or should the changes be applied all at once after the full response is received? Live updates look impressive but could be disorienting for collaborators. Batch application is safer but less responsive.
+> **Question 2 (AI response streaming UX) — RESOLVED:** Hybrid approach. Stream the AI's text response live in the chat panel (so users see progress in real time), but apply document changes as a batch after the full response is received and parsed. This avoids broken document states from partial/malformed HTML mid-stream — especially important for structural changes (e.g., reformatting paragraphs into lists or tables) where there is no valid intermediate ProseMirror document state.
 
-3. **Conflict between AI edits and concurrent human edits:** If a user is typing while the AI is also modifying the document, how should conflicts be handled? `prosemirrorSync.transform()` handles OT rebasing automatically, and the callback is re-invoked with the updated doc if it changed. This is the simplest approach. If results are unsatisfactory, consider locking the document during AI edits as a fallback.
+> **Question 3 (Conflict between AI edits and concurrent human edits) — RESOLVED:** Soft lock. While the AI is generating a response, show a visual indicator to all collaborators: "AI (\<username\>) is working..." (where \<username\> is the user who submitted the prompt). Users can still type, but the indicator nudges them to avoid major edits. The AI's response was based on a document snapshot taken at prompt submission — if the document changes significantly during generation, search/replace blocks may fail to match. In that case, show an error with a retry option. For the actual application of edits, `prosemirrorSync.transform()` handles OT rebasing automatically, and the apply step is near-instant so conflicts during application are negligible.
 
-4. **Verification loop — what if the model keeps making changes?** The current design caps verification at 3 iterations. But what if the model alternates between two states? Should we add a check to detect oscillation (e.g., if the diff of iteration N reverses the diff of iteration N-1, stop)?
+> **Question 4 (Verification loop oscillation) — RESOLVED:** Cap at 3 iterations + oscillation detection. After each verification round, compare the diff to the previous round's diff. If the new diff reverses the previous one (i.e., the model is alternating between two states), stop early and keep the version from before the oscillation began.
 
-5. **Per-user settings scope:** Should settings (theme, default model, font size) be per-user globally or per-user-per-document? Global is simpler; per-document allows different preferences for different contexts.
+> **Question 5 (Per-user settings scope) — RESOLVED:** Global per-user. Settings (theme, default AI model, editor display preferences like zoom/line spacing) are user-level UI preferences, not document properties. Document formatting is embedded in the ProseMirror JSON and is inherently per-document. No need for per-document settings overrides.
 
-6. **Document title management:** Should the document title be derived from the first H1 in the document, or should it be a separate editable field? If separate, should changes to the title be versioned like content changes?
+> **Question 6 (Document title management) — RESOLVED:** Both. A separate editable title field (stored in `documents.title`) is the primary title. If the user hasn't set one, fall back to the first H1 in the document, then "Untitled". Title changes are versioned — included in diff records alongside content changes.
 
-7. **AI chat history persistence:** Should the AI chat history persist permanently for each document, or should there be an option to clear it? Should chat history be included in the context sent to the AI (i.e., multi-turn conversation), and if so, how many past messages?
+> **Question 7 (AI chat history persistence) — RESOLVED:** Chat history is stored permanently in the database (never deleted server-side). In the chat UI, history is persistent across sessions but users can clear the visible chat for a document (UI-level clear, not a DB deletion). For AI context, include the last 5 messages as conversation history so the model can reference prior instructions. Before submitting, check total token count against the model's context limit — drop oldest historical messages first if needed to fit within the window (document HTML + system prompt + user prompt always take priority over chat history).
 
-8. **Real-time presence performance:** How many concurrent collaborators should be supported? Convex presence uses single-flighting for back-pressure and per-room query caching for efficiency. Should presence updates be throttled beyond single-flighting (e.g., debounced to max 5 updates/second per user)?
+> **Question 8 (Real-time presence performance) — RESOLVED:** Design for small teams (~10 concurrent collaborators) for v1. No extra throttling beyond the existing single-flighted mutations and per-room query caching. Optimize for larger groups later if needed.
 
-9. **Shareable links — public access?** Should shareable links require the recipient to have a Google account and sign in, or should there be an option for "anyone with the link" (public/anonymous) access? The current design assumes all users must authenticate.
+> **Question 9 (Shareable links — public access) — RESOLVED:** Auth required. All users must sign in with Google to access a shared document. No anonymous/public "anyone with the link" access for v1. Simpler and more secure.
 
-10. **Cost management for AI calls:** Should there be any usage limits or rate limiting on AI API calls per user? The verification loop (up to 3 extra calls per prompt) could get expensive. Should users be warned about token costs or have a configurable max token budget?
+> **Question 10 (Cost management for AI calls) — RESOLVED:** No usage limits or rate limiting for v1. To reduce cost, only the initial AI call uses the user's selected model. Verification loop calls use a small/cheap model (e.g., Gemini Flash). Revisit limits if cost becomes a problem.
 
-11. **Offline support scope:** `prosemirror-sync` supports offline document creation, and full offline editing (caching in `sessionStorage`) is a planned future feature of the component. For v1, is it acceptable to require an active connection, or should we implement basic offline caching ourselves?
+> **Question 11 (Offline support scope) — RESOLVED:** Online only for v1. Require an active connection. If the user goes offline, show a "disconnected" banner. No local caching or offline editing. Revisit when `prosemirror-sync` ships full offline support.
