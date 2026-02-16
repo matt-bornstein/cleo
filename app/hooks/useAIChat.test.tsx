@@ -212,6 +212,51 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("does not throw when onApplyContent callback is malformed non-function", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-non-function-apply" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied update",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-non-function-apply",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: 123 as unknown as (nextContent: string) => void,
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Apply without callback");
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(createDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-non-function-apply",
+      }),
+    );
+    expect(saveMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Applied update",
+        diffId: "diff-non-function-apply",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("parses final stream event without trailing newline", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     createDiffMock.mockReturnValue({ id: "diff-nl" });

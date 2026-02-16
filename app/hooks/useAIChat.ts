@@ -20,7 +20,7 @@ const DEFAULT_MODEL = "gpt-4o";
 type UseAIChatArgs = {
   documentId: string;
   currentDocumentContent: string;
-  onApplyContent: (nextContent: string) => void;
+  onApplyContent: unknown;
   currentUserId: unknown;
   defaultModel?: unknown;
   chatClearedAt?: number;
@@ -254,7 +254,9 @@ export function useAIChat({
               content: payload.assistantMessage,
               diffId: diff?.id,
             });
-            onApplyContent(payload.nextContent);
+            if (typeof onApplyContent === "function") {
+              onApplyContent(payload.nextContent);
+            }
             return;
           }
 
