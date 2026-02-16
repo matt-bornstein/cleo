@@ -36,7 +36,7 @@ export const create = mutation({
     title: v.string(),
   },
   handler: async (ctx, args) => {
-    const now = Math.max(0, Date.now());
+    const now = safeNow();
     const userId = await getOrCreateCurrentUser(ctx);
     const content = JSON.stringify({
       type: "doc",
@@ -124,8 +124,16 @@ export const updateContent = mutation({
 
     await ctx.db.patch(args.documentId, {
       content: args.content,
-      updatedAt: Math.max(0, Date.now()),
+      updatedAt: safeNow(),
     });
     return args.documentId;
   },
 });
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
+  }
+}

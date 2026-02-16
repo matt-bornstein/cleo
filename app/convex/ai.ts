@@ -7,7 +7,7 @@ export const acquireLock = mutation({
     documentId: v.id("documents"),
   },
   handler: async (ctx, args) => {
-    const now = Math.max(0, Date.now());
+    const now = safeNow();
     const document = (await ctx.db.get(args.documentId)) as
       | { aiLockedBy?: string; aiLockedAt?: number }
       | null;
@@ -59,7 +59,7 @@ export const saveMessage = mutation({
     return ctx.db.insert("aiMessages", {
       ...args,
       userId: "dev-user",
-      createdAt: Math.max(0, Date.now()),
+      createdAt: safeNow(),
     });
   },
 });
@@ -77,3 +77,11 @@ export const getMessages = query({
       .collect();
   },
 });
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
+  }
+}
