@@ -18,6 +18,7 @@ const MAX_PROMPT_LENGTH = 4_000;
 const MAX_MESSAGE_CONTENT_LENGTH = 8_000;
 const MAX_DOCUMENT_ID_LENGTH = 256;
 const MAX_USER_ID_LENGTH = 256;
+const MAX_DOCUMENT_CONTENT_LENGTH = 200_000;
 
 type StreamRequestPayload = {
   documentId: string;
@@ -36,7 +37,11 @@ function hasText(value: unknown): value is string {
 }
 
 function hasValidDocumentJson(value: unknown): value is string {
-  if (typeof value !== "string" || value.trim().length === 0) {
+  if (
+    typeof value !== "string" ||
+    value.trim().length === 0 ||
+    value.length > MAX_DOCUMENT_CONTENT_LENGTH
+  ) {
     return false;
   }
 
