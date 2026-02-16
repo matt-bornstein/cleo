@@ -190,10 +190,15 @@ export function useAIChat({
           requestError instanceof Error
             ? requestError.message
             : "Unknown AI request error";
+        const errorContent = `Error: ${message}`;
         setError(message);
         setMessages((prev) =>
-          updateMessageContent(prev, assistantDraft.id, `Error: ${message}`),
+          updateMessageContent(prev, assistantDraft.id, errorContent),
         );
+        saveMessage({
+          ...assistantDraft,
+          content: errorContent,
+        });
       } finally {
         setIsLoading(false);
       }

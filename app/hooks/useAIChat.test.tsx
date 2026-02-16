@@ -277,7 +277,14 @@ describe("useAIChat", () => {
       }),
     );
     expect(createDiffMock).not.toHaveBeenCalled();
-    expect(saveMessageMock).toHaveBeenCalledTimes(1);
+    expect(saveMessageMock).toHaveBeenCalledTimes(2);
+    expect(saveMessageMock.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        userId: "assistant",
+        content: "Error: Model failed",
+      }),
+    );
 
     vi.unstubAllGlobals();
   });
