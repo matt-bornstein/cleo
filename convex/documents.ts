@@ -1,11 +1,14 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { prosemirrorSync } from "./prosemirrorSync";
 
-const EMPTY_DOC = JSON.stringify({
+const EMPTY_DOC_OBJ = {
   type: "doc",
   content: [{ type: "paragraph" }],
-});
+};
+
+const EMPTY_DOC = JSON.stringify(EMPTY_DOC_OBJ);
 
 export const create = mutation({
   args: {
@@ -39,6 +42,9 @@ export const create = mutation({
       source: "created",
       createdAt: now,
     });
+
+    // Initialize prosemirror-sync document
+    await prosemirrorSync.create(ctx, documentId, EMPTY_DOC_OBJ);
 
     return documentId;
   },
