@@ -75,11 +75,11 @@ export function usePresence(documentId: unknown) {
   const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
   const [visitorId] = useState(createVisitorId);
   const [version, setVersion] = useState(0);
-  const [currentTime, setCurrentTime] = useState(() => Math.max(0, Date.now()));
+  const [currentTime, setCurrentTime] = useState(safeNow);
 
   const refresh = useCallback(() => {
     setVersion((value) => value + 1);
-    setCurrentTime(Math.max(0, Date.now()));
+    setCurrentTime(safeNow());
   }, []);
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export function usePresence(documentId: unknown) {
       return;
     }
 
-    const heartbeatInterval = setInterval(() => {
+    const heartbeatInterval = safeSetInterval(() => {
       updatePresence({
         documentId: normalizedDocumentId,
         visitorId,
@@ -102,7 +102,9 @@ export function usePresence(documentId: unknown) {
     }, 5000);
 
     return () => {
-      clearInterval(heartbeatInterval);
+      if (heartbeatInterval) {
+        safeClearInterval(heartbeatInterval);
+      }
       removePresence(visitorId);
       refresh();
     };
@@ -137,4 +139,28 @@ export function usePresence(documentId: unknown) {
     others,
     updateMyPresence,
   };
+}
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
+  }
+}
+
+function safeSetInterval(callback: () => void, delayMs: number) {
+  try {
+    return setInterval(callback, delayMs);
+  } catch {
+    return null;
+  }
+}
+
+function safeClearInterval(intervalId: ReturnType<typeof setInterval>) {
+  try {
+    clearInterval(intervalId);
+  } catch {
+    return;
+  }
 }

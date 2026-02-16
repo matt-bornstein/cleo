@@ -76,6 +76,7 @@ describe("filterStalePresence", () => {
 
 describe("usePresence", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.useFakeTimers();
     listPresenceMock.mockReset();
     removePresenceMock.mockReset();
@@ -159,5 +160,37 @@ describe("usePresence", () => {
         }),
       }),
     );
+  });
+
+  it("does not throw when setInterval throws at runtime", () => {
+    vi.spyOn(globalThis, "setInterval").mockImplementation(() => {
+      throw new Error("setInterval failed");
+    });
+
+    expect(() => renderHook(() => usePresence("doc-presence"))).not.toThrow();
+    expect(updatePresenceMock).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when clearInterval throws during cleanup", () => {
+    const setIntervalSpy = vi
+      .spyOn(globalThis, "setInterval")
+      .mockReturnValue(123 as unknown as ReturnType<typeof setInterval>);
+    vi.spyOn(globalThis, "clearInterval").mockImplementation(() => {
+      throw new Error("clearInterval failed");
+    });
+
+    const { unmount } = renderHook(() => usePresence("doc-presence"));
+
+    expect(() => unmount()).not.toThrow();
+    expect(setIntervalSpy).toHaveBeenCalled();
+  });
+
+  it("falls back to zero time when Date.now throws during initialization", () => {
+    vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+
+    expect(() => renderHook(() => usePresence("doc-presence"))).not.toThrow();
+    expect(listPresenceMock).toHaveBeenCalledWith("doc-presence");
   });
 });
