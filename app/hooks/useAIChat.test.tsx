@@ -1,0 +1,172 @@
+import { act, renderHook } from "@testing-library/react";
+import { vi } from "vitest";
+
+import { useAIChat } from "@/hooks/useAIChat";
+
+const {
+  listMessagesByDocumentMock,
+  saveMessageMock,
+  createDiffMock,
+  getModelConfigMock,
+} = vi.hoisted(() => ({
+  listMessagesByDocumentMock: vi.fn(),
+  saveMessageMock: vi.fn(),
+  createDiffMock: vi.fn(),
+  getModelConfigMock: vi.fn(() => ({ id: "gpt-4o", label: "GPT-4o" })),
+}));
+
+vi.mock("@/lib/ai/chatStore", () => ({
+  listMessagesByDocument: listMessagesByDocumentMock,
+  saveMessage: saveMessageMock,
+}));
+
+vi.mock("@/lib/diffs/store", () => ({
+  createDiff: createDiffMock,
+}));
+
+vi.mock("@/lib/ai/models", () => ({
+  getModelConfig: getModelConfigMock,
+}));
+
+function createStreamResponse(events: Array<Record<string, unknown>>) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const event of events) {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(stream, { status: 200 });
+}
+
+describe("useAIChat", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    listMessagesByDocumentMock.mockReset();
+    saveMessageMock.mockReset();
+    createDiffMock.mockReset();
+    getModelConfigMock.mockClear();
+  });
+
+  it("submits request with user context and stores ai diff attribution", async () => {
+    listMessagesByDocumentMock.mockReturnValue([
+      {
+        id: "m-1",
+        documentId: "doc-1",
+        userId: "teammate@example.com",
+        role: "user",
+        content: "Please simplify this intro",
+        createdAt: 10,
+      },
+    ]);
+    createDiffMock.mockReturnValue({ id: "diff-1" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          { type: "token", text: "Drafting..." },
+          {
+            type: "done",
+            assistantMessage: "Applied improvements.",
+            nextContent: "<p>Updated content</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onApplyContent = vi.fn();
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-1",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent,
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Improve this section");
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/ai/stream",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "x-user-id": "owner@example.com" }),
+      }),
+    );
+
+    const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      messages: Array<{ userId?: string }>;
+    };
+    expect(requestBody.messages[0]?.userId).toBe("teammate@example.com");
+
+    expect(saveMessageMock).toHaveBeenCalledTimes(2);
+    expect(saveMessageMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        role: "user",
+        userId: "owner@example.com",
+      }),
+    );
+    expect(saveMessageMock.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        userId: "assistant",
+        diffId: "diff-1",
+      }),
+    );
+
+    expect(createDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-1",
+        userId: "owner@example.com",
+        source: "ai",
+      }),
+    );
+    expect(onApplyContent).toHaveBeenCalledWith("<p>Updated content</p>");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("skips diff creation when ai response keeps content unchanged", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "No edits needed.",
+            nextContent: "<p>Original</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-2",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Review this");
+    });
+
+    expect(createDiffMock).not.toHaveBeenCalled();
+    expect(saveMessageMock.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "No edits needed.",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+});

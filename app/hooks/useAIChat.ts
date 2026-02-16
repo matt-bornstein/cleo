@@ -137,7 +137,7 @@ export function useAIChat({
               const diff = didContentChange
                 ? createDiff({
                     documentId,
-                    userId: "local-dev-user",
+                    userId: currentUserId,
                     snapshotAfter: payload.nextContent,
                     source: "ai",
                     aiPrompt: prompt,
