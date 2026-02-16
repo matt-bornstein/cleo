@@ -71,7 +71,7 @@ function persistState(state: AIMessageState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function listMessagesByDocument(documentId: string, chatClearedAt?: number) {
+export function listMessagesByDocument(documentId: unknown, chatClearedAt?: unknown) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) return [];
 
@@ -92,7 +92,7 @@ export function listMessagesByDocument(documentId: string, chatClearedAt?: numbe
     );
 }
 
-export function saveMessage(message: AIMessage) {
+export function saveMessage(message: unknown) {
   const normalized = normalizeMessage(message);
   if (!normalized) {
     return null;

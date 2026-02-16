@@ -122,6 +122,19 @@ describe("ai chat store", () => {
     expect(listMessagesByDocument("   ")).toEqual([]);
   });
 
+  it("returns empty list for malformed non-string document ids", () => {
+    saveMessage({
+      id: "m-non-string-doc-id",
+      documentId: "doc-valid",
+      userId: "u-1",
+      role: "assistant",
+      content: "Hello",
+      createdAt: 4_000,
+    });
+
+    expect(listMessagesByDocument(123 as unknown as string)).toEqual([]);
+  });
+
   it("rejects malformed saveMessage payloads", () => {
     const invalidRole = saveMessage({
       id: "msg-invalid-role",
@@ -187,6 +200,7 @@ describe("ai chat store", () => {
       content: "Hello",
       createdAt: -1,
     });
+    const nonObjectPayload = saveMessage(42 as unknown as never);
 
     expect(invalidRole).toBeNull();
     expect(blankContent).toBeNull();
@@ -196,6 +210,7 @@ describe("ai chat store", () => {
     expect(oversizedContent).toBeNull();
     expect(controlCharContent).toBeNull();
     expect(negativeTimestamp).toBeNull();
+    expect(nonObjectPayload).toBeNull();
     expect(listMessagesByDocument("doc-bad")).toEqual([]);
   });
 
