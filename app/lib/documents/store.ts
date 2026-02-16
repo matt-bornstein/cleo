@@ -1,5 +1,6 @@
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { AppDocument } from "@/lib/types";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.documents.v1";
 
@@ -11,6 +12,7 @@ const EMPTY_EDITOR_DOC = JSON.stringify({
   type: "doc",
   content: [{ type: "paragraph" }],
 });
+const DEFAULT_OWNER_EMAIL = "me@local.dev";
 
 const inMemoryState: DocumentStoreState = {
   documents: [],
@@ -39,7 +41,7 @@ function loadState(): DocumentStoreState {
     return {
       documents: parsed.documents.map((doc) => ({
         ...doc,
-        ownerEmail: doc.ownerEmail ?? "me@local.dev",
+        ownerEmail: normalizeOwnerEmail(doc.ownerEmail),
       })),
     };
   } catch {
@@ -56,7 +58,16 @@ function persistState(state: DocumentStoreState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function createDocument(title: string, ownerEmail = "me@local.dev"): AppDocument {
+function normalizeOwnerEmail(ownerEmail: string | undefined) {
+  const normalizedOwnerEmail = ownerEmail?.trim().toLowerCase();
+  if (!normalizedOwnerEmail || hasControlChars(normalizedOwnerEmail)) {
+    return DEFAULT_OWNER_EMAIL;
+  }
+
+  return normalizedOwnerEmail;
+}
+
+export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL): AppDocument {
   const now = Date.now();
   const normalizedTitle = title.trim() || "Untitled";
   const state = loadState();
@@ -64,7 +75,7 @@ export function createDocument(title: string, ownerEmail = "me@local.dev"): AppD
     id: crypto.randomUUID(),
     title: normalizedTitle,
     content: EMPTY_EDITOR_DOC,
-    ownerEmail: ownerEmail.trim().toLowerCase(),
+    ownerEmail: normalizeOwnerEmail(ownerEmail),
     createdAt: now,
     updatedAt: now,
   };

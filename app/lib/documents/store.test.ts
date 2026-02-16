@@ -23,6 +23,14 @@ describe("document store", () => {
     expect(document.id).toBeTruthy();
   });
 
+  it("falls back to default owner email for invalid owner input", () => {
+    const blankOwner = createDocument("Blank owner", "   ");
+    expect(blankOwner.ownerEmail).toBe("me@local.dev");
+
+    const controlCharOwner = createDocument("Bad owner", "owner\nname@example.com");
+    expect(controlCharOwner.ownerEmail).toBe("me@local.dev");
+  });
+
   it("lists documents sorted by updatedAt desc and searchable", async () => {
     const first = createDocument("First");
     await new Promise((resolve) => setTimeout(resolve, 2));
@@ -34,6 +42,27 @@ describe("document store", () => {
     const filtered = listDocuments("plan");
     expect(filtered).toHaveLength(1);
     expect(filtered[0].id).toBe(second.id);
+  });
+
+  it("normalizes legacy stored owner emails when loading from storage", () => {
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({
+        documents: [
+          {
+            id: "legacy-doc",
+            title: "Legacy",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "   ",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      }),
+    );
+
+    const documents = listDocuments();
+    expect(documents[0]?.ownerEmail).toBe("me@local.dev");
   });
 
   it("gets a document by id", () => {
