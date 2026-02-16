@@ -195,8 +195,9 @@ export function ensureCreatedDiff(params: {
   userId?: string;
 }) {
   const existing = listDiffsByDocument(params.documentId);
-  if (existing.length > 0) {
-    return existing[0];
+  const existingCreatedDiff = existing.find((diff) => diff.source === "created");
+  if (existingCreatedDiff) {
+    return existingCreatedDiff;
   }
 
   return createDiff({

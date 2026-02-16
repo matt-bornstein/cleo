@@ -164,6 +164,31 @@ describe("diff store triggerIdleSave", () => {
     expect(getDocumentById(document.id)?.content).toBe(document.content);
   });
 
+  it("ensures a created baseline diff exists even after manual history", () => {
+    const document = createDocument("Backfill created diff");
+    const changedSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "manual revision" }] }],
+    });
+
+    const manualDiff = triggerIdleSave({
+      documentId: document.id,
+      snapshot: changedSnapshot,
+      dedupWindowMs: 0,
+    });
+    expect(manualDiff.skipped).toBe(false);
+
+    const createdBaseline = ensureCreatedDiff({
+      documentId: document.id,
+      snapshot: document.content,
+    });
+
+    expect(createdBaseline?.source).toBe("created");
+    expect(listDiffsByDocument(document.id).map((diff) => diff.source)).toEqual(
+      expect.arrayContaining(["manual", "created"]),
+    );
+  });
+
   it("rejects invalid document ids for diff creation and idle saves", () => {
     const invalidCreate = createDiff({
       documentId: "   ",
