@@ -27,54 +27,56 @@ function loadState(): CommentState {
     }
 
     const sanitizedComments = parsed.comments.flatMap((comment) => {
-        const normalizedDocumentId = normalizeDocumentId(comment.documentId);
-        const normalizedCommentId = comment.id?.trim();
-        const normalizedContent = comment.content?.trim();
-        const normalizedAnchorText = comment.anchorText?.trim() || "Comment";
-        const normalizedParentCommentId = comment.parentCommentId?.trim() || undefined;
-        const normalizedUserId = comment.userId?.trim();
-        const safeUserId =
-          normalizedUserId &&
-          normalizedUserId.length <= MAX_USER_ID_LENGTH &&
-          !hasControlChars(normalizedUserId)
-            ? normalizedUserId
-            : DEFAULT_LOCAL_USER_ID;
-        const normalizedAnchorFrom =
-          typeof comment.anchorFrom === "number" && Number.isFinite(comment.anchorFrom)
-            ? Math.max(0, comment.anchorFrom)
-            : 0;
-        const normalizedAnchorTo =
-          typeof comment.anchorTo === "number" && Number.isFinite(comment.anchorTo)
-            ? Math.max(normalizedAnchorFrom, comment.anchorTo)
-            : normalizedAnchorFrom;
+      const normalizedDocumentId = normalizeDocumentId(comment.documentId);
+      const normalizedCommentId = normalizeCommentReferenceId(comment.id);
+      const normalizedContent = comment.content?.trim();
+      const normalizedAnchorText = comment.anchorText?.trim() || "Comment";
+      const normalizedParentCommentId = normalizeCommentReferenceId(
+        comment.parentCommentId,
+      );
+      const normalizedUserId = comment.userId?.trim();
+      const safeUserId =
+        normalizedUserId &&
+        normalizedUserId.length <= MAX_USER_ID_LENGTH &&
+        !hasControlChars(normalizedUserId)
+          ? normalizedUserId
+          : DEFAULT_LOCAL_USER_ID;
+      const normalizedAnchorFrom =
+        typeof comment.anchorFrom === "number" && Number.isFinite(comment.anchorFrom)
+          ? Math.max(0, comment.anchorFrom)
+          : 0;
+      const normalizedAnchorTo =
+        typeof comment.anchorTo === "number" && Number.isFinite(comment.anchorTo)
+          ? Math.max(normalizedAnchorFrom, comment.anchorTo)
+          : normalizedAnchorFrom;
 
-        if (
-          !normalizedCommentId ||
-          !isValidDocumentId(normalizedDocumentId) ||
-          !normalizedContent ||
-          typeof comment.createdAt !== "number" ||
-          !Number.isFinite(comment.createdAt) ||
-          typeof comment.updatedAt !== "number" ||
-          !Number.isFinite(comment.updatedAt)
-        ) {
-          return [];
-        }
+      if (
+        !normalizedCommentId ||
+        !isValidDocumentId(normalizedDocumentId) ||
+        !normalizedContent ||
+        typeof comment.createdAt !== "number" ||
+        !Number.isFinite(comment.createdAt) ||
+        typeof comment.updatedAt !== "number" ||
+        !Number.isFinite(comment.updatedAt)
+      ) {
+        return [];
+      }
 
-        return [
-          {
-            ...comment,
-            id: normalizedCommentId,
-            documentId: normalizedDocumentId,
-            userId: safeUserId,
-            content: normalizedContent,
-            anchorText: normalizedAnchorText,
-            parentCommentId: normalizedParentCommentId,
-            resolved: Boolean(comment.resolved),
-            anchorFrom: normalizedAnchorFrom,
-            anchorTo: normalizedAnchorTo,
-          },
-        ];
-      });
+      return [
+        {
+          ...comment,
+          id: normalizedCommentId,
+          documentId: normalizedDocumentId,
+          userId: safeUserId,
+          content: normalizedContent,
+          anchorText: normalizedAnchorText,
+          parentCommentId: normalizedParentCommentId,
+          resolved: Boolean(comment.resolved),
+          anchorFrom: normalizedAnchorFrom,
+          anchorTo: normalizedAnchorTo,
+        },
+      ];
+    });
 
     const dedupedByCommentId = new Map<string, CommentRecord>();
     for (const comment of sanitizedComments) {
@@ -122,7 +124,7 @@ export function addComment(params: {
     return null;
   }
   const normalizedAnchorText = params.anchorText.trim() || "Comment";
-  const normalizedParentCommentId = params.parentCommentId?.trim() || undefined;
+  const normalizedParentCommentId = normalizeCommentReferenceId(params.parentCommentId);
 
   const state = loadState();
   const now = Date.now();
@@ -151,8 +153,11 @@ export function addComment(params: {
 }
 
 export function resolveComment(commentId: string) {
+  const normalizedCommentId = normalizeCommentReferenceId(commentId);
+  if (!normalizedCommentId) return null;
+
   const state = loadState();
-  const index = state.comments.findIndex((comment) => comment.id === commentId);
+  const index = state.comments.findIndex((comment) => comment.id === normalizedCommentId);
   if (index === -1) return null;
   state.comments[index] = {
     ...state.comments[index],
@@ -165,4 +170,17 @@ export function resolveComment(commentId: string) {
 
 export function resetCommentsForTests() {
   persistState({ comments: [] });
+}
+
+function normalizeCommentReferenceId(value: string | undefined) {
+  const normalizedValue = value?.trim();
+  if (
+    !normalizedValue ||
+    normalizedValue.length > MAX_USER_ID_LENGTH ||
+    hasControlChars(normalizedValue)
+  ) {
+    return undefined;
+  }
+
+  return normalizedValue;
 }

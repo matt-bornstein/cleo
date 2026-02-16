@@ -37,7 +37,7 @@ describe("comments store", () => {
       anchorText: "Line",
     });
     expect(comment).not.toBeNull();
-    const resolved = resolveComment(comment!.id);
+    const resolved = resolveComment(`  ${comment!.id}  `);
     expect(resolved?.resolved).toBe(true);
   });
 
@@ -122,6 +122,18 @@ describe("comments store", () => {
     expect(comment?.parentCommentId).toBe("parent-1");
   });
 
+  it("drops malformed parent comment references", () => {
+    const comment = addComment({
+      documentId: "doc-6",
+      content: "Reply without valid parent",
+      anchorText: "Line",
+      parentCommentId: "parent-\ninvalid",
+    });
+
+    expect(comment).not.toBeNull();
+    expect(comment?.parentCommentId).toBeUndefined();
+  });
+
   it("filters malformed persisted comments and normalizes legacy entries", () => {
     window.localStorage.setItem(
       "plan00.comments.v1",
@@ -173,7 +185,7 @@ describe("comments store", () => {
             anchorTo: 5,
             anchorText: "Anchor",
             resolved: false,
-            parentCommentId: "",
+            parentCommentId: "bad\nparent",
             createdAt: 5,
             updatedAt: 6,
           },
