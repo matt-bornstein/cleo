@@ -4,6 +4,8 @@ describe("auth guards", () => {
   it("flags editor routes as protected", () => {
     expect(isProtectedPath("/editor")).toBe(true);
     expect(isProtectedPath("/editor/abc")).toBe(true);
+    expect(isProtectedPath("/editorial")).toBe(false);
+    expect(isProtectedPath("/editor-archive")).toBe(false);
     expect(isProtectedPath("/sign-in")).toBe(false);
   });
 
