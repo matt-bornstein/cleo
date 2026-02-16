@@ -139,6 +139,7 @@ export function createDiff(params: {
   source: DiffSource;
   aiPrompt?: string;
   aiModel?: string;
+  previousSnapshot?: string;
 }) {
   const normalizedDocumentId = normalizeDocumentId(params.documentId);
   if (
@@ -154,9 +155,11 @@ export function createDiff(params: {
   }
 
   const state = loadState();
-  const previousSnapshot =
-    getLatestDiffByDocumentFromState(state, normalizedDocumentId)?.snapshotAfter ??
-    JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
+  const previousSnapshot = resolvePreviousSnapshot({
+    state,
+    documentId: normalizedDocumentId,
+    previousSnapshot: params.previousSnapshot,
+  });
 
   const patch = createDiffPatch(previousSnapshot, params.snapshotAfter);
   const diffRecord: DiffRecord = {
@@ -227,6 +230,7 @@ export function restoreVersion(params: {
   }
 
   const now = Math.max(0, Date.now());
+  const previousSnapshot = document.content;
   updateDocumentContent(normalizedDocumentId, params.snapshot);
   setDocumentLastDiffAt(normalizedDocumentId, now);
   const diff = createDiff({
@@ -234,6 +238,7 @@ export function restoreVersion(params: {
     userId: params.userId ?? DEFAULT_LOCAL_USER_ID,
     snapshotAfter: params.snapshot,
     source: "manual",
+    previousSnapshot,
   });
   if (!diff) {
     return { restored: false as const, reason: "invalid_snapshot" as const };
@@ -289,6 +294,7 @@ export function triggerIdleSave(params: {
     userId: DEFAULT_LOCAL_USER_ID,
     snapshotAfter: params.snapshot,
     source: "manual",
+    previousSnapshot,
   });
   if (!diff) {
     return { skipped: true, reason: "invalid_snapshot" as const };
@@ -347,4 +353,29 @@ function getLatestDiffByDocumentFromState(
   }
 
   return latestDiff;
+}
+
+function resolvePreviousSnapshot(params: {
+  state: DiffStoreState;
+  documentId: string;
+  previousSnapshot?: string;
+}) {
+  if (
+    params.previousSnapshot &&
+    isValidDocumentContentJson(params.previousSnapshot)
+  ) {
+    return params.previousSnapshot;
+  }
+
+  const latestDiff = getLatestDiffByDocumentFromState(params.state, params.documentId);
+  if (latestDiff) {
+    return latestDiff.snapshotAfter;
+  }
+
+  const currentDocument = getDocumentById(params.documentId);
+  if (currentDocument && isValidDocumentContentJson(currentDocument.content)) {
+    return currentDocument.content;
+  }
+
+  return JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
 }

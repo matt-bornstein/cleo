@@ -3,6 +3,7 @@ import {
   getDocumentById,
   resetDocumentsForTests,
   setDocumentLastDiffAt,
+  updateDocumentContent,
 } from "@/lib/documents/store";
 import {
   createDiff,
@@ -130,6 +131,29 @@ describe("diff store triggerIdleSave", () => {
     expect(created).not.toBeNull();
     expect(created?.patch).toContain("-lates");
     expect(created?.patch).not.toContain("legacy");
+  });
+
+  it("uses current document content as baseline when no prior diffs exist", () => {
+    const document = createDocument("Document baseline fallback");
+    const currentSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "current baseline marker" }] }],
+    });
+    const nextSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "next revision marker" }] }],
+    });
+    updateDocumentContent(document.id, currentSnapshot);
+
+    const created = createDiff({
+      documentId: document.id,
+      userId: "u-1",
+      snapshotAfter: nextSnapshot,
+      source: "manual",
+    });
+
+    expect(created).not.toBeNull();
+    expect(created?.patch).toContain("-cur");
   });
 
   it("falls back to default dedup window for malformed dedup values", () => {
