@@ -31,7 +31,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { Id } from "@/convex/_generated/dataModel";
 import { Input } from "@/components/ui/input";
 import { PresenceIndicator } from "@/components/editor/PresenceIndicator";
-import { exportAsHtml, exportAsText } from "@/lib/export";
+import { exportAsHtml, exportAsText, exportAsMarkdown, htmlToMarkdown } from "@/lib/export";
 
 interface ToolbarProps {
   documentId?: Id<"documents">;
@@ -99,6 +99,19 @@ ${liveHtml}
     }
   };
 
+  const handleExportMarkdown = () => {
+    const liveHtml = getEditorHtml?.();
+    if (liveHtml) {
+      const md = htmlToMarkdown(liveHtml);
+      const blob = new Blob([md], { type: "text/markdown" });
+      downloadBlob(blob, `${documentTitle || "document"}.md`);
+    } else if (documentContent) {
+      const md = exportAsMarkdown(documentContent);
+      const blob = new Blob([md], { type: "text/markdown" });
+      downloadBlob(blob, `${documentTitle || "document"}.md`);
+    }
+  };
+
   const handleExportText = () => {
     if (!documentContent) return;
     const text = exportAsText(documentContent);
@@ -162,6 +175,10 @@ ${liveHtml}
                   <DropdownMenuItem onClick={handleExportHtml}>
                     <FileCode className="mr-2 h-4 w-4" />
                     HTML
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportMarkdown}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Markdown
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleExportText}>
                     <FileText className="mr-2 h-4 w-4" />

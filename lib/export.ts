@@ -3,6 +3,8 @@
  * These functions work with ProseMirror JSON content strings.
  */
 
+import TurndownService from "turndown";
+
 /**
  * Export as HTML - renders ProseMirror JSON to basic HTML
  * For a complete rendering, use the Tiptap editor's getHTML() method.
@@ -40,6 +42,54 @@ ${html}
 </html>`;
   } catch {
     return `<html><body><p>Error exporting document</p></body></html>`;
+  }
+}
+
+/**
+ * Export as Markdown - converts ProseMirror JSON → HTML → Markdown via turndown
+ */
+export function exportAsMarkdown(contentJson: string): string {
+  try {
+    const doc = JSON.parse(contentJson);
+    const html = prosemirrorJsonToHtml(doc);
+    const turndownService = new TurndownService({
+      headingStyle: "atx",
+      codeBlockStyle: "fenced",
+      bulletListMarker: "-",
+    });
+    // Add task list support
+    turndownService.addRule("taskListItem", {
+      filter: (node) => {
+        return (
+          node.nodeName === "LI" &&
+          node.getAttribute("data-type") === "taskItem"
+        );
+      },
+      replacement: (_content, node) => {
+        const checked = (node as Element).getAttribute("data-checked") === "true";
+        const text = _content.trim();
+        return `- [${checked ? "x" : " "}] ${text}\n`;
+      },
+    });
+    return turndownService.turndown(html);
+  } catch {
+    return "Error exporting document";
+  }
+}
+
+/**
+ * Export as Markdown from live editor HTML
+ */
+export function htmlToMarkdown(html: string): string {
+  try {
+    const turndownService = new TurndownService({
+      headingStyle: "atx",
+      codeBlockStyle: "fenced",
+      bulletListMarker: "-",
+    });
+    return turndownService.turndown(html);
+  } catch {
+    return "Error converting to markdown";
   }
 }
 
