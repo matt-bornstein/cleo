@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 type CommentInputProps = {
   placeholder?: string;
-  onSubmit: (value: string) => void;
+  onSubmit: unknown;
 };
 
 export function CommentInput({ placeholder, onSubmit }: CommentInputProps) {
@@ -16,6 +16,9 @@ export function CommentInput({ placeholder, onSubmit }: CommentInputProps) {
     event.preventDefault();
     const normalized = value.trim();
     if (!normalized) return;
+    if (typeof onSubmit !== "function") {
+      return;
+    }
     onSubmit(normalized);
     setValue("");
   };

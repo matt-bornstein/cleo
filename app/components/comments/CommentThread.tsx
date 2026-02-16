@@ -62,7 +62,7 @@ export function CommentThread({
         <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2">
           <CommentInput
             placeholder="Reply to comment"
-            onSubmit={(value) => {
+            onSubmit={(value: string) => {
               onReply(comment.id, value);
               setIsReplying(false);
             }}
