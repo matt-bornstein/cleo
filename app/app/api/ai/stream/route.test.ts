@@ -284,4 +284,15 @@ describe("GET /api/ai/stream", () => {
     expect(payload.lockedBy).toBe("alice");
     aiLockManager.release("doc-status-locked", "alice");
   });
+
+  it("trims documentId query before lock status lookup", async () => {
+    aiLockManager.acquire("doc-status-trim", "alice");
+    const response = await GET(
+      new Request("http://localhost/api/ai/stream?documentId=%20doc-status-trim%20"),
+    );
+    const payload = (await response.json()) as { locked: boolean; lockedBy?: string };
+    expect(payload.locked).toBe(true);
+    expect(payload.lockedBy).toBe("alice");
+    aiLockManager.release("doc-status-trim", "alice");
+  });
 });
