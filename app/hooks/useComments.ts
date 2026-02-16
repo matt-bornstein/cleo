@@ -43,6 +43,9 @@ export function useComments(documentId: string, currentUserId?: string) {
 
   const markResolved = useCallback(
     (commentId: string) => {
+      if (!hasValidDocumentId) {
+        return null;
+      }
       const existing = comments.find((comment) => comment.id === commentId);
       const updated = resolveComment(commentId);
       if (updated && (!existing || !existing.resolved)) {
@@ -50,7 +53,7 @@ export function useComments(documentId: string, currentUserId?: string) {
       }
       return updated;
     },
-    [comments, refresh],
+    [comments, hasValidDocumentId, refresh],
   );
 
   const createReply = useCallback(

@@ -97,9 +97,11 @@ describe("useComments", () => {
     act(() => {
       result.current.createComment("Ignored", "Anchor");
       result.current.createReply("parent-1", "Ignored reply");
+      result.current.markResolved("parent-1");
     });
 
     expect(addCommentMock).not.toHaveBeenCalled();
+    expect(resolveCommentMock).not.toHaveBeenCalled();
   });
 
   it("refreshes when marking an unresolved comment as resolved", () => {
