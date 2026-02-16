@@ -1,6 +1,8 @@
 import { aiLockManager } from "@/lib/ai/lock";
 import { DEFAULT_AI_USER_ID } from "@/lib/ai/identity";
 import { GET, POST } from "@/app/api/ai/stream/route";
+import * as aiModels from "@/lib/ai/models";
+import { vi } from "vitest";
 
 function createRequestBody(overrides?: Partial<Record<string, unknown>>) {
   return {
@@ -25,6 +27,10 @@ async function readStream(response: Response) {
 }
 
 describe("POST /api/ai/stream", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("returns bad request for malformed request object payload", async () => {
     const response = await POST({} as unknown as Request);
     expect(response.status).toBe(400);
@@ -86,6 +92,30 @@ describe("POST /api/ai/stream", () => {
       "Keeping the current document unchanged",
     );
     expect(String(doneEvent?.nextContent)).toContain("Initial");
+  });
+
+  it("falls back safely when model config lookup throws at runtime", async () => {
+    vi.spyOn(aiModels, "getModelConfig").mockImplementation(() => {
+      throw new Error("model lookup failed");
+    });
+
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(createRequestBody()),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const events = await readStream(response);
+    const doneEvent = events.find((event) => event.type === "done");
+    expect(doneEvent).toBeDefined();
+    expect(String(doneEvent?.assistantMessage)).toContain(
+      "Keeping the current document unchanged",
+    );
+    expect(events.some((event) => event.type === "error")).toBe(false);
   });
 
   it("returns busy error when lock is already held", async () => {

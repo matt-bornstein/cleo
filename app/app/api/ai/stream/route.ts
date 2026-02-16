@@ -180,8 +180,11 @@ async function callModel(
   prompt: string,
   userPrompt: string,
 ): Promise<string> {
-  const config = getModelConfig(model);
   const fallback = `I reviewed your request: "${userPrompt}". Keeping the current document unchanged in local fallback mode.`;
+  const config = readModelConfigSafely(model);
+  if (!config) {
+    return fallback;
+  }
 
   try {
     if (config.provider === "openai" && process.env.OPENAI_API_KEY) {
@@ -365,5 +368,13 @@ function readRequestUrl(request: unknown) {
     return (request as { url?: unknown }).url;
   } catch {
     return undefined;
+  }
+}
+
+function readModelConfigSafely(model: string) {
+  try {
+    return getModelConfig(model);
+  } catch {
+    return null;
   }
 }
