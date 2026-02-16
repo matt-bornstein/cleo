@@ -84,27 +84,25 @@ function normalizeLockStatus(value: unknown): LockStatus {
     return { locked: false };
   }
 
-  const candidate = value as {
-    locked?: unknown;
-    lockedBy?: unknown;
-    lockedAt?: unknown;
-  };
-  if (candidate.locked !== true) {
+  const locked = readLockPayloadField(value, "locked");
+  if (locked !== true) {
     return { locked: false };
   }
 
+  const lockedBy = readLockPayloadField(value, "lockedBy");
+  const lockedAt = readLockPayloadField(value, "lockedAt");
   const normalizedLockedBy =
-    typeof candidate.lockedBy === "string" &&
-    candidate.lockedBy.trim().length > 0 &&
-    candidate.lockedBy.trim().length <= MAX_USER_ID_LENGTH &&
-    !hasControlChars(candidate.lockedBy.trim())
-      ? candidate.lockedBy.trim()
+    typeof lockedBy === "string" &&
+    lockedBy.trim().length > 0 &&
+    lockedBy.trim().length <= MAX_USER_ID_LENGTH &&
+    !hasControlChars(lockedBy.trim())
+      ? lockedBy.trim()
       : undefined;
   const normalizedLockedAt =
-    typeof candidate.lockedAt === "number" &&
-    Number.isFinite(candidate.lockedAt) &&
-    candidate.lockedAt >= 0
-      ? candidate.lockedAt
+    typeof lockedAt === "number" &&
+    Number.isFinite(lockedAt) &&
+    lockedAt >= 0
+      ? lockedAt
       : undefined;
 
   return {
@@ -161,5 +159,17 @@ function safeClearInterval(intervalId: ReturnType<typeof setInterval>) {
     clearInterval(intervalId);
   } catch {
     return;
+  }
+}
+
+function readLockPayloadField(payload: unknown, key: string) {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (payload as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
   }
 }

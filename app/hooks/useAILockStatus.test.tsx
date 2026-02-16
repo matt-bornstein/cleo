@@ -106,6 +106,65 @@ describe("useAILockStatus", () => {
     vi.unstubAllGlobals();
   });
 
+  it("falls back to unlocked status when lock payload getter throws", async () => {
+    const payloadWithThrowingLock = Object.create(null) as { locked: unknown };
+    Object.defineProperty(payloadWithThrowingLock, "locked", {
+      get() {
+        throw new Error("locked getter failed");
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => payloadWithThrowingLock,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("doc-hook"));
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ locked: false });
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("drops lock owner and lock time when payload getters throw", async () => {
+    const payload = { locked: true } as {
+      locked: boolean;
+      lockedBy: unknown;
+      lockedAt: unknown;
+    };
+    Object.defineProperty(payload, "lockedBy", {
+      get() {
+        throw new Error("lockedBy getter failed");
+      },
+    });
+    Object.defineProperty(payload, "lockedAt", {
+      get() {
+        throw new Error("lockedAt getter failed");
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => payload,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("doc-hook"));
+
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        locked: true,
+        lockedBy: undefined,
+        lockedAt: undefined,
+      });
+    });
+
+    vi.unstubAllGlobals();
+  });
+
   it("falls back to unlocked status when response ok getter throws", async () => {
     const response = Object.create(null) as { ok: unknown; json: () => Promise<unknown> };
     Object.defineProperty(response, "ok", {
