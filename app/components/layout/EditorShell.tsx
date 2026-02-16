@@ -17,6 +17,7 @@ import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
 import { ensureCreatedDiff, restoreVersion, triggerIdleSave } from "@/lib/diffs/store";
 import { useComments } from "@/hooks/useComments";
 import { useIdleSave } from "@/hooks/useIdleSave";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDocuments } from "@/hooks/useDocuments";
 import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
@@ -38,6 +39,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [saveStateLabel, setSaveStateLabel] = useState("Saved");
   const { settings, refreshSettings } = useSettings();
+  const isOnline = useOnlineStatus();
   const { others, updateMyPresence } = usePresence(documentId);
   const { comments, createComment, createReply, markResolved } = useComments(documentId);
 
@@ -114,6 +116,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onSettings={() => setSettingsModalOpen(true)}
         canShare={canShare}
       />
+      {!isOnline ? (
+        <div className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-xs font-medium text-amber-900">
+          You are offline. Reconnect to sync collaboration and AI features.
+        </div>
+      ) : null}
       <EditorLayout
         editorPanel={
           <div className="flex h-full">

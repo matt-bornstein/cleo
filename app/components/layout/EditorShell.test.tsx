@@ -22,6 +22,10 @@ describe("EditorShell", () => {
     pushMock.mockReset();
     resetDocumentsForTests();
     window.localStorage.clear();
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get: () => true,
+    });
   });
 
   it("renders toolbar and split panel with document title", () => {
@@ -95,5 +99,17 @@ describe("EditorShell", () => {
     expect(screen.getByText("Read-only mode. You have view/comment access only.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share" })).toBeDisabled();
     expect(screen.getByText("AI edits are disabled for your current role.")).toBeInTheDocument();
+  });
+
+  it("shows offline banner when browser is offline", () => {
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get: () => false,
+    });
+    const document = createDocument("Offline Doc");
+    render(<EditorShell documentId={document.id} />);
+    expect(
+      screen.getByText("You are offline. Reconnect to sync collaboration and AI features."),
+    ).toBeInTheDocument();
   });
 });
