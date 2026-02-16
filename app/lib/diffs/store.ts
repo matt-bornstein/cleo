@@ -40,8 +40,8 @@ function loadState(): DiffStoreState {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return { diffs: [] };
   try {
-    const parsed = JSON.parse(raw) as DiffStoreState;
-    if (!parsed.diffs) {
+    const parsed = JSON.parse(raw) as { diffs?: unknown };
+    if (!Array.isArray(parsed.diffs)) {
       return { diffs: [] };
     }
 

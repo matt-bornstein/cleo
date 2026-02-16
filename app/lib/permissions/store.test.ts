@@ -174,6 +174,7 @@ describe("permissions store", () => {
             email: "user@example.com",
             role: "admin",
           },
+          null,
           {
             id: " duplicate ",
             documentId: "doc-valid",
@@ -192,6 +193,15 @@ describe("permissions store", () => {
         role: "viewer",
       },
     ]);
+  });
+
+  it("returns empty when persisted permissions container is non-array", () => {
+    window.localStorage.setItem(
+      "plan00.permissions.v1",
+      JSON.stringify({ permissions: { id: "not-array" } }),
+    );
+
+    expect(listPermissions("doc-valid")).toEqual([]);
   });
 
   it("uses stable id tie-breaker for duplicate persisted roles", () => {

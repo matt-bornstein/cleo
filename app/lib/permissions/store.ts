@@ -37,20 +37,26 @@ function loadState(): PermissionState {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return { permissions: [] };
   try {
-    const parsed = JSON.parse(raw) as PermissionState;
-    if (!parsed.permissions) {
+    const parsed = JSON.parse(raw) as { permissions?: unknown };
+    if (!Array.isArray(parsed.permissions)) {
       return { permissions: [] };
     }
 
     const sanitizedPermissions = parsed.permissions.flatMap((entry) => {
-        const normalizedDocumentId = normalizeDocumentId(entry.documentId);
-        const normalizedEmail = normalizeEmailOrUndefined(entry.email);
-        const normalizedPermissionId = normalizePermissionId(entry.id);
+        if (!entry || typeof entry !== "object") {
+          return [];
+        }
+
+        const candidate = entry as Partial<PermissionEntry>;
+        const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+        const normalizedEmail = normalizeEmailOrUndefined(candidate.email);
+        const normalizedPermissionId = normalizePermissionId(candidate.id);
+        const normalizedRole = normalizePermissionRole(candidate.role);
         if (
           !isValidDocumentId(normalizedDocumentId) ||
           !normalizedEmail ||
           !isValidEmail(normalizedEmail) ||
-          !ALLOWED_ROLES.has(entry.role) ||
+          !normalizedRole ||
           !normalizedPermissionId
         ) {
           return [];
@@ -61,7 +67,7 @@ function loadState(): PermissionState {
             id: normalizedPermissionId,
             documentId: normalizedDocumentId,
             email: normalizedEmail,
-            role: entry.role,
+            role: normalizedRole,
           },
         ];
       });
@@ -246,4 +252,13 @@ function normalizePermissionId(value: unknown) {
   }
 
   return normalizedValue;
+}
+
+function normalizePermissionRole(value: unknown): Role | undefined {
+  return value === "owner" ||
+    value === "editor" ||
+    value === "commenter" ||
+    value === "viewer"
+    ? value
+    : undefined;
 }

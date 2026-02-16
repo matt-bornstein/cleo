@@ -274,6 +274,15 @@ describe("document store", () => {
     expect(documents[0].updatedAt).toBeGreaterThanOrEqual(documents[0].createdAt);
   });
 
+  it("returns empty when persisted documents container is non-array", () => {
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({ documents: { id: "not-array" } }),
+    );
+
+    expect(listDocuments()).toEqual([]);
+  });
+
   it("gets a document by id", () => {
     const created = createDocument("Roadmap");
 

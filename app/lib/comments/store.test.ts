@@ -396,6 +396,15 @@ describe("comments store", () => {
     );
   });
 
+  it("returns empty when persisted comments container is non-array", () => {
+    window.localStorage.setItem(
+      "plan00.comments.v1",
+      JSON.stringify({ comments: { id: "not-array" } }),
+    );
+
+    expect(listComments("doc-legacy")).toEqual([]);
+  });
+
   it("normalizes malformed anchor ranges in persisted comments", () => {
     window.localStorage.setItem(
       "plan00.comments.v1",

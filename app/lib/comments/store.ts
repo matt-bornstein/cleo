@@ -25,8 +25,8 @@ function loadState(): CommentState {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return { comments: [] };
   try {
-    const parsed = JSON.parse(raw) as CommentState;
-    if (!parsed.comments) {
+    const parsed = JSON.parse(raw) as { comments?: unknown };
+    if (!Array.isArray(parsed.comments)) {
       return { comments: [] };
     }
 

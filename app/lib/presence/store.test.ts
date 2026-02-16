@@ -180,6 +180,15 @@ describe("presence store", () => {
     );
   });
 
+  it("returns empty when persisted presence container is non-array", () => {
+    window.localStorage.setItem(
+      "plan00.presence.v1",
+      JSON.stringify({ presence: { id: "not-array" } }),
+    );
+
+    expect(listPresence("doc-valid")).toEqual([]);
+  });
+
   it("returns document presence ordered by latest update timestamp", () => {
     window.localStorage.setItem(
       "plan00.presence.v1",

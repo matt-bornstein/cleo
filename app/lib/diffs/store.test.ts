@@ -509,6 +509,15 @@ describe("diff store triggerIdleSave", () => {
     );
   });
 
+  it("returns empty when persisted diffs container is non-array", () => {
+    window.localStorage.setItem(
+      "plan00.diffs.v1",
+      JSON.stringify({ diffs: { id: "not-array" } }),
+    );
+
+    expect(listDiffsByDocument("doc-legacy")).toEqual([]);
+  });
+
   it("uses deterministic id tie-breaker for same-timestamp diffs", () => {
     window.localStorage.setItem(
       "plan00.diffs.v1",

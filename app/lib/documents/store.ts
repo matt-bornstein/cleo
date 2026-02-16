@@ -38,8 +38,8 @@ function loadState(): DocumentStoreState {
   }
 
   try {
-    const parsed = JSON.parse(raw) as DocumentStoreState;
-    if (!parsed.documents) {
+    const parsed = JSON.parse(raw) as { documents?: unknown };
+    if (!Array.isArray(parsed.documents)) {
       return { documents: [] };
     }
 

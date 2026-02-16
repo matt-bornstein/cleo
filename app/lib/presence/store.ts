@@ -22,8 +22,8 @@ function loadState(): PresenceState {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return { presence: [] };
   try {
-    const parsed = JSON.parse(raw) as PresenceState;
-    if (!parsed.presence) {
+    const parsed = JSON.parse(raw) as { presence?: unknown };
+    if (!Array.isArray(parsed.presence)) {
       return { presence: [] };
     }
 
