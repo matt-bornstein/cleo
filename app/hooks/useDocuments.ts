@@ -14,11 +14,16 @@ import {
 import { hasDocumentAccess } from "@/lib/permissions/store";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
+import { normalizeEmailOrFallback } from "@/lib/user/email";
 
 export function useDocuments(
   search?: string,
   currentUserEmail = DEFAULT_LOCAL_USER_EMAIL,
 ) {
+  const normalizedCurrentUserEmail = normalizeEmailOrFallback(
+    currentUserEmail,
+    DEFAULT_LOCAL_USER_EMAIL,
+  );
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   const refresh = useCallback(() => {
@@ -28,9 +33,13 @@ export function useDocuments(
   const documents = useMemo(() => {
     void refreshCounter;
     return listDocuments(search).filter((document) =>
-      hasDocumentAccess(document.id, currentUserEmail, document.ownerEmail),
+      hasDocumentAccess(
+        document.id,
+        normalizedCurrentUserEmail,
+        document.ownerEmail,
+      ),
     );
-  }, [currentUserEmail, refreshCounter, search]);
+  }, [normalizedCurrentUserEmail, refreshCounter, search]);
 
   const create = useCallback(
     (title: string, ownerEmail?: string) => {

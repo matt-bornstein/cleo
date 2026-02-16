@@ -78,6 +78,28 @@ describe("useDocuments", () => {
     expect(result.current.documents[0]?.id).toBe("doc-allowed");
   });
 
+  it("normalizes malformed current user email before access checks", () => {
+    listDocumentsMock.mockReturnValue([
+      {
+        id: "doc-allowed",
+        title: "Allowed",
+        content: "{}",
+        ownerEmail: "owner@example.com",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]);
+    hasDocumentAccessMock.mockReturnValue(true);
+
+    renderHook(() => useDocuments(undefined, "bad\nemail"));
+
+    expect(hasDocumentAccessMock).toHaveBeenCalledWith(
+      "doc-allowed",
+      "me@local.dev",
+      "owner@example.com",
+    );
+  });
+
   it("refreshes list only when updates or removals succeed", () => {
     const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
     expect(listDocumentsMock).toHaveBeenCalledTimes(1);
