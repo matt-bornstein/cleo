@@ -121,6 +121,31 @@ describe("POST /api/ai/stream", () => {
     const payload = (await response.json()) as { error: string };
     expect(payload.error).toBe("Invalid request payload");
   });
+
+  it("normalizes trimmed fields before lock lookup", async () => {
+    aiLockManager.acquire("doc-trim", "alice");
+
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": "bob",
+      },
+      body: JSON.stringify(
+        createRequestBody({
+          documentId: "  doc-trim  ",
+          model: "  gpt-4o  ",
+          prompt: "  add summary  ",
+        }),
+      ),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(409);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toContain("alice");
+    aiLockManager.release("doc-trim", "alice");
+  });
 });
 
 describe("GET /api/ai/stream", () => {

@@ -43,11 +43,15 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
   }
 
   const rawMessages = candidate.messages;
+  const documentId = candidate.documentId.trim();
+  const model = candidate.model.trim();
+  const prompt = candidate.prompt.trim();
+
   if (rawMessages === undefined) {
     return {
-      documentId: candidate.documentId,
-      model: candidate.model,
-      prompt: candidate.prompt,
+      documentId,
+      model,
+      prompt,
       documentContent: candidate.documentContent,
       messages: [],
     };
@@ -72,9 +76,9 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
   if (messages.some((message) => message === null)) return null;
 
   return {
-    documentId: candidate.documentId,
-    model: candidate.model,
-    prompt: candidate.prompt,
+    documentId,
+    model,
+    prompt,
     documentContent: candidate.documentContent,
     messages: messages as StreamRequestPayload["messages"],
   };
