@@ -7,6 +7,7 @@ type AnyCtx = {
     delete: (...args: unknown[]) => Promise<unknown>;
     get: (...args: unknown[]) => Promise<unknown>;
     query: (...args: unknown[]) => {
+      collect: () => Promise<unknown[]>;
       withIndex: (...indexArgs: unknown[]) => {
         collect: () => Promise<unknown[]>;
         unique: () => Promise<unknown>;

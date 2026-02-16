@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AIPanel } from "@/components/ai/AIPanel";
+import { CommentsSidebar } from "@/components/comments/CommentsSidebar";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { EditorLayout } from "@/components/layout/EditorLayout";
 import { Toolbar } from "@/components/layout/Toolbar";
@@ -12,8 +13,10 @@ import { OpenDocModal } from "@/components/modals/OpenDocModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { triggerIdleSave } from "@/lib/diffs/store";
+import { useComments } from "@/hooks/useComments";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { useDocuments } from "@/hooks/useDocuments";
+import { usePresence } from "@/hooks/usePresence";
 
 type EditorShellProps = {
   documentId: string;
@@ -27,6 +30,8 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [saveStateLabel, setSaveStateLabel] = useState("Saved");
+  const { others, updateMyPresence } = usePresence(documentId);
+  const { comments, createComment, markResolved } = useComments(documentId);
 
   const currentDocument = getById(documentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
@@ -64,19 +69,35 @@ export function EditorShell({ documentId }: EditorShellProps) {
       />
       <EditorLayout
         editorPanel={
-          <EditorPanel
-            key={documentId}
-            title={documentTitle}
-            content={content}
-            saveStateLabel={saveStateLabel}
-            onContentChange={(nextContent) => {
-              updateContent(documentId, nextContent);
-            }}
-            onLocalUpdate={() => {
-              setSaveStateLabel("Saving...");
-              scheduleIdleSave();
-            }}
-          />
+          <div className="flex h-full">
+            <div className="flex-1">
+              <EditorPanel
+                key={documentId}
+                title={documentTitle}
+                content={content}
+                otherPresence={others}
+                saveStateLabel={saveStateLabel}
+                onContentChange={(nextContent) => {
+                  updateContent(documentId, nextContent);
+                }}
+                onLocalUpdate={() => {
+                  setSaveStateLabel("Saving...");
+                  updateMyPresence({
+                    name: "You",
+                    color: "#3b82f6",
+                  });
+                  scheduleIdleSave();
+                }}
+              />
+            </div>
+            <CommentsSidebar
+              comments={comments}
+              onCreateComment={(commentText) =>
+                createComment(commentText, "Document selection")
+              }
+              onResolveComment={markResolved}
+            />
+          </div>
         }
         aiPanel={
           <AIPanel
@@ -103,7 +124,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
         documents={documents}
         onOpenDocument={(nextDocumentId) => router.push(`/editor/${nextDocumentId}`)}
       />
-      <ShareModal open={shareModalOpen} onOpenChange={setShareModalOpen} />
+      <ShareModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        documentId={documentId}
+      />
       <SettingsModal open={settingsModalOpen} onOpenChange={setSettingsModalOpen} />
     </div>
   );
