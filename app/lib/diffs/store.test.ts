@@ -278,4 +278,37 @@ describe("diff store triggerIdleSave", () => {
       }),
     );
   });
+
+  it("uses deterministic id tie-breaker for same-timestamp diffs", () => {
+    window.localStorage.setItem(
+      "plan00.diffs.v1",
+      JSON.stringify({
+        diffs: [
+          {
+            id: "diff-b",
+            documentId: "doc-order",
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+text",
+            snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            source: "manual",
+            createdAt: 10,
+          },
+          {
+            id: "diff-a",
+            documentId: "doc-order",
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+text",
+            snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            source: "manual",
+            createdAt: 10,
+          },
+        ],
+      }),
+    );
+
+    expect(listDiffsByDocument("doc-order").map((diff) => diff.id)).toEqual([
+      "diff-a",
+      "diff-b",
+    ]);
+  });
 });

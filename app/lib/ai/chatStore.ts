@@ -69,7 +69,11 @@ export function listMessagesByDocument(documentId: string, chatClearedAt?: numbe
   return state.messages
     .filter((message) => message.documentId === normalizedDocumentId)
     .filter((message) => message.createdAt >= clearedAt)
-    .sort((a, b) => a.createdAt - b.createdAt);
+    .sort((a, b) =>
+      a.createdAt === b.createdAt
+        ? a.id.localeCompare(b.id)
+        : a.createdAt - b.createdAt,
+    );
 }
 
 export function saveMessage(message: AIMessage) {

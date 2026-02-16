@@ -159,7 +159,11 @@ export function listDiffsByDocument(documentId: string) {
 
   return loadState()
     .diffs.filter((diff) => diff.documentId === normalizedDocumentId)
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .sort((a, b) =>
+      b.createdAt === a.createdAt
+        ? a.id.localeCompare(b.id)
+        : b.createdAt - a.createdAt,
+    );
 }
 
 export function ensureCreatedDiff(params: {

@@ -70,6 +70,30 @@ describe("ai chat store", () => {
     expect(visible[0].id).toBe("m-nan");
   });
 
+  it("uses deterministic id tie-breaker for same-timestamp messages", () => {
+    saveMessage({
+      id: "m-b",
+      documentId: "doc-sort",
+      userId: "u-1",
+      role: "assistant",
+      content: "Second",
+      createdAt: 100,
+    });
+    saveMessage({
+      id: "m-a",
+      documentId: "doc-sort",
+      userId: "u-1",
+      role: "assistant",
+      content: "First",
+      createdAt: 100,
+    });
+
+    expect(listMessagesByDocument("doc-sort").map((message) => message.id)).toEqual([
+      "m-a",
+      "m-b",
+    ]);
+  });
+
   it("normalizes document ids and rejects invalid document ids", () => {
     const saved = saveMessage({
       id: "m-5",
