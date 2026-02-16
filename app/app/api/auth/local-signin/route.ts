@@ -4,8 +4,12 @@ import { sanitizeNextPath } from "@/lib/auth/nextPath";
 import { LOCAL_AUTH_COOKIE } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
-  const payload = (await request.json().catch(() => ({}))) as { next?: string };
-  const nextPath = sanitizeNextPath(payload.next);
+  const payload = (await request.json().catch(() => ({}))) as unknown;
+  const nextPath = sanitizeNextPath(
+    typeof payload === "object" && payload !== null && "next" in payload
+      ? (payload as { next?: unknown }).next
+      : undefined,
+  );
 
   const response = NextResponse.json({ ok: true, next: nextPath });
   response.cookies.set(LOCAL_AUTH_COOKIE, "1", {

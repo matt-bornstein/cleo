@@ -46,4 +46,18 @@ describe("POST /api/auth/local-signin", () => {
     const payload = (await response.json()) as { next: string };
     expect(payload.next).toBe("/editor");
   });
+
+  it("falls back to /editor for non-string next payload values", async () => {
+    const request = new Request("http://localhost/api/auth/local-signin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ next: { path: "/editor/abc" } }),
+    });
+
+    const response = await POST(request);
+    const payload = (await response.json()) as { next: string };
+    expect(payload.next).toBe("/editor");
+  });
 });

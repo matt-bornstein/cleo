@@ -9,6 +9,8 @@ describe("sanitizeNextPath", () => {
     expect(sanitizeNextPath("/sign-in")).toBe("/editor");
     expect(sanitizeNextPath("/editorial")).toBe("/editor");
     expect(sanitizeNextPath("   ")).toBe("/editor");
+    expect(sanitizeNextPath(123)).toBe("/editor");
+    expect(sanitizeNextPath({ next: "/editor/doc-1" })).toBe("/editor");
   });
 
   it("preserves valid relative app paths", () => {

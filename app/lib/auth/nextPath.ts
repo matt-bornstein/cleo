@@ -1,5 +1,7 @@
-export function sanitizeNextPath(rawNextPath: string | null | undefined) {
-  const normalizedNextPath = rawNextPath?.trim();
+export function sanitizeNextPath(rawNextPath: unknown) {
+  if (typeof rawNextPath !== "string") return "/editor";
+
+  const normalizedNextPath = rawNextPath.trim();
   if (!normalizedNextPath) return "/editor";
   if (!normalizedNextPath.startsWith("/")) return "/editor";
   if (normalizedNextPath.startsWith("//")) return "/editor";
