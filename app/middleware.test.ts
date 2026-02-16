@@ -4,11 +4,13 @@ import { middleware } from "@/middleware";
 
 describe("middleware auth guard", () => {
   it("redirects unauthenticated editor requests to sign-in", () => {
-    const request = new NextRequest("http://localhost/editor/doc-1");
+    const request = new NextRequest("http://localhost/editor/doc-1?from=share");
     const response = middleware(request);
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/sign-in?next=%2Feditor%2Fdoc-1");
+    expect(response.headers.get("location")).toContain(
+      "/sign-in?next=%2Feditor%2Fdoc-1%3Ffrom%3Dshare",
+    );
   });
 
   it("allows authenticated editor requests", () => {
