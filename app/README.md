@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI-Powered Collaborative Rich Text Editor
 
-## Getting Started
+This app implements the section-11 phased plan from `plan00.md` using:
 
-First, run the development server:
+- **Next.js 16** + App Router + React 19
+- **Tiptap** rich text editing
+- **Convex** backend scaffolding (schema, functions, auth wiring)
+- **Local fallback stores** for development without Convex deployment
+- **AI providers** via OpenAI / Anthropic / Gemini SDKs
+
+## Implemented feature set
+
+### Foundation
+- Toolbar + split editor/AI layout
+- New/Open/Share/Settings modals
+- Document routes (`/editor`, `/editor/[documentId]`, `/sign-in`)
+
+### Editor
+- Tiptap editor with formatting toolbar
+- Idle-save hook (5s) + deduplicated diff snapshots
+- Version snapshots and restore flows
+
+### AI Assistant
+- Streaming AI chat panel
+- Model selector
+- AI lock handling in streaming route
+- HTML edit parsing (search/replace + full HTML fallback)
+- AI diff tagging (`Changes applied`) and clear-chat support
+
+### Collaboration
+- Presence + comments + permissions data flow
+- Threaded comment replies
+- Convex prosemirror-sync scaffolding
+
+### Polish
+- Version history modal with restore
+- Export modal (Markdown, HTML, PDF print)
+- Settings persistence (theme/model/font size/line spacing)
+- Keyboard shortcuts (`Ctrl/Cmd+N`, `Ctrl/Cmd+O`, `Ctrl/Cmd+H`)
+- Responsive AI drawer for small screens
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run validation:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test
+npm run typecheck
+npm run lint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment variables
 
-## Learn More
+Create `.env.local` in `app/` if needed:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+NEXT_PUBLIC_CONVEX_URL=<convex-deployment-url>
+OPENAI_API_KEY=<optional>
+ANTHROPIC_API_KEY=<optional>
+GEMINI_API_KEY=<optional>
+AUTH_GOOGLE_ID=<optional>
+AUTH_GOOGLE_SECRET=<optional>
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+If `NEXT_PUBLIC_CONVEX_URL` is missing, the app runs in local fallback mode using browser storage.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Current known limitation
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Convex CLI deployment/codegen could not be fully initialized in this terminal environment due non-interactive login constraints. The codebase includes Convex schema/function scaffolding and local fallback implementations so development and tests remain functional.
