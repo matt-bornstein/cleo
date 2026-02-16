@@ -177,6 +177,16 @@ describe("comments store", () => {
     expect(comment?.parentCommentId).toBe(parent!.id);
   });
 
+  it("rejects comment creation with disallowed control characters in content", () => {
+    const comment = addComment({
+      documentId: "doc-control-content",
+      content: `bad${"\u0000"}content`,
+      anchorText: "Anchor",
+    });
+
+    expect(comment).toBeNull();
+  });
+
   it("drops malformed parent comment references", () => {
     const comment = addComment({
       documentId: "doc-6",
@@ -275,6 +285,18 @@ describe("comments store", () => {
             documentId: "doc-\ninvalid",
             userId: "user-3",
             content: "Bad doc",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: 4,
+            updatedAt: 4,
+          },
+          {
+            id: "bad-control-content",
+            documentId: "doc-legacy",
+            userId: "user-3",
+            content: `bad${"\u0000"}content`,
             anchorFrom: 0,
             anchorTo: 0,
             anchorText: "Anchor",

@@ -5,6 +5,7 @@ import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.comments.v1";
+const DISALLOWED_COMMENT_CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 type CommentState = {
   comments: CommentRecord[];
@@ -54,6 +55,7 @@ function loadState(): CommentState {
         !normalizedCommentId ||
         !isValidDocumentId(normalizedDocumentId) ||
         !normalizedContent ||
+        DISALLOWED_COMMENT_CONTROL_CHARS_REGEX.test(normalizedContent) ||
         typeof comment.createdAt !== "number" ||
         !Number.isFinite(comment.createdAt) ||
         comment.createdAt < 0 ||
@@ -172,7 +174,10 @@ export function addComment(params: {
     return null;
   }
   const normalizedContent = params.content.trim();
-  if (!normalizedContent) {
+  if (
+    !normalizedContent ||
+    DISALLOWED_COMMENT_CONTROL_CHARS_REGEX.test(normalizedContent)
+  ) {
     return null;
   }
   const normalizedAnchorText = normalizeAnchorText(params.anchorText);
