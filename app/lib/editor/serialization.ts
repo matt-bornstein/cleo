@@ -4,6 +4,12 @@ type JSONContent = {
   content?: JSONContent[];
 };
 
+const EMPTY_DOCUMENT_HTML = "<p></p>";
+const EMPTY_DOCUMENT_JSON = JSON.stringify({
+  type: "doc",
+  content: [{ type: "paragraph", content: [] }],
+});
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -40,14 +46,27 @@ function nodeToHtml(node: JSONContent): string {
 
 export function prosemirrorJsonToHtml(content: string) {
   try {
-    const parsed = JSON.parse(content) as JSONContent;
-    return nodeToHtml(parsed);
+    if (typeof content !== "string") {
+      return EMPTY_DOCUMENT_HTML;
+    }
+
+    const parsed = JSON.parse(content) as unknown;
+    if (!parsed || typeof parsed !== "object") {
+      return EMPTY_DOCUMENT_HTML;
+    }
+
+    const html = nodeToHtml(parsed as JSONContent);
+    return html || EMPTY_DOCUMENT_HTML;
   } catch {
-    return "<p></p>";
+    return EMPTY_DOCUMENT_HTML;
   }
 }
 
 export function htmlToProsemirrorJson(html: string) {
+  if (typeof html !== "string") {
+    return EMPTY_DOCUMENT_JSON;
+  }
+
   const paragraphMatches = [...html.matchAll(/<p>([\s\S]*?)<\/p>/gi)];
   const paragraphs = paragraphMatches.length > 0 ? paragraphMatches : [[html, html]];
 
