@@ -24,13 +24,13 @@ import {
   CodeSquare,
   Minus,
   Link,
-  Image,
   Table,
   Undo,
   Redo,
 } from "lucide-react";
 
 import { CommentButton } from "./CommentButton";
+import { ImageUploadButton } from "./ImageUploadButton";
 import { Id } from "@/convex/_generated/dataModel";
 
 interface FormattingToolbarProps {
@@ -87,12 +87,7 @@ export function FormattingToolbar({ editor, documentId }: FormattingToolbarProps
     }
   };
 
-  const addImage = () => {
-    const url = window.prompt("Enter image URL:");
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-  };
+  // Image upload is handled by ImageUploadButton component
 
   const addTable = () => {
     editor
@@ -229,11 +224,7 @@ export function FormattingToolbar({ editor, documentId }: FormattingToolbarProps
         icon={<Link className="h-4 w-4" />}
         tooltip="Insert Link"
       />
-      <ToolbarButton
-        onClick={addImage}
-        icon={<Image className="h-4 w-4" />}
-        tooltip="Insert Image"
-      />
+      <ImageUploadButton editor={editor} />
       <ToolbarButton
         onClick={addTable}
         icon={<Table className="h-4 w-4" />}

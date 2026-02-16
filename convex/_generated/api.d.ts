@@ -22,6 +22,7 @@ import type * as permissions from "../permissions.js";
 import type * as presence from "../presence.js";
 import type * as prosemirrorSync from "../prosemirrorSync.js";
 import type * as settings from "../settings.js";
+import type * as storage from "../storage.js";
 import type * as users from "../users.js";
 
 import type {
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   presence: typeof presence;
   prosemirrorSync: typeof prosemirrorSync;
   settings: typeof settings;
+  storage: typeof storage;
   users: typeof users;
 }>;
 
