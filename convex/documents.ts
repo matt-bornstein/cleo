@@ -1,0 +1,219 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
+
+const EMPTY_DOC = JSON.stringify({
+  type: "doc",
+  content: [{ type: "paragraph" }],
+});
+
+export const create = mutation({
+  args: {
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const now = Date.now();
+    const documentId = await ctx.db.insert("documents", {
+      title: args.title,
+      content: EMPTY_DOC,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create owner permission
+    await ctx.db.insert("permissions", {
+      documentId,
+      userId,
+      role: "owner",
+    });
+
+    // Create initial diff record
+    await ctx.db.insert("diffs", {
+      documentId,
+      userId,
+      patch: "",
+      snapshotAfter: EMPTY_DOC,
+      source: "created",
+      createdAt: now,
+    });
+
+    return documentId;
+  },
+});
+
+export const get = query({
+  args: { id: v.id("documents") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const doc = await ctx.db.get(args.id);
+    if (!doc) return null;
+
+    // Check permission
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.id).eq("userId", userId)
+      )
+      .first();
+
+    if (!permission) return null;
+
+    return { ...doc, myRole: permission.role };
+  },
+});
+
+export const list = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+
+    const permissions = await ctx.db
+      .query("permissions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const docs = await Promise.all(
+      permissions.map(async (perm) => {
+        const doc = await ctx.db.get(perm.documentId);
+        if (!doc) return null;
+        return {
+          _id: doc._id,
+          title: doc.title,
+          updatedAt: doc.updatedAt,
+          createdAt: doc.createdAt,
+          role: perm.role,
+        };
+      })
+    );
+
+    return docs
+      .filter((d): d is NonNullable<typeof d> => d !== null)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
+export const updateTitle = mutation({
+  args: {
+    id: v.id("documents"),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.id).eq("userId", userId)
+      )
+      .first();
+
+    if (!permission || (permission.role !== "owner" && permission.role !== "editor")) {
+      throw new Error("Not authorized");
+    }
+
+    await ctx.db.patch(args.id, {
+      title: args.title,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const updateContent = mutation({
+  args: {
+    id: v.id("documents"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.id).eq("userId", userId)
+      )
+      .first();
+
+    if (!permission || (permission.role !== "owner" && permission.role !== "editor")) {
+      throw new Error("Not authorized");
+    }
+
+    await ctx.db.patch(args.id, {
+      content: args.content,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("documents") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.id).eq("userId", userId)
+      )
+      .first();
+
+    if (!permission || permission.role !== "owner") {
+      throw new Error("Only owner can delete");
+    }
+
+    // Delete all permissions
+    const allPerms = await ctx.db
+      .query("permissions")
+      .withIndex("by_document", (q) => q.eq("documentId", args.id))
+      .collect();
+    for (const perm of allPerms) {
+      await ctx.db.delete(perm._id);
+    }
+
+    // Delete all diffs
+    const allDiffs = await ctx.db
+      .query("diffs")
+      .withIndex("by_document", (q) => q.eq("documentId", args.id))
+      .collect();
+    for (const diff of allDiffs) {
+      await ctx.db.delete(diff._id);
+    }
+
+    // Delete all comments
+    const allComments = await ctx.db
+      .query("comments")
+      .withIndex("by_document", (q) => q.eq("documentId", args.id))
+      .collect();
+    for (const comment of allComments) {
+      await ctx.db.delete(comment._id);
+    }
+
+    // Delete all AI messages
+    const allMessages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_document", (q) => q.eq("documentId", args.id))
+      .collect();
+    for (const msg of allMessages) {
+      await ctx.db.delete(msg._id);
+    }
+
+    // Delete all presence
+    const allPresence = await ctx.db
+      .query("presence")
+      .withIndex("by_document", (q) => q.eq("documentId", args.id))
+      .collect();
+    for (const p of allPresence) {
+      await ctx.db.delete(p._id);
+    }
+
+    await ctx.db.delete(args.id);
+  },
+});
