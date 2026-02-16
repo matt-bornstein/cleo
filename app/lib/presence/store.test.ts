@@ -52,6 +52,22 @@ describe("presence store", () => {
     nowSpy.mockRestore();
   });
 
+  it("falls back to zero updatedAt when Date.now throws", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+    const updated = updatePresence({
+      documentId: "doc-presence-throw",
+      visitorId: "visitor-throw",
+      userId: "user-1",
+      data: {},
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated?.updatedAt).toBe(0);
+    nowSpy.mockRestore();
+  });
+
   it("keeps updatedAt monotonic when clocks move backwards", () => {
     const first = updatePresence({
       documentId: "doc-clock",

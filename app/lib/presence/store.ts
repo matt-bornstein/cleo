@@ -126,7 +126,7 @@ export function updatePresence(record: unknown) {
   }
 
   const state = loadState();
-  const now = Math.max(0, Date.now());
+  const now = safeNow();
   const existingIndex = state.presence.findIndex(
     (entry) => entry.visitorId === normalizedVisitorId,
   );
@@ -258,5 +258,13 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
   }
 }
