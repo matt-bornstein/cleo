@@ -209,6 +209,20 @@ describe("EditorShell", () => {
     expect(screen.getAllByText("Malformed runtime payloads").length).toBeGreaterThan(0);
   });
 
+  it("does not throw when search params get getter throws", () => {
+    const document = createDocument("Search param getter trap");
+    const malformedSearchParams = Object.create(null) as { get: unknown };
+    Object.defineProperty(malformedSearchParams, "get", {
+      get() {
+        throw new Error("get getter failed");
+      },
+    });
+    mockedSearchParams = malformedSearchParams;
+
+    expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
+    expect(screen.getAllByText("Search param getter trap").length).toBeGreaterThan(0);
+  });
+
   it("does not throw when permission lookups throw", () => {
     const document = createDocument("Permission lookup failures");
     vi.spyOn(permissionsStore, "getRoleForUser").mockImplementation(() => {
@@ -234,6 +248,66 @@ describe("EditorShell", () => {
 
     expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
     expect(screen.getByText("Applying shared access permissions...")).toBeInTheDocument();
+  });
+
+  it("does not throw when router push getter throws from access-required action", async () => {
+    const user = userEvent.setup();
+    saveSettings({
+      userEmail: "outsider@example.com",
+    });
+    const document = createDocument("Push getter trap");
+    const malformedRouter = Object.create(null) as { push: unknown };
+    Object.defineProperty(malformedRouter, "push", {
+      get() {
+        throw new Error("push getter failed");
+      },
+    });
+    mockedRouter = malformedRouter;
+
+    render(<EditorShell documentId={document.id} />);
+    await expect(
+      user.click(screen.getByRole("button", { name: "Return to document list" })),
+    ).resolves.toBeUndefined();
+  });
+
+  it("does not throw when router replace getter throws during share cleanup", () => {
+    mockedSearchParams = new URLSearchParams("share=commenter");
+    const document = createDocument("Replace getter trap");
+    const malformedRouter = Object.create(null) as { replace: unknown };
+    Object.defineProperty(malformedRouter, "replace", {
+      get() {
+        throw new Error("replace getter failed");
+      },
+    });
+    mockedRouter = malformedRouter;
+
+    expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
+    expect(screen.getAllByText("Replace getter trap").length).toBeGreaterThan(0);
+  });
+
+  it("does not throw when router refresh getter throws during sign out", async () => {
+    const user = userEvent.setup();
+    const document = createDocument("Refresh getter trap");
+    const malformedRouter = Object.create(null) as {
+      push: (path: string) => void;
+      refresh: unknown;
+    };
+    Object.defineProperty(malformedRouter, "push", {
+      value: pushMock,
+    });
+    Object.defineProperty(malformedRouter, "refresh", {
+      get() {
+        throw new Error("refresh getter failed");
+      },
+    });
+    mockedRouter = malformedRouter;
+
+    render(<EditorShell documentId={document.id} />);
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    await expect(
+      user.click(screen.getByRole("button", { name: "Sign out" })),
+    ).resolves.toBeUndefined();
+    expect(pushMock).toHaveBeenCalledWith("/sign-in");
   });
 
   it("does not throw when diff creation throws for new documents", async () => {

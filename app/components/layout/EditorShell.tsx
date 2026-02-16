@@ -370,17 +370,17 @@ export function EditorShell({ documentId }: EditorShellProps) {
 }
 
 function readSearchParam(searchParams: unknown, key: string) {
-  if (
-    !searchParams ||
-    typeof searchParams !== "object" ||
-    !("get" in searchParams) ||
-    typeof (searchParams as { get?: unknown }).get !== "function"
-  ) {
+  if (!searchParams || typeof searchParams !== "object") {
+    return null;
+  }
+
+  const getFn = readSearchParamsGetFunction(searchParams);
+  if (!getFn) {
     return null;
   }
 
   try {
-    return (searchParams as { get: (name: string) => string | null }).get(key);
+    return getFn(key);
   } catch {
     return null;
   }
@@ -407,35 +407,65 @@ async function safeSignOutRequest() {
 }
 
 function safeRouterPush(router: unknown, path: string) {
-  if (
-    router &&
-    typeof router === "object" &&
-    "push" in router &&
-    typeof (router as { push?: unknown }).push === "function"
-  ) {
-    (router as { push: (nextPath: string) => void }).push(path);
+  if (!router || typeof router !== "object" || !("push" in router)) {
+    return;
+  }
+
+  try {
+    const push = (router as { push?: unknown }).push;
+    if (typeof push === "function") {
+      push(path);
+    }
+  } catch {
+    return;
   }
 }
 
 function safeRouterReplace(router: unknown, path: string) {
-  if (
-    router &&
-    typeof router === "object" &&
-    "replace" in router &&
-    typeof (router as { replace?: unknown }).replace === "function"
-  ) {
-    (router as { replace: (nextPath: string) => void }).replace(path);
+  if (!router || typeof router !== "object" || !("replace" in router)) {
+    return;
+  }
+
+  try {
+    const replace = (router as { replace?: unknown }).replace;
+    if (typeof replace === "function") {
+      replace(path);
+    }
+  } catch {
+    return;
   }
 }
 
 function safeRouterRefresh(router: unknown) {
-  if (
-    router &&
-    typeof router === "object" &&
-    "refresh" in router &&
-    typeof (router as { refresh?: unknown }).refresh === "function"
-  ) {
-    (router as { refresh: () => void }).refresh();
+  if (!router || typeof router !== "object" || !("refresh" in router)) {
+    return;
+  }
+
+  try {
+    const refresh = (router as { refresh?: unknown }).refresh;
+    if (typeof refresh === "function") {
+      refresh();
+    }
+  } catch {
+    return;
+  }
+}
+
+function readSearchParamsGetFunction(searchParams: unknown) {
+  if (!searchParams || typeof searchParams !== "object" || !("get" in searchParams)) {
+    return undefined;
+  }
+
+  try {
+    const candidate = (searchParams as { get?: unknown }).get;
+    if (typeof candidate !== "function") {
+      return undefined;
+    }
+
+    const owner = searchParams as { get: (name: string) => string | null };
+    return (name: string) => Reflect.apply(candidate, owner, [name]) as string | null;
+  } catch {
+    return undefined;
   }
 }
 

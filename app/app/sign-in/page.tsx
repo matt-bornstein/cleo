@@ -70,17 +70,17 @@ export default function SignInPage() {
 }
 
 function readNextPath(searchParams: unknown) {
-  if (
-    !searchParams ||
-    typeof searchParams !== "object" ||
-    !("get" in searchParams) ||
-    typeof (searchParams as { get?: unknown }).get !== "function"
-  ) {
+  if (!searchParams || typeof searchParams !== "object") {
+    return undefined;
+  }
+
+  const getFn = readSearchParamsGetFunction(searchParams);
+  if (!getFn) {
     return undefined;
   }
 
   try {
-    return (searchParams as { get: (key: string) => string | null }).get("next");
+    return getFn("next");
   } catch {
     return undefined;
   }
@@ -113,5 +113,23 @@ function safeRouterRefresh(router: unknown) {
     }
   } catch {
     return;
+  }
+}
+
+function readSearchParamsGetFunction(searchParams: unknown) {
+  if (!searchParams || typeof searchParams !== "object" || !("get" in searchParams)) {
+    return undefined;
+  }
+
+  try {
+    const candidate = (searchParams as { get?: unknown }).get;
+    if (typeof candidate !== "function") {
+      return undefined;
+    }
+
+    const owner = searchParams as { get: (key: string) => string | null };
+    return (key: string) => Reflect.apply(candidate, owner, [key]) as string | null;
+  } catch {
+    return undefined;
   }
 }
