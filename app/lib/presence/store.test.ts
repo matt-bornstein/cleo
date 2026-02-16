@@ -4,6 +4,7 @@ import {
   resetPresenceForTests,
   updatePresence,
 } from "@/lib/presence/store";
+import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
 function safeClearLocalStorage() {
@@ -124,6 +125,49 @@ describe("presence store", () => {
     const updated = updatePresence(123 as unknown as never);
 
     expect(updated).toBeNull();
+  });
+
+  it("handles updatePresence payload getter traps safely", () => {
+    const payloadWithThrowingDocumentId = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingDocumentId, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingDocumentId, "visitorId", {
+      value: "visitor-1",
+    });
+
+    expect(
+      updatePresence(
+        payloadWithThrowingDocumentId as unknown as Parameters<typeof updatePresence>[0],
+      ),
+    ).toBeNull();
+
+    const payloadWithThrowingOptionalFields = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingOptionalFields, "documentId", {
+      value: "doc-getter-safe",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "visitorId", {
+      value: "visitor-getter-safe",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "userId", {
+      get() {
+        throw new Error("userId getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "data", {
+      get() {
+        throw new Error("data getter failed");
+      },
+    });
+
+    const updated = updatePresence(
+      payloadWithThrowingOptionalFields as unknown as Parameters<typeof updatePresence>[0],
+    );
+    expect(updated).not.toBeNull();
+    expect(updated?.userId).toBe(DEFAULT_LOCAL_USER_ID);
+    expect(updated?.data).toBeNull();
   });
 
   it("does not persist remove operations when visitor is absent", () => {

@@ -119,8 +119,10 @@ export function updatePresence(record: unknown) {
     return null;
   }
 
-  const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
-  const normalizedVisitorId = normalizePresenceVisitorId(candidate.visitorId);
+  const documentId = safeReadUpdatePresenceField(candidate, "documentId");
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  const visitorId = safeReadUpdatePresenceField(candidate, "visitorId");
+  const normalizedVisitorId = normalizePresenceVisitorId(visitorId);
   if (!isValidDocumentId(normalizedDocumentId) || !normalizedVisitorId) {
     return null;
   }
@@ -130,16 +132,17 @@ export function updatePresence(record: unknown) {
   const existingIndex = state.presence.findIndex(
     (entry) => entry.visitorId === normalizedVisitorId,
   );
-  const normalizedData = normalizePresenceData(candidate.data);
   const normalizedExistingRecordId =
     existingIndex === -1
       ? undefined
       : normalizePresenceRecordId(state.presence[existingIndex]?.id);
+  const data = safeReadUpdatePresenceField(candidate, "data");
+  const userId = safeReadUpdatePresenceField(candidate, "userId");
   const nextRecord: PresenceRecord = {
     documentId: normalizedDocumentId,
     visitorId: normalizedVisitorId,
-    userId: normalizePresenceUserId(candidate.userId),
-    data: normalizedData,
+    userId: normalizePresenceUserId(userId),
+    data: normalizePresenceData(data),
     id:
       existingIndex === -1
         ? generateLocalId()
@@ -258,6 +261,22 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeReadUpdatePresenceField(
+  record: {
+    documentId?: unknown;
+    visitorId?: unknown;
+    userId?: unknown;
+    data?: unknown;
+  },
+  key: "documentId" | "visitorId" | "userId" | "data",
+) {
+  try {
+    return record[key];
+  } catch {
+    return undefined;
   }
 }
 
