@@ -1,3 +1,5 @@
+import { hasControlChars } from "@/lib/validators/controlChars";
+
 export type AIProvider = "openai" | "anthropic" | "google";
 
 export type AIModelConfig = {
@@ -17,10 +19,26 @@ export const AI_MODELS: AIModelConfig[] = [
   { id: "gemini-2.5-pro", label: "Google Gemini 2.5 Pro", provider: "google" },
 ];
 
-export function isSupportedModel(modelId: string) {
-  return AI_MODELS.some((model) => model.id === modelId);
+export function isSupportedModel(modelId: unknown) {
+  const normalizedModelId = normalizeModelId(modelId);
+  if (!normalizedModelId) {
+    return false;
+  }
+  return AI_MODELS.some((model) => model.id === normalizedModelId);
 }
 
-export function getModelConfig(modelId: string) {
-  return AI_MODELS.find((model) => model.id === modelId) ?? AI_MODELS[0];
+export function getModelConfig(modelId: unknown) {
+  const normalizedModelId = normalizeModelId(modelId);
+  if (!normalizedModelId) {
+    return AI_MODELS[0];
+  }
+  return AI_MODELS.find((model) => model.id === normalizedModelId) ?? AI_MODELS[0];
+}
+
+function normalizeModelId(value: unknown) {
+  const normalizedValue = typeof value === "string" ? value.trim() : "";
+  if (!normalizedValue || hasControlChars(normalizedValue)) {
+    return undefined;
+  }
+  return normalizedValue;
 }
