@@ -337,6 +337,47 @@ describe("document store", () => {
     expect(documents[0].updatedAt).toBeGreaterThanOrEqual(documents[0].createdAt);
   });
 
+  it("skips persisted documents when field getters throw during load", () => {
+    const documentWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(documentWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingGetters, "title", {
+      get() {
+        throw new Error("title getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingGetters, "content", {
+      get() {
+        throw new Error("content getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingGetters, "ownerEmail", {
+      get() {
+        throw new Error("ownerEmail getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingGetters, "createdAt", {
+      get() {
+        throw new Error("createdAt getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingGetters, "updatedAt", {
+      get() {
+        throw new Error("updatedAt getter failed");
+      },
+    });
+
+    window.localStorage.setItem("plan00.documents.v1", "{}");
+    vi.spyOn(JSON, "parse").mockReturnValue({
+      documents: [documentWithThrowingGetters],
+    });
+
+    expect(listDocuments()).toEqual([]);
+  });
+
   it("returns empty when persisted documents container is non-array", () => {
     window.localStorage.setItem(
       "plan00.documents.v1",

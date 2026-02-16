@@ -59,60 +59,70 @@ function loadState(): DocumentStoreState {
           return [];
         }
         const candidate = doc as Partial<AppDocument>;
+        const id = safeReadPersistedDocumentField(candidate, "id");
+        const title = safeReadPersistedDocumentField(candidate, "title");
+        const createdAt = safeReadPersistedDocumentField(candidate, "createdAt");
+        const updatedAt = safeReadPersistedDocumentField(candidate, "updatedAt");
+        const content = safeReadPersistedDocumentField(candidate, "content");
+        const ownerEmail = safeReadPersistedDocumentField(candidate, "ownerEmail");
+        const lastDiffAt = safeReadPersistedDocumentField(candidate, "lastDiffAt");
+        const chatClearedAt = safeReadPersistedDocumentField(candidate, "chatClearedAt");
+        const aiLockedBy = safeReadPersistedDocumentField(candidate, "aiLockedBy");
+        const aiLockedAt = safeReadPersistedDocumentField(candidate, "aiLockedAt");
 
-        const normalizedDocumentId = normalizeDocumentId(candidate.id);
+        const normalizedDocumentId = normalizeDocumentId(id);
         if (!isValidDocumentId(normalizedDocumentId)) {
           return [];
         }
 
-        const normalizedTitle = normalizeDocumentTitle(candidate.title);
+        const normalizedTitle = normalizeDocumentTitle(title);
         const hasValidCreatedAt =
-          typeof candidate.createdAt === "number" &&
-          Number.isFinite(candidate.createdAt) &&
-          candidate.createdAt >= 0;
+          typeof createdAt === "number" &&
+          Number.isFinite(createdAt) &&
+          createdAt >= 0;
         const hasValidUpdatedAt =
-          typeof candidate.updatedAt === "number" &&
-          Number.isFinite(candidate.updatedAt) &&
-          candidate.updatedAt >= 0;
+          typeof updatedAt === "number" &&
+          Number.isFinite(updatedAt) &&
+          updatedAt >= 0;
         const normalizedCreatedAt =
-          hasValidCreatedAt ? (candidate.createdAt as number) : fallbackNow;
+          hasValidCreatedAt ? createdAt : fallbackNow;
         const normalizedUpdatedAt =
           hasValidUpdatedAt
-            ? Math.max(candidate.updatedAt as number, normalizedCreatedAt)
+            ? Math.max(updatedAt, normalizedCreatedAt)
             : normalizedCreatedAt;
         const normalizedDocument: AppDocument = {
           id: normalizedDocumentId,
           title: normalizedTitle,
-          content: isValidDocumentContentJson(candidate.content)
-            ? candidate.content
+          content: isValidDocumentContentJson(content)
+            ? content
             : EMPTY_EDITOR_DOC,
-          ownerEmail: normalizeOwnerEmail(candidate.ownerEmail),
+          ownerEmail: normalizeOwnerEmail(ownerEmail),
           createdAt: normalizedCreatedAt,
           updatedAt: normalizedUpdatedAt,
           lastDiffAt:
-            typeof candidate.lastDiffAt === "number" &&
-            Number.isFinite(candidate.lastDiffAt) &&
-            candidate.lastDiffAt >= 0
-              ? candidate.lastDiffAt
+            typeof lastDiffAt === "number" &&
+            Number.isFinite(lastDiffAt) &&
+            lastDiffAt >= 0
+              ? lastDiffAt
               : undefined,
           chatClearedAt:
-            typeof candidate.chatClearedAt === "number" &&
-            Number.isFinite(candidate.chatClearedAt) &&
-            candidate.chatClearedAt >= 0
-              ? candidate.chatClearedAt
+            typeof chatClearedAt === "number" &&
+            Number.isFinite(chatClearedAt) &&
+            chatClearedAt >= 0
+              ? chatClearedAt
               : undefined,
           aiLockedBy:
-            typeof candidate.aiLockedBy === "string" &&
-            candidate.aiLockedBy.trim().length > 0 &&
-            candidate.aiLockedBy.trim().length <= MAX_USER_ID_LENGTH &&
-            !hasControlChars(candidate.aiLockedBy.trim())
-              ? candidate.aiLockedBy.trim()
+            typeof aiLockedBy === "string" &&
+            aiLockedBy.trim().length > 0 &&
+            aiLockedBy.trim().length <= MAX_USER_ID_LENGTH &&
+            !hasControlChars(aiLockedBy.trim())
+              ? aiLockedBy.trim()
               : undefined,
           aiLockedAt:
-            typeof candidate.aiLockedAt === "number" &&
-            Number.isFinite(candidate.aiLockedAt) &&
-            candidate.aiLockedAt >= 0
-              ? candidate.aiLockedAt
+            typeof aiLockedAt === "number" &&
+            Number.isFinite(aiLockedAt) &&
+            aiLockedAt >= 0
+              ? aiLockedAt
               : undefined,
         };
 
@@ -120,9 +130,9 @@ function loadState(): DocumentStoreState {
           {
             document: normalizedDocument,
             dedupeUpdatedAt: hasValidUpdatedAt
-              ? (candidate.updatedAt as number)
+              ? updatedAt
               : hasValidCreatedAt
-                ? (candidate.createdAt as number)
+                ? createdAt
                 : Number.NEGATIVE_INFINITY,
           },
         ];
@@ -399,6 +409,27 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeReadPersistedDocumentField(
+  document: Partial<AppDocument>,
+  key:
+    | "id"
+    | "title"
+    | "content"
+    | "ownerEmail"
+    | "createdAt"
+    | "updatedAt"
+    | "lastDiffAt"
+    | "chatClearedAt"
+    | "aiLockedBy"
+    | "aiLockedAt",
+) {
+  try {
+    return document[key];
+  } catch {
+    return undefined;
   }
 }
 
