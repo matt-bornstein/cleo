@@ -82,4 +82,40 @@ describe("ExportModal", () => {
     expect(focusMock).toHaveBeenCalled();
     expect(printMock).toHaveBeenCalled();
   });
+
+  it("uses untitled fallback filename when title is empty", async () => {
+    const user = userEvent.setup();
+    render(
+      <ExportModal
+        open
+        onOpenChange={vi.fn()}
+        documentTitle=""
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Markdown" }));
+    expect(downloadFileMock).toHaveBeenCalledWith(
+      "# markdown",
+      "untitled.md",
+      "text/markdown;charset=utf-8",
+    );
+  });
+
+  it("no-ops pdf export when print window cannot open", async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+
+    render(
+      <ExportModal
+        open
+        onOpenChange={vi.fn()}
+        documentTitle="No Window"
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "PDF" }));
+    expect(openSpy).toHaveBeenCalled();
+  });
 });
