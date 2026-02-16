@@ -47,9 +47,7 @@ export function Toolbar({
           variant="outline"
           size="sm"
           onClick={() => {
-            if (typeof onNewDocument === "function") {
-              onNewDocument();
-            }
+            safeInvoke(onNewDocument);
           }}
         >
           New
@@ -58,9 +56,7 @@ export function Toolbar({
           variant="outline"
           size="sm"
           onClick={() => {
-            if (typeof onOpenDocument === "function") {
-              onOpenDocument();
-            }
+            safeInvoke(onOpenDocument);
           }}
         >
           Open
@@ -71,9 +67,7 @@ export function Toolbar({
           onClick={() => {
             const nextTitle = safePrompt("Rename document", normalizedDocumentTitle);
             if (nextTitle === null) return;
-            if (typeof onRenameDocument === "function") {
-              onRenameDocument(nextTitle);
-            }
+            safeInvoke(onRenameDocument, nextTitle);
           }}
         >
           Rename
@@ -82,9 +76,7 @@ export function Toolbar({
           variant="outline"
           size="sm"
           onClick={() => {
-            if (typeof onHistory === "function") {
-              onHistory();
-            }
+            safeInvoke(onHistory);
           }}
         >
           History
@@ -93,9 +85,7 @@ export function Toolbar({
           variant="outline"
           size="sm"
           onClick={() => {
-            if (typeof onExport === "function") {
-              onExport();
-            }
+            safeInvoke(onExport);
           }}
         >
           Export
@@ -104,9 +94,7 @@ export function Toolbar({
           variant="outline"
           size="sm"
           onClick={() => {
-            if (typeof onShare === "function") {
-              onShare();
-            }
+            safeInvoke(onShare);
           }}
           disabled={!normalizedCanShare}
         >
@@ -116,9 +104,7 @@ export function Toolbar({
           variant="outline"
           size="sm"
           onClick={() => {
-            if (typeof onSettings === "function") {
-              onSettings();
-            }
+            safeInvoke(onSettings);
           }}
         >
           Settings
@@ -147,5 +133,17 @@ function safePrompt(message: string, defaultValue: string) {
     return window.prompt(message, defaultValue);
   } catch {
     return null;
+  }
+}
+
+function safeInvoke(callback: unknown, ...args: unknown[]) {
+  if (typeof callback !== "function") {
+    return;
+  }
+
+  try {
+    callback(...args);
+  } catch {
+    return;
   }
 }

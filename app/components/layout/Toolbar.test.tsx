@@ -123,4 +123,47 @@ describe("Toolbar", () => {
     await user.click(screen.getByRole("button", { name: "Rename" }));
     expect(onRenameDocument).not.toHaveBeenCalled();
   });
+
+  it("does not throw when action callbacks throw", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "prompt").mockReturnValue("Renamed doc");
+    const throwing = () => {
+      throw new Error("callback failed");
+    };
+
+    render(
+      <Toolbar
+        documentTitle="Roadmap"
+        onRenameDocument={throwing}
+        onNewDocument={throwing}
+        onOpenDocument={throwing}
+        onHistory={throwing}
+        onExport={throwing}
+        onShare={throwing}
+        onSettings={throwing}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "New" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Open" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Rename" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "History" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Export" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Share" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Settings" })),
+    ).resolves.toBeUndefined();
+  });
 });
