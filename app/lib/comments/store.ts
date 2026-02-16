@@ -39,6 +39,14 @@ function loadState(): CommentState {
           !hasControlChars(normalizedUserId)
             ? normalizedUserId
             : DEFAULT_LOCAL_USER_ID;
+        const normalizedAnchorFrom =
+          typeof comment.anchorFrom === "number" && Number.isFinite(comment.anchorFrom)
+            ? Math.max(0, comment.anchorFrom)
+            : 0;
+        const normalizedAnchorTo =
+          typeof comment.anchorTo === "number" && Number.isFinite(comment.anchorTo)
+            ? Math.max(normalizedAnchorFrom, comment.anchorTo)
+            : normalizedAnchorFrom;
 
         if (
           !normalizedCommentId ||
@@ -62,14 +70,8 @@ function loadState(): CommentState {
             anchorText: normalizedAnchorText,
             parentCommentId: normalizedParentCommentId,
             resolved: Boolean(comment.resolved),
-            anchorFrom:
-              typeof comment.anchorFrom === "number" && Number.isFinite(comment.anchorFrom)
-                ? comment.anchorFrom
-                : 0,
-            anchorTo:
-              typeof comment.anchorTo === "number" && Number.isFinite(comment.anchorTo)
-                ? comment.anchorTo
-                : 0,
+            anchorFrom: normalizedAnchorFrom,
+            anchorTo: normalizedAnchorTo,
           },
         ];
       });

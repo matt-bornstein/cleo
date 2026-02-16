@@ -170,7 +170,7 @@ describe("comments store", () => {
             userId: "user-2",
             content: "Latest content",
             anchorFrom: 10,
-            anchorTo: 20,
+            anchorTo: 5,
             anchorText: "Anchor",
             resolved: false,
             parentCommentId: "",
@@ -190,9 +190,41 @@ describe("comments store", () => {
         userId: "user-2",
         content: "Latest content",
         anchorText: "Anchor",
+        anchorFrom: 10,
+        anchorTo: 10,
         parentCommentId: undefined,
         resolved: false,
       }),
     );
+  });
+
+  it("normalizes malformed anchor ranges in persisted comments", () => {
+    window.localStorage.setItem(
+      "plan00.comments.v1",
+      JSON.stringify({
+        comments: [
+          {
+            id: "range-comment",
+            documentId: "doc-ranges",
+            userId: "user-1",
+            content: "Range comment",
+            anchorFrom: -5,
+            anchorTo: -10,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      }),
+    );
+
+    expect(listComments("doc-ranges")).toEqual([
+      expect.objectContaining({
+        id: "range-comment",
+        anchorFrom: 0,
+        anchorTo: 0,
+      }),
+    ]);
   });
 });
