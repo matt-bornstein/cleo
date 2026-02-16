@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 
+import { getModelConfig } from "@/lib/ai/models";
 import type { AppUserSettings } from "@/lib/types";
 import { getSettings } from "@/lib/settings/store";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
+import { hasControlChars } from "@/lib/validators/controlChars";
 import { isValidEmail } from "@/lib/validators/email";
 
 export function useSettings() {
@@ -50,10 +52,7 @@ function normalizeHookSettings(settings: unknown): AppUserSettings {
       theme === "light" || theme === "dark" || theme === "system"
         ? theme
         : "system",
-    defaultModel:
-      typeof defaultModel === "string" && defaultModel.trim().length > 0
-        ? defaultModel.trim()
-        : "gpt-4o",
+    defaultModel: normalizeDefaultModel(defaultModel),
     editorFontSize:
       typeof editorFontSize === "number" &&
       Number.isFinite(editorFontSize) &&
@@ -89,4 +88,20 @@ function createFallbackSettings(): AppUserSettings {
     editorLineSpacing: 1.6,
     userEmail: DEFAULT_LOCAL_USER_EMAIL,
   };
+}
+
+function normalizeDefaultModel(value: unknown) {
+  if (
+    typeof value !== "string" ||
+    value.trim().length === 0 ||
+    hasControlChars(value.trim())
+  ) {
+    return "gpt-4o";
+  }
+
+  try {
+    return getModelConfig(value.trim()).id;
+  } catch {
+    return "gpt-4o";
+  }
 }

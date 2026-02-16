@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { vi } from "vitest";
 
 import { useSettings } from "@/hooks/useSettings";
+import * as aiModels from "@/lib/ai/models";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 const getSettingsMock = vi.fn();
@@ -98,5 +99,36 @@ describe("useSettings", () => {
       editorLineSpacing: 1.6,
       userEmail: DEFAULT_LOCAL_USER_EMAIL,
     });
+  });
+
+  it("falls back to safe default model for malformed model ids and lookup failures", () => {
+    getSettingsMock.mockReturnValue({
+      theme: "dark",
+      defaultModel: "bad\nmodel",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: "owner@example.com",
+    });
+
+    const { result, rerender } = renderHook(() => useSettings());
+    expect(result.current.settings.defaultModel).toBe("gpt-4o");
+
+    getSettingsMock.mockReturnValue({
+      theme: "dark",
+      defaultModel: "gpt-4.1",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: "owner@example.com",
+    });
+    vi.spyOn(aiModels, "getModelConfig").mockImplementation(() => {
+      throw new Error("model lookup failed");
+    });
+
+    act(() => {
+      result.current.refreshSettings();
+    });
+    rerender();
+
+    expect(result.current.settings.defaultModel).toBe("gpt-4o");
   });
 });
