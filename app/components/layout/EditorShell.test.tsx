@@ -5,12 +5,15 @@ import { beforeEach, vi } from "vitest";
 import { EditorShell } from "@/components/layout/EditorShell";
 import { createDocument, resetDocumentsForTests } from "@/lib/documents/store";
 import { triggerIdleSave } from "@/lib/diffs/store";
+import { upsertPermission } from "@/lib/permissions/store";
+import { saveSettings } from "@/lib/settings/store";
 
 const pushMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: pushMock,
+    refresh: vi.fn(),
   }),
 }));
 
@@ -78,5 +81,19 @@ describe("EditorShell", () => {
     expect(screen.getByText("Version history")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Restore selected version" }));
     expect(screen.queryByText("Version history")).not.toBeInTheDocument();
+  });
+
+  it("enforces read-only role permissions for viewer", () => {
+    const document = createDocument("Read Only Doc");
+    saveSettings({
+      userEmail: "viewer@example.com",
+    });
+    upsertPermission(document.id, "viewer@example.com", "viewer");
+
+    render(<EditorShell documentId={document.id} />);
+
+    expect(screen.getByText("Read-only mode. You have view/comment access only.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Share" })).toBeDisabled();
+    expect(screen.getByText("AI edits are disabled for your current role.")).toBeInTheDocument();
   });
 });

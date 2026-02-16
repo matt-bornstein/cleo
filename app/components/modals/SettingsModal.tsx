@@ -82,6 +82,19 @@ export function SettingsModal({
             </select>
           </label>
           <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-1 col-span-2">
+              <span className="text-xs">User email (for permissions)</span>
+              <Input
+                type="email"
+                value={settings.userEmail ?? ""}
+                onChange={(event) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    userEmail: event.target.value,
+                  }))
+                }
+              />
+            </label>
             <label className="space-y-1">
               <span className="text-xs">Font size</span>
               <Input

@@ -20,6 +20,8 @@ import { useIdleSave } from "@/hooks/useIdleSave";
 import { useDocuments } from "@/hooks/useDocuments";
 import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
+import { getRoleForUser } from "@/lib/permissions/store";
+import { hasPermission } from "@/lib/permissions";
 
 type EditorShellProps = {
   documentId: string;
@@ -41,6 +43,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
 
   const currentDocument = getById(documentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
+  const currentUserEmail = settings.userEmail ?? "me@local.dev";
+  const myRole = getRoleForUser(documentId, currentUserEmail);
+  const canEdit = hasPermission(myRole, "editor");
+  const canComment = hasPermission(myRole, "commenter");
+  const canShare = hasPermission(myRole, "owner");
   const content =
     currentDocument?.content ??
     JSON.stringify({
@@ -105,6 +112,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onExport={() => setExportModalOpen(true)}
         onShare={() => setShareModalOpen(true)}
         onSettings={() => setSettingsModalOpen(true)}
+        canShare={canShare}
       />
       <EditorLayout
         editorPanel={
@@ -118,10 +126,13 @@ export function EditorShell({ documentId }: EditorShellProps) {
                 saveStateLabel={saveStateLabel}
                 fontSize={settings.editorFontSize}
                 lineSpacing={settings.editorLineSpacing}
+                readOnly={!canEdit}
                 onContentChange={(nextContent) => {
+                  if (!canEdit) return;
                   updateContent(documentId, nextContent);
                 }}
                 onLocalUpdate={() => {
+                  if (!canEdit) return;
                   setSaveStateLabel("Saving...");
                   updateMyPresence({
                     name: "You",
@@ -138,6 +149,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
               }
               onReplyComment={createReply}
               onResolveComment={markResolved}
+              canComment={canComment}
             />
           </div>
         }
@@ -146,7 +158,9 @@ export function EditorShell({ documentId }: EditorShellProps) {
             documentId={documentId}
             currentDocumentContent={content}
             defaultModel={settings.defaultModel}
+            canEdit={canEdit}
             onApplyContent={(nextContent) => {
+              if (!canEdit) return;
               updateContent(documentId, nextContent);
               setSaveStateLabel("Saved");
             }}

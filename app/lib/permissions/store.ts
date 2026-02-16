@@ -43,6 +43,16 @@ export function listPermissions(documentId: string) {
   return loadState().permissions.filter((entry) => entry.documentId === documentId);
 }
 
+export function getRoleForUser(documentId: string, email: string): Role {
+  const normalizedEmail = email.trim().toLowerCase();
+  const match = loadState().permissions.find(
+    (entry) =>
+      entry.documentId === documentId &&
+      entry.email.trim().toLowerCase() === normalizedEmail,
+  );
+  return match?.role ?? "owner";
+}
+
 export function upsertPermission(documentId: string, email: string, role: Role) {
   const state = loadState();
   const normalizedEmail = email.trim().toLowerCase();

@@ -11,6 +11,7 @@ type CommentThreadProps = {
   replies: CommentRecord[];
   onResolve: (commentId: string) => void;
   onReply: (parentCommentId: string, content: string) => void;
+  canComment?: boolean;
 };
 
 export function CommentThread({
@@ -18,6 +19,7 @@ export function CommentThread({
   replies,
   onResolve,
   onReply,
+  canComment = true,
 }: CommentThreadProps) {
   const [isReplying, setIsReplying] = useState(false);
 
@@ -32,7 +34,7 @@ export function CommentThread({
           {comment.resolved ? "Resolved" : "Open"}
         </span>
         <div className="flex items-center gap-1">
-          {!comment.resolved ? (
+          {!comment.resolved && canComment ? (
             <>
               <Button
                 size="sm"
@@ -48,7 +50,7 @@ export function CommentThread({
           ) : null}
         </div>
       </div>
-      {isReplying ? (
+      {isReplying && canComment ? (
         <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2">
           <CommentInput
             placeholder="Reply to comment"

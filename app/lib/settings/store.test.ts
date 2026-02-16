@@ -9,6 +9,7 @@ describe("settings store", () => {
     const settings = getSettings();
     expect(settings.defaultModel).toBe("gpt-4o");
     expect(settings.editorFontSize).toBe(16);
+    expect(settings.userEmail).toBe("me@local.dev");
   });
 
   it("persists and reloads settings", () => {
@@ -17,10 +18,12 @@ describe("settings store", () => {
       defaultModel: "gemini-2.5-pro",
       editorFontSize: 18,
       editorLineSpacing: 1.8,
+      userEmail: "test@example.com",
     });
     const settings = getSettings();
     expect(settings.theme).toBe("dark");
     expect(settings.defaultModel).toBe("gemini-2.5-pro");
     expect(settings.editorFontSize).toBe(18);
+    expect(settings.userEmail).toBe("test@example.com");
   });
 });

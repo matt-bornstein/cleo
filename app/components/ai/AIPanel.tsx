@@ -10,6 +10,7 @@ type AIPanelProps = {
   currentDocumentContent: string;
   onApplyContent: (nextContent: string) => void;
   defaultModel?: string;
+  canEdit?: boolean;
 };
 
 export function AIPanel({
@@ -17,6 +18,7 @@ export function AIPanel({
   currentDocumentContent,
   onApplyContent,
   defaultModel,
+  canEdit = true,
 }: AIPanelProps) {
   const {
     messages,
@@ -55,9 +57,14 @@ export function AIPanel({
         <ChatMessages messages={messages} />
       </div>
       <div className="space-y-2 border-t border-slate-200 bg-slate-100 p-3">
+        {!canEdit ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">
+            AI edits are disabled for your current role.
+          </div>
+        ) : null}
         <ModelSelector value={selectedModel} onValueChange={setSelectedModel} />
         <div className="rounded-lg border border-slate-200 bg-white p-2">
-          <ChatInput disabled={isLoading} onSubmit={sendPrompt} />
+          <ChatInput disabled={isLoading || !canEdit} onSubmit={sendPrompt} />
         </div>
       </div>
     </div>

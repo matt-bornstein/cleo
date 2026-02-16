@@ -7,6 +7,7 @@ export type AppUserSettings = {
   defaultModel?: string;
   editorFontSize?: number;
   editorLineSpacing?: number;
+  userEmail?: string;
 };
 
 export type AppUser = {

@@ -1,4 +1,5 @@
 import {
+  getRoleForUser,
   listPermissions,
   removePermission,
   resetPermissionsForTests,
@@ -24,5 +25,11 @@ describe("permissions store", () => {
     const created = upsertPermission("doc-1", "user@example.com", "commenter");
     removePermission(created.id);
     expect(listPermissions("doc-1")).toHaveLength(0);
+  });
+
+  it("returns owner role by default and explicit shared role when present", () => {
+    expect(getRoleForUser("doc-2", "me@local.dev")).toBe("owner");
+    upsertPermission("doc-2", "me@local.dev", "viewer");
+    expect(getRoleForUser("doc-2", "me@local.dev")).toBe("viewer");
   });
 });

@@ -10,6 +10,7 @@ type ToolbarProps = {
   onExport: () => void;
   onShare: () => void;
   onSettings: () => void;
+  canShare?: boolean;
 };
 
 export function Toolbar({
@@ -20,6 +21,7 @@ export function Toolbar({
   onExport,
   onShare,
   onSettings,
+  canShare = true,
 }: ToolbarProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
@@ -36,7 +38,7 @@ export function Toolbar({
         <Button variant="outline" size="sm" onClick={onExport}>
           Export
         </Button>
-        <Button variant="outline" size="sm" onClick={onShare}>
+        <Button variant="outline" size="sm" onClick={onShare} disabled={!canShare}>
           Share
         </Button>
         <Button variant="outline" size="sm" onClick={onSettings}>

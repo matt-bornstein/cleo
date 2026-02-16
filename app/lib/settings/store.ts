@@ -7,6 +7,7 @@ const defaultSettings: AppUserSettings = {
   defaultModel: "gpt-4o",
   editorFontSize: 16,
   editorLineSpacing: 1.6,
+  userEmail: "me@local.dev",
 };
 
 function canUseStorage() {

@@ -12,6 +12,7 @@ type RichTextEditorProps = {
   onLocalUpdate?: () => void;
   fontSize?: number;
   lineSpacing?: number;
+  editable?: boolean;
 };
 
 function parseContent(content: string) {
@@ -31,6 +32,7 @@ export function RichTextEditor({
   onLocalUpdate,
   fontSize,
   lineSpacing,
+  editable = true,
 }: RichTextEditorProps) {
   const parsedContent = useMemo(() => parseContent(content), [content]);
 
@@ -44,6 +46,7 @@ export function RichTextEditor({
           "prose prose-slate max-w-none min-h-[400px] rounded-b-md bg-white p-4 focus:outline-none",
       },
     },
+    editable,
     onUpdate: ({ editor: nextEditor }) => {
       onContentChange(JSON.stringify(nextEditor.getJSON()));
       onLocalUpdate?.();
