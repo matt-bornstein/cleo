@@ -199,6 +199,18 @@ describe("useComments", () => {
     expect(resolveCommentMock).not.toHaveBeenCalled();
   });
 
+  it("does not dispatch resolve calls for malformed non-string comment ids", () => {
+    const { result } = renderHook(() =>
+      useComments("doc-1", "reviewer@example.com"),
+    );
+
+    act(() => {
+      result.current.markResolved(123 as unknown as string);
+    });
+
+    expect(resolveCommentMock).not.toHaveBeenCalled();
+  });
+
   it("refreshes when marking an unresolved comment as resolved", () => {
     listCommentsMock.mockReturnValue([
       {

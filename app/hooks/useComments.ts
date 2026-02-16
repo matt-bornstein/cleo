@@ -52,6 +52,9 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
         return null;
       }
       const normalizedCommentId = typeof commentId === "string" ? commentId : "";
+      if (!normalizedCommentId) {
+        return null;
+      }
       const existing = comments.find((comment) => comment.id === normalizedCommentId);
       const updated = resolveComment(normalizedCommentId);
       if (updated && (!existing || !existing.resolved)) {
