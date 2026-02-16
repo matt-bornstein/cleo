@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getModelConfig } from "@/lib/ai/models";
 import { listMessagesByDocument, saveMessage } from "@/lib/ai/chatStore";
@@ -65,6 +65,7 @@ export function useAIChat({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isSendingRef = useRef(false);
   const normalizedCurrentUserId = useMemo(
     () => normalizeAIUserId(currentUserId),
     [currentUserId],
@@ -86,12 +87,14 @@ export function useAIChat({
 
   const sendPrompt = useCallback(
     async (prompt: string) => {
+      if (isSendingRef.current) return;
       const normalizedPrompt = prompt.trim();
       if (!normalizedPrompt) {
         setError("Prompt is required.");
         return;
       }
 
+      isSendingRef.current = true;
       const userMessage = createMessage(
         documentId,
         normalizedCurrentUserId,
@@ -220,6 +223,7 @@ export function useAIChat({
           content: errorContent,
         });
       } finally {
+        isSendingRef.current = false;
         setIsLoading(false);
       }
     },

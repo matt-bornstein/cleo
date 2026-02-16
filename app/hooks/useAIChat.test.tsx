@@ -51,6 +51,14 @@ function createStreamResponse(
   return new Response(stream, { status: 200 });
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolveFn) => {
+    resolve = resolveFn;
+  });
+  return { promise, resolve };
+}
+
 describe("useAIChat", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -441,6 +449,57 @@ describe("useAIChat", () => {
       expect.objectContaining({
         aiPrompt: "polish this paragraph",
       }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("ignores duplicate prompt submissions while a request is in-flight", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-inflight" });
+    const deferred = createDeferred<Response>();
+    const fetchMock = vi.fn().mockReturnValue(deferred.promise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-inflight",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    let firstRequest: Promise<void> = Promise.resolve();
+    let secondRequest: Promise<void> = Promise.resolve();
+    await act(async () => {
+      firstRequest = result.current.sendPrompt("First request");
+      secondRequest = result.current.sendPrompt("Second request");
+    });
+
+    deferred.resolve(
+      createStreamResponse([
+        {
+          type: "done",
+          assistantMessage: "Handled once.",
+          nextContent: "<p>Updated</p>",
+        },
+      ]),
+    );
+
+    await act(async () => {
+      await Promise.all([firstRequest, secondRequest]);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(saveMessageMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        role: "user",
+        content: "First request",
+      }),
+    );
+    expect(saveMessageMock.mock.calls.some((call) => call[0]?.content === "Second request")).toBe(
+      false,
     );
 
     vi.unstubAllGlobals();
