@@ -72,4 +72,42 @@ describe("VersionHistoryModal", () => {
 
     expect(listDiffsByDocumentMock).toHaveBeenCalledWith(123);
   });
+
+  it("does not throw when callbacks throw", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <VersionHistoryModal
+        open
+        onOpenChange={() => {
+          throw new Error("onOpenChange failed");
+        }}
+        documentId="doc-1"
+        onRestoreSnapshot={() => {
+          throw new Error("onRestoreSnapshot failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Restore selected version" })),
+    ).resolves.toBeUndefined();
+  });
+
+  it("falls back to empty list when listing diffs throws", () => {
+    listDiffsByDocumentMock.mockImplementation(() => {
+      throw new Error("list failed");
+    });
+
+    render(
+      <VersionHistoryModal
+        open
+        onOpenChange={vi.fn()}
+        documentId="doc-1"
+        onRestoreSnapshot={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("No versions saved yet.")).toBeInTheDocument();
+  });
 });

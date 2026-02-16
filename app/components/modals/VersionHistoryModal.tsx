@@ -27,16 +27,14 @@ export function VersionHistoryModal({
 }: VersionHistoryModalProps) {
   const normalizedOpen = open === true;
   const [selectedDiffId, setSelectedDiffId] = useState<string | null>(null);
-  const diffs = useMemo(() => listDiffsByDocument(documentId), [documentId]);
+  const diffs = useMemo(() => safeListDiffsByDocument(documentId), [documentId]);
   const selectedDiff = diffs.find((diff) => diff.id === selectedDiffId) ?? diffs[0];
 
   return (
     <Dialog
       open={normalizedOpen}
       onOpenChange={(nextOpen) => {
-        if (typeof onOpenChange === "function") {
-          onOpenChange(nextOpen);
-        }
+        safeOnOpenChange(onOpenChange, nextOpen);
       }}
     >
       <DialogContent className="max-w-3xl">
@@ -75,12 +73,11 @@ export function VersionHistoryModal({
                 disabled={!selectedDiff}
                 onClick={() => {
                   if (!selectedDiff) return;
-                  if (typeof onRestoreSnapshot === "function") {
-                    onRestoreSnapshot(selectedDiff.snapshotAfter);
-                  }
-                  if (typeof onOpenChange === "function") {
-                    onOpenChange(false);
-                  }
+                  safeOnRestoreSnapshot(
+                    onRestoreSnapshot,
+                    selectedDiff.snapshotAfter,
+                  );
+                  safeOnOpenChange(onOpenChange, false);
                 }}
               >
                 Restore selected version
@@ -91,4 +88,36 @@ export function VersionHistoryModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+function safeListDiffsByDocument(documentId: unknown) {
+  try {
+    return listDiffsByDocument(documentId);
+  } catch {
+    return [];
+  }
+}
+
+function safeOnOpenChange(onOpenChange: unknown, nextOpen: boolean) {
+  if (typeof onOpenChange !== "function") {
+    return;
+  }
+
+  try {
+    onOpenChange(nextOpen);
+  } catch {
+    return;
+  }
+}
+
+function safeOnRestoreSnapshot(onRestoreSnapshot: unknown, snapshot: string) {
+  if (typeof onRestoreSnapshot !== "function") {
+    return;
+  }
+
+  try {
+    onRestoreSnapshot(snapshot);
+  } catch {
+    return;
+  }
 }
