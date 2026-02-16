@@ -2,21 +2,56 @@
 
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { useState } from "react";
 
 export default function SignInPage() {
   const { signIn } = useAuthActions();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handlePasswordAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await signIn("password", {
+        email,
+        password,
+        ...(isSignUp ? { name: name || email.split("@")[0] } : {}),
+        flow: isSignUp ? "signUp" : "signIn",
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : isSignUp
+            ? "Failed to create account. Email may already be registered."
+            : "Invalid email or password."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[380px] px-4">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            AI Editor
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">AI Editor</h1>
           <p className="text-sm text-muted-foreground">
-            Sign in to start collaborating
+            {isSignUp
+              ? "Create an account to start collaborating"
+              : "Sign in to start collaborating"}
           </p>
         </div>
+
+        {/* Google OAuth */}
         <Button
           variant="outline"
           className="w-full"
@@ -42,6 +77,70 @@ export default function SignInPage() {
           </svg>
           Sign in with Google
         </Button>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <Separator className="w-full" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with email
+            </span>
+          </div>
+        </div>
+
+        {/* Email/Password */}
+        <form onSubmit={handlePasswordAuth} className="space-y-3">
+          {isSignUp && (
+            <Input
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+            />
+          )}
+          <Input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            autoComplete={isSignUp ? "new-password" : "current-password"}
+          />
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading
+              ? "Please wait..."
+              : isSignUp
+                ? "Create Account"
+                : "Sign In"}
+          </Button>
+        </form>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+          <button
+            type="button"
+            className="underline hover:text-foreground"
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError("");
+            }}
+          >
+            {isSignUp ? "Sign in" : "Sign up"}
+          </button>
+        </p>
       </div>
     </div>
   );
