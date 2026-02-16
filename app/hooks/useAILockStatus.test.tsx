@@ -59,4 +59,16 @@ describe("useAILockStatus", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("does not poll when document id is empty", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus(""));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current).toEqual({ locked: false });
+
+    vi.unstubAllGlobals();
+  });
 });
