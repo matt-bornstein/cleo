@@ -5,6 +5,7 @@ import { vi } from "vitest";
 
 import { ShareModal } from "@/components/modals/ShareModal";
 import { resetPermissionsForTests } from "@/lib/permissions/store";
+import * as permissionsStore from "@/lib/permissions/store";
 
 describe("ShareModal", () => {
   const writeTextMock = vi.fn().mockResolvedValue(undefined);
@@ -122,6 +123,15 @@ describe("ShareModal", () => {
     await user.click(screen.getByRole("button", { name: "Add" }));
 
     expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
+  });
+
+  it("falls back to empty collaborator list when permission listing throws", () => {
+    vi.spyOn(permissionsStore, "listPermissions").mockImplementation(() => {
+      throw new Error("list failed");
+    });
+
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-list-throw" />);
+    expect(screen.getByText("No collaborators yet.")).toBeInTheDocument();
   });
 
   it("does not duplicate collaborator rows for unchanged re-adds", async () => {
@@ -300,6 +310,34 @@ describe("ShareModal", () => {
 
     await user.click(screen.getByRole("button", { name: "Remove" }));
     expect(screen.queryByText("person@example.com · editor")).not.toBeInTheDocument();
+  });
+
+  it("shows add error when upsert permission throws", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(permissionsStore, "upsertPermission").mockImplementation(() => {
+      throw new Error("upsert failed");
+    });
+
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-upsert-throw" />);
+
+    await user.type(screen.getByPlaceholderText("user@example.com"), "person@example.com");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByText("Unable to add collaborator.")).toBeInTheDocument();
+  });
+
+  it("keeps collaborator when remove permission throws", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-remove-store-throw" />);
+
+    await user.type(screen.getByPlaceholderText("user@example.com"), "person@example.com");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
+
+    vi.spyOn(permissionsStore, "removePermission").mockImplementation(() => {
+      throw new Error("remove failed");
+    });
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
   });
 
   it("keeps collaborator when remove confirmation is cancelled", async () => {

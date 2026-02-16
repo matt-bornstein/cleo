@@ -57,7 +57,7 @@ export function ShareModal({
 
   const permissions = useMemo(() => {
     void version;
-    return listPermissions(normalizedDocumentId);
+    return safeListPermissions(normalizedDocumentId);
   }, [normalizedDocumentId, version]);
   const isAddDisabled = email.trim().length === 0;
 
@@ -210,7 +210,7 @@ export function ShareModal({
                 const existing = permissions.find(
                   (permission) => permission.email === normalizedEmail,
                 );
-                const upserted = upsertPermission(
+                const upserted = safeUpsertPermission(
                   normalizedDocumentId,
                   normalizedEmail,
                   role,
@@ -262,7 +262,7 @@ export function ShareModal({
                       `Remove ${permission.email} from this document?`,
                     );
                     if (!confirmed) return;
-                    const removed = removePermission(permission.id);
+                    const removed = safeRemovePermission(permission.id);
                     if (removed) {
                       setVersion((value) => value + 1);
                     }
@@ -338,5 +338,29 @@ function safeOnOpenChange(onOpenChange: unknown, nextOpen: boolean) {
     onOpenChange(nextOpen);
   } catch {
     return;
+  }
+}
+
+function safeListPermissions(documentId: string) {
+  try {
+    return listPermissions(documentId);
+  } catch {
+    return [];
+  }
+}
+
+function safeUpsertPermission(documentId: string, email: string, role: Role) {
+  try {
+    return upsertPermission(documentId, email, role);
+  } catch {
+    return null;
+  }
+}
+
+function safeRemovePermission(permissionId: string) {
+  try {
+    return removePermission(permissionId);
+  } catch {
+    return null;
   }
 }
