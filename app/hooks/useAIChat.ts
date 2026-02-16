@@ -105,6 +105,99 @@ function parseAIStreamPayload(raw: string): AIStreamPayload | null {
   return null;
 }
 
+function isSuccessfulResponse(response: unknown) {
+  if (!response || typeof response !== "object" || !("ok" in response)) {
+    return false;
+  }
+
+  try {
+    return (response as { ok?: unknown }).ok === true;
+  } catch {
+    return false;
+  }
+}
+
+function readResponseBody(response: unknown) {
+  if (!response || typeof response !== "object" || !("body" in response)) {
+    return null;
+  }
+
+  try {
+    const body = (response as { body?: unknown }).body;
+    if (
+      body &&
+      typeof body === "object" &&
+      "getReader" in body &&
+      typeof body.getReader === "function"
+    ) {
+      return body as ReadableStream<Uint8Array>;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function readStreamReader(stream: unknown) {
+  if (
+    !stream ||
+    typeof stream !== "object" ||
+    !("getReader" in stream)
+  ) {
+    return null;
+  }
+
+  try {
+    const getReader = (stream as { getReader?: unknown }).getReader;
+    if (typeof getReader !== "function") {
+      return null;
+    }
+
+    return Reflect.apply(getReader, stream, []) as ReadableStreamDefaultReader<Uint8Array>;
+  } catch {
+    return null;
+  }
+}
+
+async function readResponseJson(response: unknown) {
+  if (!response || typeof response !== "object" || !("json" in response)) {
+    return null;
+  }
+
+  let jsonFn: unknown;
+  try {
+    jsonFn = (response as { json?: unknown }).json;
+  } catch {
+    return null;
+  }
+  if (typeof jsonFn !== "function") {
+    return null;
+  }
+
+  try {
+    return await Reflect.apply(jsonFn, response, []);
+  } catch {
+    return null;
+  }
+}
+
+function toRequestErrorMessage(payload: unknown) {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "error" in payload &&
+    typeof (payload as { error?: unknown }).error === "string"
+  ) {
+    const normalizedError = (payload as { error: string }).error.trim();
+    if (normalizedError.length > 0) {
+      return normalizedError;
+    }
+  }
+
+  return "AI request failed";
+}
+
 export function useAIChat({
   documentId,
   currentDocumentContent,
@@ -227,12 +320,16 @@ export function useAIChat({
           }),
         });
 
-        if (!response.ok || !response.body) {
-          const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error ?? "AI request failed");
+        const responseBody = readResponseBody(response);
+        if (!isSuccessfulResponse(response) || !responseBody) {
+          const payload = await readResponseJson(response);
+          throw new Error(toRequestErrorMessage(payload));
         }
 
-        const reader = response.body.getReader();
+        const reader = readStreamReader(responseBody);
+        if (!reader) {
+          throw new Error("AI request failed");
+        }
         const decoder = new TextDecoder();
         let buffer = "";
         let assistantContent = "";

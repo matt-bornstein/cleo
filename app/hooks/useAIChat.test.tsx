@@ -464,6 +464,115 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("falls back to generic request error when response ok getter throws", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const response = Object.create(null) as { ok: unknown; json: () => Promise<unknown> };
+    Object.defineProperty(response, "ok", {
+      get() {
+        throw new Error("ok getter failed");
+      },
+    });
+    response.json = async () => ({});
+    const fetchMock = vi.fn().mockResolvedValue(response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-response-ok-throws",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger response getter failure");
+    });
+
+    expect(result.current.error).toBe("AI request failed");
+    expect(result.current.messages.at(-1)).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "Error: AI request failed",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back to generic request error when error payload json getter throws", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const response = { ok: false } as { ok: boolean; json: unknown };
+    Object.defineProperty(response, "json", {
+      get() {
+        throw new Error("json getter failed");
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue(response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-response-json-throws",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger response json failure");
+    });
+
+    expect(result.current.error).toBe("AI request failed");
+    expect(result.current.messages.at(-1)).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "Error: AI request failed",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("surfaces error payload when response body getter throws", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const response = {
+      ok: true,
+      json: async () => ({ error: "Body unavailable" }),
+    } as { ok: boolean; json: () => Promise<unknown>; body: unknown };
+    Object.defineProperty(response, "body", {
+      get() {
+        throw new Error("body getter failed");
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue(response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-response-body-throws",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger response body failure");
+    });
+
+    expect(result.current.error).toBe("Body unavailable");
+    expect(result.current.messages.at(-1)).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "Error: Body unavailable",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("normalizes unknown default model ids to known model config ids", () => {
     listMessagesByDocumentMock.mockReturnValue([]);
 
