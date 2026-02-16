@@ -645,6 +645,45 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("falls back to generic request error when error payload getter throws", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const payloadWithThrowingError = Object.create(null) as { error: unknown };
+    Object.defineProperty(payloadWithThrowingError, "error", {
+      get() {
+        throw new Error("payload.error getter failed");
+      },
+    });
+    const response = {
+      ok: false,
+      json: async () => payloadWithThrowingError,
+    };
+    const fetchMock = vi.fn().mockResolvedValue(response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-response-error-getter-throws",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger payload error getter failure");
+    });
+
+    expect(result.current.error).toBe("AI request failed");
+    expect(result.current.messages.at(-1)).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "Error: AI request failed",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("surfaces error payload when response body getter throws", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const response = {

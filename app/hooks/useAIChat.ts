@@ -183,19 +183,27 @@ async function readResponseJson(response: unknown) {
 }
 
 function toRequestErrorMessage(payload: unknown) {
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "error" in payload &&
-    typeof (payload as { error?: unknown }).error === "string"
-  ) {
-    const normalizedError = (payload as { error: string }).error.trim();
+  const error = readPayloadError(payload);
+  if (typeof error === "string") {
+    const normalizedError = error.trim();
     if (normalizedError.length > 0) {
       return normalizedError;
     }
   }
 
   return "AI request failed";
+}
+
+function readPayloadError(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) {
+    return undefined;
+  }
+
+  try {
+    return (payload as { error?: unknown }).error;
+  } catch {
+    return undefined;
+  }
 }
 
 export function useAIChat({
