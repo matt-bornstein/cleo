@@ -19,9 +19,15 @@ type SettingsModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  onSignOut?: () => Promise<void> | void;
 };
 
-export function SettingsModal({ open, onOpenChange, onSaved }: SettingsModalProps) {
+export function SettingsModal({
+  open,
+  onOpenChange,
+  onSaved,
+  onSignOut,
+}: SettingsModalProps) {
   const [settings, setSettings] = useState<AppUserSettings>(getSettings());
 
   return (
@@ -105,6 +111,11 @@ export function SettingsModal({ open, onOpenChange, onSaved }: SettingsModalProp
             </label>
           </div>
           <div className="flex justify-end gap-2">
+            {onSignOut ? (
+              <Button variant="outline" onClick={() => void onSignOut()}>
+                Sign out
+              </Button>
+            ) : null}
             <Button variant="secondary" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

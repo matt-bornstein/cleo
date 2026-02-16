@@ -201,6 +201,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
         open={settingsModalOpen}
         onOpenChange={setSettingsModalOpen}
         onSaved={refreshSettings}
+        onSignOut={async () => {
+          await fetch("/api/auth/local-signout", { method: "POST" });
+          router.push("/sign-in");
+          router.refresh();
+        }}
       />
     </div>
   );
