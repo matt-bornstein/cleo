@@ -4,6 +4,7 @@ import {
   resetCommentsForTests,
   resolveComment,
 } from "@/lib/comments/store";
+import { vi } from "vitest";
 
 describe("comments store", () => {
   beforeEach(() => {
@@ -39,6 +40,23 @@ describe("comments store", () => {
     expect(comment).not.toBeNull();
     const resolved = resolveComment(`  ${comment!.id}  `);
     expect(resolved?.resolved).toBe(true);
+  });
+
+  it("does not persist when resolving an already-resolved comment", () => {
+    const comment = addComment({
+      documentId: "doc-resolve-noop",
+      content: "Already resolved",
+      anchorText: "Anchor",
+    });
+    expect(comment).not.toBeNull();
+    resolveComment(comment!.id);
+
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+    const baselineCalls = setItemSpy.mock.calls.length;
+    const resolvedAgain = resolveComment(comment!.id);
+
+    expect(resolvedAgain?.resolved).toBe(true);
+    expect(setItemSpy.mock.calls.length).toBe(baselineCalls);
   });
 
   it("stores replies with parent comment id", () => {

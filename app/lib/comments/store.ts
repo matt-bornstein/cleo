@@ -163,6 +163,9 @@ export function resolveComment(commentId: string) {
   const state = loadState();
   const index = state.comments.findIndex((comment) => comment.id === normalizedCommentId);
   if (index === -1) return null;
+  if (state.comments[index].resolved) {
+    return state.comments[index];
+  }
   state.comments[index] = {
     ...state.comments[index],
     resolved: true,
