@@ -24,6 +24,7 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
     <form className="space-y-2" onSubmit={handleSubmit}>
       <textarea
         value={prompt}
+        disabled={disabled}
         onChange={(event) => setPrompt(event.target.value)}
         placeholder="Ask AI to edit this document..."
         className="min-h-[84px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"

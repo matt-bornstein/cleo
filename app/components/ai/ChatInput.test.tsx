@@ -31,4 +31,11 @@ describe("ChatInput", () => {
 
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it("disables textarea and submit button when disabled", () => {
+    render(<ChatInput onSubmit={vi.fn().mockResolvedValue(undefined)} disabled />);
+
+    expect(screen.getByPlaceholderText("Ask AI to edit this document...")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Working..." })).toBeDisabled();
+  });
 });
