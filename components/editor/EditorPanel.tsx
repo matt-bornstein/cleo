@@ -1,6 +1,9 @@
 "use client";
 
 import { Id } from "@/convex/_generated/dataModel";
+import { RichTextEditor } from "./RichTextEditor";
+import { useIdleSave } from "@/hooks/useIdleSave";
+import { useCallback } from "react";
 
 interface EditorPanelProps {
   documentId: Id<"documents">;
@@ -8,16 +11,21 @@ interface EditorPanelProps {
 }
 
 export function EditorPanel({ documentId, initialContent }: EditorPanelProps) {
+  const { scheduleIdleSave } = useIdleSave(documentId);
+
+  const handleUpdate = useCallback(
+    (json: string) => {
+      scheduleIdleSave(json);
+    },
+    [scheduleIdleSave]
+  );
+
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="border-b p-2 text-sm text-muted-foreground">
-        Formatting toolbar (Phase 2)
-      </div>
-      <div className="flex-1 p-4">
-        <p className="text-muted-foreground">
-          Editor will be here (Phase 2). Document: {documentId}
-        </p>
-      </div>
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <RichTextEditor
+        initialContent={initialContent}
+        onUpdate={handleUpdate}
+      />
     </div>
   );
 }

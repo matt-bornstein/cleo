@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as diffs from "../diffs.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 import type * as permissions from "../permissions.js";
@@ -22,6 +23,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  diffs: typeof diffs;
   documents: typeof documents;
   http: typeof http;
   permissions: typeof permissions;
