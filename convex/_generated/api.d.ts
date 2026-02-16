@@ -16,6 +16,7 @@ import type * as diffs from "../diffs.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 import type * as lib_htmlSerializer from "../lib/htmlSerializer.js";
+import type * as lib_htmlToJson from "../lib/htmlToJson.js";
 import type * as permissions from "../permissions.js";
 import type * as presence from "../presence.js";
 import type * as prosemirrorSync from "../prosemirrorSync.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   documents: typeof documents;
   http: typeof http;
   "lib/htmlSerializer": typeof lib_htmlSerializer;
+  "lib/htmlToJson": typeof lib_htmlToJson;
   permissions: typeof permissions;
   presence: typeof presence;
   prosemirrorSync: typeof prosemirrorSync;
