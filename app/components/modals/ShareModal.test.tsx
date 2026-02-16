@@ -61,6 +61,18 @@ describe("ShareModal", () => {
     expect(await screen.findByRole("button", { name: "Copy failed" })).toBeInTheDocument();
   });
 
+  it("shows copy failure state when clipboard API is unavailable", async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: undefined,
+    });
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-copy-no-api" />);
+
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(await screen.findByRole("button", { name: "Copy failed" })).toBeInTheDocument();
+  });
+
   it("resets copy failure label after timeout", async () => {
     vi.useFakeTimers();
     const rejectingWriteText = vi.fn().mockRejectedValue(new Error("permission denied"));
