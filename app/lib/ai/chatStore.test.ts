@@ -291,6 +291,7 @@ describe("ai chat store", () => {
             content: "a".repeat(8_001),
             createdAt: 4,
           },
+          null,
           {
             id: "bad-control-content",
             documentId: "doc-legacy",
@@ -331,6 +332,15 @@ describe("ai chat store", () => {
         model: "gpt-4o",
       }),
     );
+  });
+
+  it("returns empty when persisted chat payload has non-array messages container", () => {
+    window.localStorage.setItem(
+      "plan00.aiMessages.v1",
+      JSON.stringify({ messages: { id: "not-array" } }),
+    );
+
+    expect(listMessagesByDocument("doc-legacy")).toEqual([]);
   });
 
   it("dedupes duplicate message ids on save by newest timestamp", () => {

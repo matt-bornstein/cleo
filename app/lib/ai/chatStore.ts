@@ -32,8 +32,8 @@ function loadState(): AIMessageState {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return { messages: [] };
   try {
-    const parsed = JSON.parse(raw) as AIMessageState;
-    if (!parsed.messages) {
+    const parsed = JSON.parse(raw) as { messages?: unknown };
+    if (!Array.isArray(parsed.messages)) {
       return { messages: [] };
     }
 
@@ -122,35 +122,43 @@ export function resetMessagesForTests() {
   persistState({ messages: [] });
 }
 
-function normalizeMessage(message: AIMessage): AIMessage | null {
-  const normalizedDocumentId = normalizeDocumentId(message.documentId);
+function normalizeMessage(message: unknown): AIMessage | null {
+  if (!message || typeof message !== "object") {
+    return null;
+  }
+  const candidate = message as Partial<AIMessage>;
+
+  const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
   const normalizedMessageId =
-    typeof message.id === "string" ? message.id.trim() : undefined;
+    typeof candidate.id === "string" ? candidate.id.trim() : undefined;
   if (
     !normalizedMessageId ||
     normalizedMessageId.length > MAX_USER_ID_LENGTH ||
     hasControlChars(normalizedMessageId) ||
     !isValidDocumentId(normalizedDocumentId) ||
-    !ALLOWED_MESSAGE_ROLES.has(message.role) ||
-    typeof message.content !== "string" ||
-    message.content.trim().length === 0 ||
-    message.content.length > MAX_MESSAGE_CONTENT_LENGTH ||
-    hasDisallowedTextControlChars(message.content) ||
-    typeof message.createdAt !== "number" ||
-    !Number.isFinite(message.createdAt) ||
-    message.createdAt < 0
+    !ALLOWED_MESSAGE_ROLES.has(candidate.role as AIMessage["role"]) ||
+    typeof candidate.content !== "string" ||
+    candidate.content.trim().length === 0 ||
+    candidate.content.length > MAX_MESSAGE_CONTENT_LENGTH ||
+    hasDisallowedTextControlChars(candidate.content) ||
+    typeof candidate.createdAt !== "number" ||
+    !Number.isFinite(candidate.createdAt) ||
+    candidate.createdAt < 0
   ) {
     return null;
   }
 
   return {
-    ...message,
+    ...candidate,
     id: normalizedMessageId,
     documentId: normalizedDocumentId,
-    userId: normalizeAIUserId(message.userId),
+    role: candidate.role as AIMessage["role"],
+    content: candidate.content,
+    createdAt: candidate.createdAt,
+    userId: normalizeAIUserId(candidate.userId),
     model:
-      typeof message.model === "string" && message.model.trim().length > 0
-        ? getModelConfig(message.model.trim()).id
+      typeof candidate.model === "string" && candidate.model.trim().length > 0
+        ? getModelConfig(candidate.model.trim()).id
         : undefined,
   };
 }
