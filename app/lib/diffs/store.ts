@@ -3,6 +3,7 @@ import { diff_match_patch } from "diff-match-patch";
 import { MAX_PROMPT_LENGTH, MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
+import { getModelConfig } from "@/lib/ai/models";
 import {
   getDocumentById,
   setDocumentLastDiffAt,
@@ -288,6 +289,6 @@ function normalizeDiffMetadata(aiPrompt: unknown, aiModel: unknown) {
 
   return {
     aiPrompt: normalizedPrompt.length > 0 ? normalizedPrompt : undefined,
-    aiModel: normalizedModel.length > 0 ? normalizedModel : undefined,
+    aiModel: normalizedModel.length > 0 ? getModelConfig(normalizedModel).id : undefined,
   };
 }

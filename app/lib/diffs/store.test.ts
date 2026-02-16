@@ -186,6 +186,13 @@ describe("diff store triggerIdleSave", () => {
       source: "manual",
       aiPrompt: "Line one\nLine two",
     });
+    const unknownModel = createDiff({
+      documentId: document.id,
+      userId: "reviewer@example.com",
+      snapshotAfter: snapshot,
+      source: "manual",
+      aiModel: "unknown-model",
+    });
     const controlCharModel = createDiff({
       documentId: document.id,
       userId: "reviewer@example.com",
@@ -198,6 +205,7 @@ describe("diff store triggerIdleSave", () => {
     expect(oversizedPrompt).toBeNull();
     expect(multilinePrompt).not.toBeNull();
     expect(multilinePrompt?.aiPrompt).toBe("Line one\nLine two");
+    expect(unknownModel?.aiModel).toBe("gpt-4o");
     expect(controlCharModel).toBeNull();
   });
 
