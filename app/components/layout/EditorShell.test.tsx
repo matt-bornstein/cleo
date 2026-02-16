@@ -17,6 +17,12 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useAILockStatus", () => ({
+  useAILockStatus: () => ({
+    locked: false,
+  }),
+}));
+
 describe("EditorShell", () => {
   beforeEach(() => {
     pushMock.mockReset();

@@ -1,5 +1,5 @@
 import { aiLockManager } from "@/lib/ai/lock";
-import { POST } from "@/app/api/ai/stream/route";
+import { GET, POST } from "@/app/api/ai/stream/route";
 
 function createRequestBody(overrides?: Partial<Record<string, unknown>>) {
   return {
@@ -64,5 +64,27 @@ describe("POST /api/ai/stream", () => {
     const payload = (await response.json()) as { error: string };
     expect(payload.error).toContain("alice");
     aiLockManager.release("doc-lock", "alice");
+  });
+});
+
+describe("GET /api/ai/stream", () => {
+  it("returns unlocked status by default", async () => {
+    const response = await GET(
+      new Request("http://localhost/api/ai/stream?documentId=doc-status"),
+    );
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { locked: boolean };
+    expect(payload.locked).toBe(false);
+  });
+
+  it("returns lock owner when locked", async () => {
+    aiLockManager.acquire("doc-status-locked", "alice");
+    const response = await GET(
+      new Request("http://localhost/api/ai/stream?documentId=doc-status-locked"),
+    );
+    const payload = (await response.json()) as { locked: boolean; lockedBy?: string };
+    expect(payload.locked).toBe(true);
+    expect(payload.lockedBy).toBe("alice");
+    aiLockManager.release("doc-status-locked", "alice");
   });
 });

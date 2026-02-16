@@ -21,6 +21,17 @@ type StreamRequestPayload = {
   messages: Array<{ role: "user" | "assistant" | "system"; content: string }>;
 };
 
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const documentId = searchParams.get("documentId");
+  if (!documentId) {
+    return Response.json({ error: "documentId is required" }, { status: 400 });
+  }
+
+  const status = aiLockManager.getStatus(documentId);
+  return Response.json(status);
+}
+
 
 function buildPrompt(payload: StreamRequestPayload, documentHtml: string) {
   const history = payload.messages

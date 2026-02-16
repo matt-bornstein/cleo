@@ -33,6 +33,25 @@ export class AILockManager {
     if (existing.lockedBy !== userId) return;
     this.locks.delete(documentId);
   }
+
+  getStatus(documentId: string, staleAfterMs = 120_000) {
+    const lock = this.locks.get(documentId);
+    if (!lock) {
+      return { locked: false as const };
+    }
+
+    const isStale = Date.now() - lock.lockedAt >= staleAfterMs;
+    if (isStale) {
+      this.locks.delete(documentId);
+      return { locked: false as const };
+    }
+
+    return {
+      locked: true as const,
+      lockedBy: lock.lockedBy,
+      lockedAt: lock.lockedAt,
+    };
+  }
 }
 
 export const aiLockManager = new AILockManager();

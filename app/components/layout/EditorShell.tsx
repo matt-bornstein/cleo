@@ -165,6 +165,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
           <AIPanel
             documentId={documentId}
             currentDocumentContent={content}
+            currentUserId={currentUserEmail}
             defaultModel={settings.defaultModel}
             canEdit={canEdit}
             chatClearedAt={currentDocument?.chatClearedAt}

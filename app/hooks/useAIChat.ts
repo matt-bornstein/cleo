@@ -14,6 +14,7 @@ type UseAIChatArgs = {
   documentId: string;
   currentDocumentContent: string;
   onApplyContent: (nextContent: string) => void;
+  currentUserId: string;
   defaultModel?: string;
   chatClearedAt?: number;
   onClearChat?: (clearedAt: number) => void;
@@ -46,6 +47,7 @@ export function useAIChat({
   documentId,
   currentDocumentContent,
   onApplyContent,
+  currentUserId,
   defaultModel,
   chatClearedAt,
   onClearChat,
@@ -77,7 +79,10 @@ export function useAIChat({
       try {
         const response = await fetch("/api/ai/stream", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": currentUserId,
+          },
           body: JSON.stringify({
             documentId,
             prompt,
@@ -165,6 +170,7 @@ export function useAIChat({
     [
       currentDocumentContent,
       chatClearedAt,
+      currentUserId,
       documentId,
       onApplyContent,
       selectedModel,
