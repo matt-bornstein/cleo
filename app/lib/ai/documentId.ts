@@ -1,6 +1,5 @@
 import { MAX_DOCUMENT_ID_LENGTH } from "@/lib/ai/constraints";
-
-const CONTROL_CHARS_REGEX = /[\u0000-\u001F\u007F]/;
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 export function normalizeDocumentId(documentId: string) {
   return documentId.trim();
@@ -11,6 +10,6 @@ export function isValidDocumentId(documentId: string) {
   return (
     normalizedDocumentId.length > 0 &&
     normalizedDocumentId.length <= MAX_DOCUMENT_ID_LENGTH &&
-    !CONTROL_CHARS_REGEX.test(normalizedDocumentId)
+    !hasControlChars(normalizedDocumentId)
   );
 }

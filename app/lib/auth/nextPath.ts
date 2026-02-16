@@ -1,3 +1,5 @@
+import { hasControlChars } from "@/lib/validators/controlChars";
+
 const MAX_NEXT_PATH_LENGTH = 2048;
 
 export function sanitizeNextPath(rawNextPath: unknown) {
@@ -6,7 +8,7 @@ export function sanitizeNextPath(rawNextPath: unknown) {
   const normalizedNextPath = rawNextPath.trim();
   if (!normalizedNextPath) return "/editor";
   if (normalizedNextPath.length > MAX_NEXT_PATH_LENGTH) return "/editor";
-  if (/[\u0000-\u001F\u007F]/.test(normalizedNextPath)) return "/editor";
+  if (hasControlChars(normalizedNextPath)) return "/editor";
   if (!normalizedNextPath.startsWith("/")) return "/editor";
   if (normalizedNextPath.startsWith("//")) return "/editor";
 
