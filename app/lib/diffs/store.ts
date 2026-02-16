@@ -6,6 +6,7 @@ import {
   updateDocumentContent,
 } from "@/lib/documents/store";
 import type { DiffRecord, DiffSource } from "@/lib/types";
+import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 
 const STORAGE_KEY = "plan00.diffs.v1";
 const dmp = new diff_match_patch();
@@ -99,7 +100,7 @@ export function ensureCreatedDiff(params: {
 
   return createDiff({
     documentId: params.documentId,
-    userId: params.userId ?? "local-dev-user",
+    userId: params.userId ?? DEFAULT_LOCAL_USER_ID,
     snapshotAfter: params.snapshot,
     source: "created",
   });
@@ -120,7 +121,7 @@ export function restoreVersion(params: {
   setDocumentLastDiffAt(params.documentId, now);
   const diff = createDiff({
     documentId: params.documentId,
-    userId: params.userId ?? "local-dev-user",
+    userId: params.userId ?? DEFAULT_LOCAL_USER_ID,
     snapshotAfter: params.snapshot,
     source: "manual",
   });
@@ -156,7 +157,7 @@ export function triggerIdleSave(params: {
   setDocumentLastDiffAt(params.documentId, now);
   const diff = createDiff({
     documentId: params.documentId,
-    userId: "local-dev-user",
+    userId: DEFAULT_LOCAL_USER_ID,
     snapshotAfter: params.snapshot,
     source: "manual",
   });

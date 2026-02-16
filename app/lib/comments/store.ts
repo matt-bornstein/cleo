@@ -1,4 +1,5 @@
 import type { CommentRecord } from "@/lib/types";
+import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 
 const STORAGE_KEY = "plan00.comments.v1";
 
@@ -49,7 +50,7 @@ export function addComment(params: {
   const comment: CommentRecord = {
     id: crypto.randomUUID(),
     documentId: params.documentId,
-    userId: "local-dev-user",
+    userId: DEFAULT_LOCAL_USER_ID,
     content: params.content,
     anchorFrom: 0,
     anchorTo: 0,

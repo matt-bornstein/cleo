@@ -7,6 +7,7 @@ import {
   removePresence,
   updatePresence,
 } from "@/lib/presence/store";
+import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 
 type PresenceData = {
   name: string;
@@ -16,7 +17,7 @@ type PresenceData = {
 };
 
 const CURRENT_USER = {
-  id: "local-dev-user",
+  id: DEFAULT_LOCAL_USER_ID,
   name: "You",
   color: "#3b82f6",
 };
