@@ -445,6 +445,17 @@ describe("document store", () => {
     expect(deleteDocument("doc-\ninvalid")).toBe(false);
   });
 
+  it("handles malformed non-string runtime inputs safely", () => {
+    expect(getDocumentById(123 as unknown as string)).toBeUndefined();
+    expect(updateDocumentTitle(123 as unknown as string, "Ignored")).toBeUndefined();
+    expect(updateDocumentContent("doc-valid", 123 as unknown as string)).toBeUndefined();
+    expect(setDocumentLastDiffAt("doc-valid", "123" as unknown as number)).toBeUndefined();
+    expect(
+      setDocumentChatClearedAt("doc-valid", "123" as unknown as number),
+    ).toBeUndefined();
+    expect(deleteDocument(123 as unknown as string)).toBe(false);
+  });
+
   it("updates document title and normalizes empty title", () => {
     const created = createDocument("Old title");
     const renamed = updateDocumentTitle(created.id, "  New title  ");

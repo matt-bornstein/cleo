@@ -160,7 +160,7 @@ function persistState(state: DocumentStoreState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-function normalizeOwnerEmail(ownerEmail: string | undefined) {
+function normalizeOwnerEmail(ownerEmail: unknown) {
   const normalizedEmail = normalizeEmailOrUndefined(ownerEmail);
   if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
     return DEFAULT_OWNER_EMAIL;
@@ -169,7 +169,10 @@ function normalizeOwnerEmail(ownerEmail: string | undefined) {
   return normalizedEmail;
 }
 
-export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL): AppDocument {
+export function createDocument(
+  title: unknown,
+  ownerEmail: unknown = DEFAULT_OWNER_EMAIL,
+): AppDocument {
   const now = Math.max(0, Date.now());
   const normalizedTitle = normalizeDocumentTitle(title);
   const state = loadState();
@@ -187,7 +190,7 @@ export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL):
   return document;
 }
 
-export function listDocuments(query?: string): AppDocument[] {
+export function listDocuments(query?: unknown): AppDocument[] {
   const state = loadState();
   const normalizedQuery =
     typeof query === "string" ? query.trim().toLowerCase() : undefined;
@@ -204,7 +207,7 @@ export function listDocuments(query?: string): AppDocument[] {
     );
 }
 
-export function getDocumentById(documentId: string): AppDocument | undefined {
+export function getDocumentById(documentId: unknown): AppDocument | undefined {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) return undefined;
 
@@ -213,8 +216,8 @@ export function getDocumentById(documentId: string): AppDocument | undefined {
 }
 
 export function updateDocumentContent(
-  documentId: string,
-  content: string,
+  documentId: unknown,
+  content: unknown,
 ): AppDocument | undefined {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (
@@ -243,8 +246,8 @@ export function updateDocumentContent(
 }
 
 export function updateDocumentTitle(
-  documentId: string,
-  title: string,
+  documentId: unknown,
+  title: unknown,
 ): AppDocument | undefined {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) return undefined;
@@ -269,14 +272,19 @@ export function updateDocumentTitle(
 }
 
 export function setDocumentLastDiffAt(
-  documentId: string,
-  timestamp: number,
+  documentId: unknown,
+  timestamp: unknown,
 ): AppDocument | undefined {
   const normalizedDocumentId = normalizeDocumentId(documentId);
+  const normalizedTimestamp =
+    typeof timestamp === "number" &&
+    Number.isFinite(timestamp) &&
+    timestamp >= 0
+      ? timestamp
+      : undefined;
   if (
     !isValidDocumentId(normalizedDocumentId) ||
-    !Number.isFinite(timestamp) ||
-    timestamp < 0
+    normalizedTimestamp === undefined
   ) {
     return undefined;
   }
@@ -286,14 +294,15 @@ export function setDocumentLastDiffAt(
   if (index === -1) return undefined;
   const existing = state.documents[index];
   if (
-    existing.lastDiffAt === timestamp ||
-    (typeof existing.lastDiffAt === "number" && timestamp < existing.lastDiffAt)
+    existing.lastDiffAt === normalizedTimestamp ||
+    (typeof existing.lastDiffAt === "number" &&
+      normalizedTimestamp < existing.lastDiffAt)
   ) {
     return undefined;
   }
   const updated: AppDocument = {
     ...existing,
-    lastDiffAt: timestamp,
+    lastDiffAt: normalizedTimestamp,
   };
   state.documents[index] = updated;
   persistState(state);
@@ -301,14 +310,19 @@ export function setDocumentLastDiffAt(
 }
 
 export function setDocumentChatClearedAt(
-  documentId: string,
-  timestamp: number,
+  documentId: unknown,
+  timestamp: unknown,
 ): AppDocument | undefined {
   const normalizedDocumentId = normalizeDocumentId(documentId);
+  const normalizedTimestamp =
+    typeof timestamp === "number" &&
+    Number.isFinite(timestamp) &&
+    timestamp >= 0
+      ? timestamp
+      : undefined;
   if (
     !isValidDocumentId(normalizedDocumentId) ||
-    !Number.isFinite(timestamp) ||
-    timestamp < 0
+    normalizedTimestamp === undefined
   ) {
     return undefined;
   }
@@ -318,21 +332,22 @@ export function setDocumentChatClearedAt(
   if (index === -1) return undefined;
   const existing = state.documents[index];
   if (
-    existing.chatClearedAt === timestamp ||
-    (typeof existing.chatClearedAt === "number" && timestamp < existing.chatClearedAt)
+    existing.chatClearedAt === normalizedTimestamp ||
+    (typeof existing.chatClearedAt === "number" &&
+      normalizedTimestamp < existing.chatClearedAt)
   ) {
     return undefined;
   }
   const updated: AppDocument = {
     ...existing,
-    chatClearedAt: timestamp,
+    chatClearedAt: normalizedTimestamp,
   };
   state.documents[index] = updated;
   persistState(state);
   return updated;
 }
 
-export function deleteDocument(documentId: string) {
+export function deleteDocument(documentId: unknown) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) return false;
 
