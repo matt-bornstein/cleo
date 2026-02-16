@@ -74,4 +74,23 @@ describe("AILockManager", () => {
     });
     nowSpy.mockRestore();
   });
+
+  it("falls back to default stale window for invalid staleAfterMs values", () => {
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValue(1_000);
+    const manager = new AILockManager();
+    manager.acquire("doc-5", "alice", Number.NaN);
+
+    nowSpy.mockReturnValue(1_500);
+    const status = manager.getStatus("doc-5", Number.NaN);
+    expect(status).toEqual({
+      locked: true,
+      lockedBy: "alice",
+      lockedAt: 1_000,
+    });
+
+    const blocked = manager.acquire("doc-5", "bob", Number.NaN);
+    expect(blocked.acquired).toBe(false);
+    nowSpy.mockRestore();
+  });
 });
