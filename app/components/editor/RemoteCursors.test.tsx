@@ -43,4 +43,26 @@ describe("RemoteCursors", () => {
     expect(screen.getByText("Collaborator")).toBeInTheDocument();
     expect(screen.queryByText("Ignore me")).not.toBeInTheDocument();
   });
+
+  it("does not throw when presence id and data getters throw", () => {
+    const presenceWithThrowingGetters = Object.create(null) as {
+      id: unknown;
+      data: unknown;
+    };
+    Object.defineProperty(presenceWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(presenceWithThrowingGetters, "data", {
+      get() {
+        throw new Error("data getter failed");
+      },
+    });
+
+    expect(() =>
+      render(<RemoteCursors others={[presenceWithThrowingGetters]} />),
+    ).not.toThrow();
+    expect(screen.getByText("No other collaborators online.")).toBeInTheDocument();
+  });
 });

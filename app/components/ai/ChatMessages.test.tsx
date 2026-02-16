@@ -31,4 +31,24 @@ describe("ChatMessages", () => {
 
     expect(screen.getByText("Hello world")).toBeInTheDocument();
   });
+
+  it("does not throw when message id getter throws", () => {
+    const messageWithThrowingId = Object.create(null) as { id: unknown; role: string; content: string };
+    Object.defineProperty(messageWithThrowingId, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(messageWithThrowingId, "role", {
+      value: "assistant",
+    });
+    Object.defineProperty(messageWithThrowingId, "content", {
+      value: "Getter trap message",
+    });
+
+    expect(() =>
+      render(<ChatMessages messages={[messageWithThrowingId]} />),
+    ).not.toThrow();
+    expect(screen.getByText("Getter trap message")).toBeInTheDocument();
+  });
 });

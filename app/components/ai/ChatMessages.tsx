@@ -12,13 +12,7 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
           return [];
         }
 
-        const candidate = message as { id?: unknown };
-        const normalizedId =
-          typeof candidate.id === "string" &&
-          candidate.id.trim().length > 0 &&
-          !hasControlChars(candidate.id.trim())
-            ? candidate.id.trim()
-            : `message-${index}`;
+        const normalizedId = normalizeMessageEntryId(message, index);
         return [{ id: normalizedId, message }];
       })
     : [];
@@ -38,4 +32,27 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
       ))}
     </div>
   );
+}
+
+function normalizeMessageEntryId(message: unknown, index: number) {
+  if (!message || typeof message !== "object") {
+    return `message-${index}`;
+  }
+
+  let messageId: unknown;
+  try {
+    messageId = (message as { id?: unknown }).id;
+  } catch {
+    return `message-${index}`;
+  }
+
+  if (
+    typeof messageId === "string" &&
+    messageId.trim().length > 0 &&
+    !hasControlChars(messageId.trim())
+  ) {
+    return messageId.trim();
+  }
+
+  return `message-${index}`;
 }

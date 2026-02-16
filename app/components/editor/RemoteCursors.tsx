@@ -7,25 +7,15 @@ type RemoteCursorsProps = {
 export function RemoteCursors({ others }: RemoteCursorsProps) {
   const normalizedOthers = Array.isArray(others)
     ? others.flatMap((presence) => {
-        if (!presence || typeof presence !== "object") {
+        const normalizedPresence = normalizePresenceEntry(presence);
+        if (!normalizedPresence) {
           return [];
         }
-        const candidate = presence as {
-          id?: unknown;
-          data?: unknown;
-        };
-        const normalizedId =
-          typeof candidate.id === "string" && candidate.id.trim().length > 0
-            ? candidate.id.trim()
-            : undefined;
+        const normalizedId = normalizedPresence.id;
         if (!normalizedId || hasControlChars(normalizedId)) {
           return [];
         }
-
-        const data =
-          candidate.data && typeof candidate.data === "object"
-            ? (candidate.data as { name?: unknown; color?: unknown })
-            : undefined;
+        const data = normalizedPresence.data;
         const normalizedName =
           typeof data?.name === "string" &&
           data.name.trim().length > 0 &&
@@ -71,4 +61,28 @@ export function RemoteCursors({ others }: RemoteCursorsProps) {
       })}
     </div>
   );
+}
+
+function normalizePresenceEntry(presence: unknown) {
+  if (!presence || typeof presence !== "object") {
+    return undefined;
+  }
+
+  try {
+    const candidate = presence as {
+      id?: unknown;
+      data?: unknown;
+    };
+    return {
+      id: typeof candidate.id === "string" && candidate.id.trim().length > 0
+        ? candidate.id.trim()
+        : undefined,
+      data:
+        candidate.data && typeof candidate.data === "object"
+          ? (candidate.data as { name?: unknown; color?: unknown })
+          : undefined,
+    };
+  } catch {
+    return undefined;
+  }
 }
