@@ -3,6 +3,7 @@ import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { Role } from "@/lib/types";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
 import { hasControlChars } from "@/lib/validators/controlChars";
+import { isValidEmail } from "@/lib/validators/email";
 
 const STORAGE_KEY = "plan00.permissions.v1";
 const ALLOWED_ROLES = new Set<Role>(["owner", "editor", "commenter", "viewer"]);
@@ -47,6 +48,7 @@ function loadState(): PermissionState {
         if (
           !isValidDocumentId(normalizedDocumentId) ||
           !normalizedEmail ||
+          !isValidEmail(normalizedEmail) ||
           !ALLOWED_ROLES.has(entry.role) ||
           !normalizedPermissionId
         ) {
@@ -120,7 +122,7 @@ export function getRoleForUser(
   }
 
   const normalizedEmail = normalizeEmailOrUndefined(email);
-  if (!normalizedEmail) {
+  if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
     return "viewer";
   }
   const normalizedOwnerEmail = normalizeEmailOrUndefined(ownerEmail);
@@ -148,7 +150,7 @@ export function hasDocumentAccess(
   }
 
   const normalizedEmail = normalizeEmailOrUndefined(email);
-  if (!normalizedEmail) {
+  if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
     return false;
   }
   const normalizedOwnerEmail = normalizeEmailOrUndefined(ownerEmail);
@@ -170,7 +172,11 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
   }
 
   const normalizedEmail = normalizeEmailOrUndefined(email);
-  if (!normalizedEmail || !ALLOWED_ROLES.has(role)) {
+  if (
+    !normalizedEmail ||
+    !isValidEmail(normalizedEmail) ||
+    !ALLOWED_ROLES.has(role)
+  ) {
     return null;
   }
 
