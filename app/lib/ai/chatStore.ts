@@ -147,6 +147,7 @@ function normalizeMessage(message: unknown): AIMessage | null {
   const role = safeReadMessageField(candidate, "role");
   const content = safeReadMessageField(candidate, "content");
   const createdAt = safeReadMessageField(candidate, "createdAt");
+  const diffId = safeReadMessageField(candidate, "diffId");
   if (
     !normalizedMessageId ||
     normalizedMessageId.length > MAX_USER_ID_LENGTH ||
@@ -167,7 +168,6 @@ function normalizeMessage(message: unknown): AIMessage | null {
   const model = safeReadMessageField(candidate, "model");
 
   return {
-    ...candidate,
     id: normalizedMessageId,
     documentId: normalizedDocumentId,
     role: role as AIMessage["role"],
@@ -175,6 +175,13 @@ function normalizeMessage(message: unknown): AIMessage | null {
     createdAt,
     userId: normalizeAIUserId(userId),
     model: normalizeMessageModel(model),
+    diffId:
+      typeof diffId === "string" &&
+      diffId.trim().length > 0 &&
+      diffId.trim().length <= MAX_USER_ID_LENGTH &&
+      !hasControlChars(diffId.trim())
+        ? diffId.trim()
+        : undefined,
   };
 }
 
@@ -215,7 +222,8 @@ function safeReadMessageField(
     | "role"
     | "content"
     | "createdAt"
-    | "model",
+    | "model"
+    | "diffId",
 ) {
   try {
     return message[key];

@@ -678,6 +678,40 @@ describe("diff store triggerIdleSave", () => {
     expect(listDiffsByDocument("doc-legacy")).toEqual([]);
   });
 
+  it("keeps persisted diffs when enumerable extra getters throw", () => {
+    const validDiffWithThrowingExtra = {
+      id: "diff-extra-getter",
+      documentId: "doc-extra-getter",
+      userId: "owner@example.com",
+      patch: "@@ -0,0 +1 @@\n+text",
+      snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+      source: "manual",
+      createdAt: 1,
+    } as Record<string, unknown>;
+    Object.defineProperty(validDiffWithThrowingExtra, "extra", {
+      enumerable: true,
+      get() {
+        throw new Error("extra getter failed");
+      },
+    });
+
+    window.localStorage.setItem("plan00.diffs.v1", "{}");
+    const nativeParse = JSON.parse;
+    const parseSpy = vi.spyOn(JSON, "parse");
+    parseSpy.mockImplementationOnce(() => ({
+      diffs: [validDiffWithThrowingExtra],
+    }));
+    parseSpy.mockImplementation((value: string) => nativeParse(value));
+
+    const listedDiffs = listDiffsByDocument("doc-extra-getter");
+    expect(listedDiffs).toEqual([
+      expect.objectContaining({
+        id: "diff-extra-getter",
+        documentId: "doc-extra-getter",
+      }),
+    ]);
+  });
+
   it("returns empty when persisted diffs container is non-array", () => {
     window.localStorage.setItem(
       "plan00.diffs.v1",

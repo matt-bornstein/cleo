@@ -99,7 +99,6 @@ function loadState(): CommentState {
 
       return [
         {
-          ...candidate,
           id: normalizedCommentId,
           documentId: normalizedDocumentId,
           userId: safeUserId,

@@ -296,6 +296,35 @@ describe("ai chat store", () => {
     expect(saved?.model).toBeUndefined();
   });
 
+  it("does not fail when save payload includes enumerable getter traps", () => {
+    const payloadWithThrowingExtraField = {
+      id: "message-extra-getter",
+      documentId: "doc-extra-getter",
+      userId: "owner@example.com",
+      role: "assistant",
+      content: "Hello",
+      createdAt: 3,
+    } as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingExtraField, "extra", {
+      enumerable: true,
+      get() {
+        throw new Error("extra getter failed");
+      },
+    });
+
+    expect(() =>
+      saveMessage(
+        payloadWithThrowingExtraField as unknown as Parameters<typeof saveMessage>[0],
+      ),
+    ).not.toThrow();
+    expect(listMessagesByDocument("doc-extra-getter")).toEqual([
+      expect.objectContaining({
+        id: "message-extra-getter",
+        content: "Hello",
+      }),
+    ]);
+  });
+
   it("normalizes unknown message model ids to supported defaults", () => {
     const saved = saveMessage({
       id: "model-message",

@@ -542,6 +542,40 @@ describe("comments store", () => {
     expect(listComments("doc-legacy")).toEqual([]);
   });
 
+  it("keeps persisted comments when enumerable extra getters throw", () => {
+    const validCommentWithThrowingExtra = {
+      id: "comment-extra-getter",
+      documentId: "doc-extra-getter",
+      userId: "owner@example.com",
+      content: "Hello",
+      anchorFrom: 0,
+      anchorTo: 0,
+      anchorText: "Anchor",
+      resolved: false,
+      createdAt: 1,
+      updatedAt: 1,
+    } as Record<string, unknown>;
+    Object.defineProperty(validCommentWithThrowingExtra, "extra", {
+      enumerable: true,
+      get() {
+        throw new Error("extra getter failed");
+      },
+    });
+
+    window.localStorage.setItem("plan00.comments.v1", "{}");
+    vi.spyOn(JSON, "parse").mockReturnValue({
+      comments: [validCommentWithThrowingExtra],
+    });
+
+    expect(() => listComments("doc-extra-getter")).not.toThrow();
+    expect(listComments("doc-extra-getter")).toEqual([
+      expect.objectContaining({
+        id: "comment-extra-getter",
+        documentId: "doc-extra-getter",
+      }),
+    ]);
+  });
+
   it("returns empty when persisted comments container is non-array", () => {
     window.localStorage.setItem(
       "plan00.comments.v1",

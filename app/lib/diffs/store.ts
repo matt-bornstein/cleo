@@ -88,7 +88,6 @@ function loadState(): DiffStoreState {
 
       return [
         {
-          ...candidate,
           id: normalizedDiffId,
           documentId: normalizedDocumentId,
           source: source as DiffSource,
