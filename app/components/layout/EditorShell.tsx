@@ -113,6 +113,17 @@ export function EditorShell({ documentId }: EditorShellProps) {
   }, [documentId, currentUserEmail, myRole, refreshDocuments, requestedShareRole]);
 
   useEffect(() => {
+    if (!requestedShareRole) return;
+    if (!(myRole === "owner" || myRole === requestedShareRole)) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("share");
+    const cleaned = params.toString();
+    const nextPath = cleaned ? `/editor/${documentId}?${cleaned}` : `/editor/${documentId}`;
+    router.replace(nextPath);
+  }, [documentId, myRole, requestedShareRole, router, searchParams]);
+
+  useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       const isMeta = event.metaKey || event.ctrlKey;
       if (!isMeta) return;

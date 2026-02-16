@@ -9,11 +9,13 @@ import { upsertPermission } from "@/lib/permissions/store";
 import { saveSettings } from "@/lib/settings/store";
 
 const pushMock = vi.fn();
+const replaceMock = vi.fn();
 let mockedSearchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: pushMock,
+    replace: replaceMock,
     refresh: vi.fn(),
   }),
   useSearchParams: () => mockedSearchParams,
@@ -28,6 +30,7 @@ vi.mock("@/hooks/useAILockStatus", () => ({
 describe("EditorShell", () => {
   beforeEach(() => {
     pushMock.mockReset();
+    replaceMock.mockReset();
     resetDocumentsForTests();
     window.localStorage.clear();
     mockedSearchParams = new URLSearchParams();
@@ -148,6 +151,7 @@ describe("EditorShell", () => {
     await waitFor(() => {
       expect(screen.getByText("commenter")).toBeInTheDocument();
     });
+    expect(replaceMock).toHaveBeenCalledWith(`/editor/${document.id}`);
   });
 
   it("shows access required screen for user without access", () => {
