@@ -194,4 +194,54 @@ describe("getRecentMessages", () => {
       { role: "assistant", content: "ok", userId: "user-1" },
     ]);
   });
+
+  it("does not throw when non-id history getters throw", () => {
+    const throwingEntry = Object.create(null) as {
+      id: unknown;
+      userId: unknown;
+      role: unknown;
+      content: unknown;
+      createdAt: unknown;
+    };
+    Object.defineProperty(throwingEntry, "id", {
+      value: "throwing-entry",
+    });
+    Object.defineProperty(throwingEntry, "userId", {
+      get() {
+        throw new Error("userId getter failed");
+      },
+    });
+    Object.defineProperty(throwingEntry, "role", {
+      get() {
+        throw new Error("role getter failed");
+      },
+    });
+    Object.defineProperty(throwingEntry, "content", {
+      get() {
+        throw new Error("content getter failed");
+      },
+    });
+    Object.defineProperty(throwingEntry, "createdAt", {
+      get() {
+        throw new Error("createdAt getter failed");
+      },
+    });
+
+    const messages = [
+      {
+        id: "valid",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "assistant",
+        content: "ok",
+        createdAt: 1,
+      },
+      throwingEntry,
+    ] as unknown as AIMessage[];
+
+    expect(() => getRecentMessages(messages, 5)).not.toThrow();
+    expect(getRecentMessages(messages, 5)).toEqual([
+      { role: "assistant", content: "ok", userId: "user-1" },
+    ]);
+  });
 });
