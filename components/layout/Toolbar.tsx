@@ -21,6 +21,7 @@ import {
   FileText,
   FileCode,
   MessageSquare,
+  Printer,
 } from "lucide-react";
 import { NewDocModal } from "@/components/modals/NewDocModal";
 import { OpenDocModal } from "@/components/modals/OpenDocModal";
@@ -32,6 +33,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Input } from "@/components/ui/input";
 import { PresenceIndicator } from "@/components/editor/PresenceIndicator";
 import { exportAsHtml, exportAsText, exportAsMarkdown, htmlToMarkdown } from "@/lib/export";
+import { prosemirrorJsonToHtml } from "@/lib/editor/htmlSerializer";
 
 interface ToolbarProps {
   documentId?: Id<"documents">;
@@ -119,6 +121,54 @@ ${liveHtml}
     downloadBlob(blob, `${documentTitle || "document"}.txt`);
   };
 
+  const handleExportPdf = () => {
+    // Use browser print dialog to generate PDF
+    const liveHtml = getEditorHtml?.();
+    const htmlContent = liveHtml || (documentContent ? (() => {
+      try {
+        const doc = JSON.parse(documentContent);
+        return prosemirrorJsonToHtml(doc);
+      } catch { return ""; }
+    })() : "");
+
+    if (!htmlContent) return;
+
+    // Open a new window with the content styled for print
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${documentTitle || "Document"}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 700px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #333; }
+    h1 { font-size: 2em; margin-top: 0; } h2 { font-size: 1.5em; } h3 { font-size: 1.25em; }
+    blockquote { border-left: 3px solid #ccc; padding-left: 1rem; color: #666; margin-left: 0; }
+    pre { background: #f4f4f4; padding: 0.75rem; border-radius: 4px; font-size: 0.9em; }
+    code { background: #f4f4f4; padding: 0.125rem 0.25rem; border-radius: 3px; font-size: 0.9em; }
+    pre code { background: none; padding: 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    td, th { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background: #f9f9f9; font-weight: 600; }
+    img { max-width: 100%; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 1.5rem 0; }
+    ul, ol { padding-left: 1.5em; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+${htmlContent}
+</body>
+</html>`);
+    printWindow.document.close();
+    // Wait for content to render before printing
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   function downloadBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -183,6 +233,10 @@ ${liveHtml}
                   <DropdownMenuItem onClick={handleExportText}>
                     <FileText className="mr-2 h-4 w-4" />
                     Plain Text
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPdf}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    PDF (Print)
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
