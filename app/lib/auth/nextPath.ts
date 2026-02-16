@@ -1,6 +1,17 @@
 export function sanitizeNextPath(rawNextPath: string | null | undefined) {
-  if (!rawNextPath) return "/editor";
-  if (!rawNextPath.startsWith("/")) return "/editor";
-  if (rawNextPath.startsWith("//")) return "/editor";
-  return rawNextPath;
+  const normalizedNextPath = rawNextPath?.trim();
+  if (!normalizedNextPath) return "/editor";
+  if (!normalizedNextPath.startsWith("/")) return "/editor";
+  if (normalizedNextPath.startsWith("//")) return "/editor";
+
+  if (
+    normalizedNextPath === "/editor" ||
+    normalizedNextPath.startsWith("/editor/") ||
+    normalizedNextPath.startsWith("/editor?") ||
+    normalizedNextPath.startsWith("/editor#")
+  ) {
+    return normalizedNextPath;
+  }
+
+  return "/editor";
 }

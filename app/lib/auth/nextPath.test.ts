@@ -6,6 +6,9 @@ describe("sanitizeNextPath", () => {
     expect(sanitizeNextPath(null)).toBe("/editor");
     expect(sanitizeNextPath("editor/doc")).toBe("/editor");
     expect(sanitizeNextPath("//evil.com")).toBe("/editor");
+    expect(sanitizeNextPath("/sign-in")).toBe("/editor");
+    expect(sanitizeNextPath("/editorial")).toBe("/editor");
+    expect(sanitizeNextPath("   ")).toBe("/editor");
   });
 
   it("preserves valid relative app paths", () => {
@@ -13,5 +16,7 @@ describe("sanitizeNextPath", () => {
     expect(sanitizeNextPath("/editor/doc-1?from=share")).toBe(
       "/editor/doc-1?from=share",
     );
+    expect(sanitizeNextPath("   /editor/doc-2   ")).toBe("/editor/doc-2");
+    expect(sanitizeNextPath("/editor#history")).toBe("/editor#history");
   });
 });
