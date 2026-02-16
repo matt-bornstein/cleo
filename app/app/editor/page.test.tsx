@@ -118,4 +118,42 @@ describe("EditorIndexPage", () => {
 
     expect(pushMock).not.toHaveBeenCalled();
   });
+
+  it("does not throw when router push getter throws", async () => {
+    const user = userEvent.setup();
+    mockedRouter = Object.create(null);
+    Object.defineProperty(mockedRouter, "push", {
+      get() {
+        throw new Error("push getter failed");
+      },
+    });
+    useDocumentsMock.mockReturnValue({
+      documents: [{ id: "doc-1" }],
+      create: vi.fn(),
+    });
+
+    render(<EditorIndexPage />);
+    await expect(
+      user.click(screen.getByRole("button", { name: "Open editor" })),
+    ).resolves.toBeUndefined();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when router push callback throws", async () => {
+    const user = userEvent.setup();
+    mockedRouter = {
+      push: () => {
+        throw new Error("push failed");
+      },
+    };
+    useDocumentsMock.mockReturnValue({
+      documents: [{ id: "doc-1" }],
+      create: vi.fn(),
+    });
+
+    render(<EditorIndexPage />);
+    await expect(
+      user.click(screen.getByRole("button", { name: "Open editor" })),
+    ).resolves.toBeUndefined();
+  });
 });

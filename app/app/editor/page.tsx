@@ -56,13 +56,17 @@ export default function EditorIndexPage() {
 }
 
 function safeNavigate(router: unknown, path: string) {
-  if (
-    router &&
-    typeof router === "object" &&
-    "push" in router &&
-    typeof (router as { push?: unknown }).push === "function"
-  ) {
-    (router as { push: (nextPath: string) => void }).push(path);
+  if (!router || typeof router !== "object" || !("push" in router)) {
+    return;
+  }
+
+  try {
+    const push = (router as { push?: unknown }).push;
+    if (typeof push === "function") {
+      push(path);
+    }
+  } catch {
+    return;
   }
 }
 
