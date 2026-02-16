@@ -75,4 +75,22 @@ describe("EditorDocumentPage", () => {
       expect.objectContaining({ documentId: undefined }),
     );
   });
+
+  it("handles params documentId getter errors safely", async () => {
+    const malformedParams = Object.create(null) as { documentId: unknown };
+    Object.defineProperty(malformedParams, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+
+    const view = await EditorDocumentPage({
+      params: Promise.resolve(malformedParams),
+    });
+    render(view);
+
+    expect(editorShellMock).toHaveBeenCalledWith(
+      expect.objectContaining({ documentId: undefined }),
+    );
+  });
 });

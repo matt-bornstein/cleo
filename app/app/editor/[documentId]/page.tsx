@@ -8,11 +8,7 @@ export default async function EditorDocumentPage({
   params,
 }: EditorDocumentPageProps) {
   const resolvedParams = await resolveParams(params);
-  const documentId = normalizeRouteDocumentId(
-    resolvedParams && typeof resolvedParams === "object"
-      ? (resolvedParams as { documentId?: unknown }).documentId
-      : undefined,
-  );
+  const documentId = normalizeRouteDocumentId(readRouteDocumentId(resolvedParams));
   return <EditorShell documentId={documentId} />;
 }
 
@@ -49,6 +45,18 @@ function hasThenProperty(value: unknown) {
     return "then" in value;
   } catch {
     return true;
+  }
+}
+
+function readRouteDocumentId(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (value as { documentId?: unknown }).documentId;
+  } catch {
+    return undefined;
   }
 }
 
