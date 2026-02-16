@@ -30,4 +30,26 @@ Rewrote section.
     const nextHtml = applyParsedEditsToHtml("<p>Old</p>", parsed);
     expect(nextHtml).toBe("<p>Completely new content</p>");
   });
+
+  it("handles malformed non-string AI response payloads", () => {
+    const parsed = parseAIResponse(123 as unknown as string);
+    expect(parsed).toEqual({
+      explanation: "",
+      fullHtml: undefined,
+      blocks: [],
+    });
+  });
+
+  it("safely ignores malformed parsed edit blocks at runtime", () => {
+    const nextHtml = applyParsedEditsToHtml("<p>Old</p>", {
+      explanation: "ok",
+      blocks: [
+        { search: "<p>Old</p>", replace: "<p>New</p>" },
+        null,
+        { search: 123, replace: "<p>Ignored</p>" },
+      ] as unknown as Array<{ search: string; replace: string }>,
+    });
+
+    expect(nextHtml).toBe("<p>New</p>");
+  });
 });

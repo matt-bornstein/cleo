@@ -14,18 +14,20 @@ const SEARCH_REPLACE_REGEX =
 const FULL_HTML_REGEX = /```html\s*([\s\S]*?)\s*```/i;
 
 export function parseAIResponse(response: string): ParsedAIResponse {
-  const fullHtmlMatch = response.match(FULL_HTML_REGEX);
+  const safeResponse = typeof response === "string" ? response : "";
+  const fullHtmlMatch = safeResponse.match(FULL_HTML_REGEX);
   const blocks: SearchReplaceBlock[] = [];
 
+  SEARCH_REPLACE_REGEX.lastIndex = 0;
   let match: RegExpExecArray | null;
-  while ((match = SEARCH_REPLACE_REGEX.exec(response)) !== null) {
+  while ((match = SEARCH_REPLACE_REGEX.exec(safeResponse)) !== null) {
     blocks.push({
-      search: match[1],
-      replace: match[2],
+      search: typeof match[1] === "string" ? match[1] : "",
+      replace: typeof match[2] === "string" ? match[2] : "",
     });
   }
 
-  const explanation = response
+  const explanation = safeResponse
     .replace(FULL_HTML_REGEX, "")
     .replace(SEARCH_REPLACE_REGEX, "")
     .trim();
@@ -41,14 +43,24 @@ export function applyParsedEditsToHtml(
   originalHtml: string,
   parsed: ParsedAIResponse,
 ) {
-  if (parsed.fullHtml) {
-    return parsed.fullHtml;
+  const safeOriginalHtml = typeof originalHtml === "string" ? originalHtml : "";
+  const safeParsed = parsed && typeof parsed === "object" ? parsed : undefined;
+  const safeFullHtml =
+    safeParsed && typeof safeParsed.fullHtml === "string"
+      ? safeParsed.fullHtml
+      : undefined;
+  if (safeFullHtml) {
+    return safeFullHtml;
   }
 
-  let nextHtml = originalHtml;
-  for (const block of parsed.blocks) {
-    if (!block.search) continue;
-    nextHtml = nextHtml.replace(block.search, block.replace);
+  const safeBlocks = Array.isArray(safeParsed?.blocks) ? safeParsed.blocks : [];
+  let nextHtml = safeOriginalHtml;
+  for (const block of safeBlocks) {
+    if (!block || typeof block !== "object") continue;
+    const search = typeof block.search === "string" ? block.search : "";
+    const replace = typeof block.replace === "string" ? block.replace : "";
+    if (!search) continue;
+    nextHtml = nextHtml.replace(search, replace);
   }
   return nextHtml;
 }
