@@ -271,4 +271,77 @@ describe("AIPanel", () => {
       user.click(screen.getByRole("button", { name: "Clear chat" })),
     ).resolves.toBeUndefined();
   });
+
+  it("does not throw when ai hook payload getters throw", async () => {
+    const user = userEvent.setup();
+    const lockStatusWithThrowingGetter = { locked: true } as {
+      locked: boolean;
+      lockedBy: unknown;
+    };
+    Object.defineProperty(lockStatusWithThrowingGetter, "lockedBy", {
+      get() {
+        throw new Error("lockedBy getter failed");
+      },
+    });
+    useAILockStatusMock.mockReturnValue(lockStatusWithThrowingGetter);
+
+    const aiChatStateWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(aiChatStateWithThrowingGetters, "messages", {
+      get() {
+        throw new Error("messages getter failed");
+      },
+    });
+    Object.defineProperty(aiChatStateWithThrowingGetters, "selectedModel", {
+      get() {
+        throw new Error("selectedModel getter failed");
+      },
+    });
+    Object.defineProperty(aiChatStateWithThrowingGetters, "selectedModelLabel", {
+      get() {
+        throw new Error("selectedModelLabel getter failed");
+      },
+    });
+    Object.defineProperty(aiChatStateWithThrowingGetters, "setSelectedModel", {
+      get() {
+        throw new Error("setSelectedModel getter failed");
+      },
+    });
+    Object.defineProperty(aiChatStateWithThrowingGetters, "sendPrompt", {
+      get() {
+        throw new Error("sendPrompt getter failed");
+      },
+    });
+    Object.defineProperty(aiChatStateWithThrowingGetters, "isLoading", {
+      get() {
+        throw new Error("isLoading getter failed");
+      },
+    });
+    Object.defineProperty(aiChatStateWithThrowingGetters, "error", {
+      get() {
+        throw new Error("error getter failed");
+      },
+    });
+    Object.defineProperty(aiChatStateWithThrowingGetters, "clearChat", {
+      get() {
+        throw new Error("clearChat getter failed");
+      },
+    });
+    useAIChatMock.mockReturnValue(aiChatStateWithThrowingGetters);
+
+    expect(() =>
+      render(
+        <AIPanel
+          documentId="doc-1"
+          currentDocumentContent="{}"
+          currentUserId="bob@example.com"
+          onApplyContent={vi.fn()}
+        />,
+      ),
+    ).not.toThrow();
+
+    expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Clear chat" })),
+    ).resolves.toBeUndefined();
+  });
 });

@@ -48,30 +48,36 @@ export function AIPanel({
     chatClearedAt,
     onClearChat,
   });
-  const messages = Array.isArray(aiChatState?.messages) ? aiChatState.messages : [];
+  const messagesValue = readObjectField(aiChatState, "messages");
+  const messages = Array.isArray(messagesValue) ? messagesValue : [];
+  const selectedModelValue = readObjectField(aiChatState, "selectedModel");
   const selectedModel =
-    typeof aiChatState?.selectedModel === "string" &&
-    aiChatState.selectedModel.trim().length > 0
-      ? aiChatState.selectedModel
+    typeof selectedModelValue === "string" &&
+    selectedModelValue.trim().length > 0
+      ? selectedModelValue
       : "gpt-4o";
+  const selectedModelLabelValue = readObjectField(aiChatState, "selectedModelLabel");
   const selectedModelLabel =
-    typeof aiChatState?.selectedModelLabel === "string" &&
-    aiChatState.selectedModelLabel.trim().length > 0
-      ? aiChatState.selectedModelLabel
+    typeof selectedModelLabelValue === "string" &&
+    selectedModelLabelValue.trim().length > 0
+      ? selectedModelLabelValue
       : selectedModel;
+  const setSelectedModelValue = readObjectField(aiChatState, "setSelectedModel");
   const setSelectedModel =
-    typeof aiChatState?.setSelectedModel === "function"
-      ? aiChatState.setSelectedModel
+    typeof setSelectedModelValue === "function"
+      ? setSelectedModelValue
       : undefined;
+  const sendPromptValue = readObjectField(aiChatState, "sendPrompt");
   const sendPrompt =
-    typeof aiChatState?.sendPrompt === "function"
-      ? aiChatState.sendPrompt
+    typeof sendPromptValue === "function"
+      ? sendPromptValue
       : undefined;
-  const isLoading = aiChatState?.isLoading === true;
-  const error =
-    typeof aiChatState?.error === "string" ? aiChatState.error : null;
+  const isLoading = readObjectField(aiChatState, "isLoading") === true;
+  const errorValue = readObjectField(aiChatState, "error");
+  const error = typeof errorValue === "string" ? errorValue : null;
+  const clearChatValue = readObjectField(aiChatState, "clearChat");
   const clearChat =
-    typeof aiChatState?.clearChat === "function" ? aiChatState.clearChat : undefined;
+    typeof clearChatValue === "function" ? clearChatValue : undefined;
 
   return (
     <div className="flex h-full flex-col">
@@ -124,13 +130,11 @@ function normalizeLockStatus(lockStatus: unknown) {
     return { locked: false, lockedBy: undefined };
   }
 
-  const candidate = lockStatus as {
-    locked?: unknown;
-    lockedBy?: unknown;
-  };
+  const locked = readObjectField(lockStatus, "locked");
+  const lockedBy = readObjectField(lockStatus, "lockedBy");
   return {
-    locked: candidate.locked === true,
-    lockedBy: typeof candidate.lockedBy === "string" ? candidate.lockedBy : undefined,
+    locked: locked === true,
+    lockedBy: typeof lockedBy === "string" ? lockedBy : undefined,
   };
 }
 
@@ -143,5 +147,17 @@ function safeInvoke(callback: unknown) {
     callback();
   } catch {
     return;
+  }
+}
+
+function readObjectField(value: unknown, key: string) {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (value as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
   }
 }
