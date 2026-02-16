@@ -7,7 +7,16 @@ import {
 import { vi } from "vitest";
 
 describe("comments store", () => {
+  const localStorageDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    "localStorage",
+  );
+
   beforeEach(() => {
+    vi.restoreAllMocks();
+    if (localStorageDescriptor) {
+      Object.defineProperty(window, "localStorage", localStorageDescriptor);
+    }
     resetCommentsForTests();
     window.localStorage.clear();
   });
@@ -559,5 +568,60 @@ describe("comments store", () => {
         parentCommentId: undefined,
       }),
     ]);
+  });
+
+  it("falls back to in-memory comments when localStorage getter throws", () => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("localStorage getter failed");
+      },
+    });
+
+    const comment = addComment({
+      documentId: "doc-memory-comments",
+      content: "Memory comment",
+      anchorText: "Anchor",
+    });
+
+    expect(comment).not.toBeNull();
+    expect(listComments("doc-memory-comments")).toEqual([
+      expect.objectContaining({
+        content: "Memory comment",
+      }),
+    ]);
+  });
+
+  it("returns empty list when localStorage getItem throws", () => {
+    addComment({
+      documentId: "doc-getitem-comments",
+      content: "Stored comment",
+      anchorText: "Anchor",
+    });
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("getItem failed");
+    });
+
+    expect(listComments("doc-getitem-comments")).toEqual([]);
+  });
+
+  it("returns normalized writes when localStorage setItem throws", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("setItem failed");
+    });
+
+    const comment = addComment({
+      documentId: "doc-setitem-comments",
+      content: "  Stored comment  ",
+      anchorText: "Anchor",
+      userId: " User@Example.com ",
+    });
+
+    expect(comment).toEqual(
+      expect.objectContaining({
+        content: "Stored comment",
+        userId: "User@Example.com",
+      }),
+    );
   });
 });

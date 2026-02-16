@@ -16,13 +16,22 @@ type CommentState = {
 
 const inMemoryState: CommentState = { comments: [] };
 
-function canUseStorage() {
-  return typeof window !== "undefined" && !!window.localStorage;
+function getStorage() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function loadState(): CommentState {
-  if (!canUseStorage()) return inMemoryState;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const storage = getStorage();
+  if (!storage) return inMemoryState;
+  const raw = safeGetItem(storage, STORAGE_KEY);
   if (!raw) return { comments: [] };
   try {
     const parsed = JSON.parse(raw) as { comments?: unknown };
@@ -152,11 +161,12 @@ function loadState(): CommentState {
 }
 
 function persistState(state: CommentState) {
-  if (!canUseStorage()) {
-    inMemoryState.comments = state.comments;
+  inMemoryState.comments = [...state.comments];
+  const storage = getStorage();
+  if (!storage) {
     return;
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  safeSetItem(storage, STORAGE_KEY, JSON.stringify(state));
 }
 
 export function listComments(documentId: unknown) {
@@ -260,6 +270,7 @@ export function resolveComment(commentId: unknown) {
 }
 
 export function resetCommentsForTests() {
+  inMemoryState.comments = [];
   persistState({ comments: [] });
 }
 
@@ -311,4 +322,20 @@ function isValidParentCommentReference(
   }
 
   return true;
+}
+
+function safeGetItem(storage: Storage, key: string) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
 }
