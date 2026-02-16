@@ -3,12 +3,12 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 
 import {
-  MAX_DOCUMENT_CONTENT_LENGTH,
   MAX_MESSAGE_CONTENT_LENGTH,
   MAX_MESSAGE_COUNT,
   MAX_PROMPT_LENGTH,
   MAX_USER_ID_LENGTH,
 } from "@/lib/ai/constraints";
+import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { aiLockManager } from "@/lib/ai/lock";
 import { normalizeAIUserId } from "@/lib/ai/identity";
@@ -38,28 +38,6 @@ function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function hasValidDocumentJson(value: unknown): value is string {
-  if (
-    typeof value !== "string" ||
-    value.trim().length === 0 ||
-    value.length > MAX_DOCUMENT_CONTENT_LENGTH
-  ) {
-    return false;
-  }
-
-  try {
-    const parsed = JSON.parse(value) as { type?: unknown } | unknown;
-    return (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "type" in parsed &&
-      (parsed as { type?: unknown }).type === "doc"
-    );
-  } catch {
-    return false;
-  }
-}
-
 function parsePayload(value: unknown): StreamRequestPayload | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
@@ -68,7 +46,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     !hasText(candidate.documentId) ||
     !hasText(candidate.model) ||
     !hasText(candidate.prompt) ||
-    !hasValidDocumentJson(candidate.documentContent)
+    !isValidDocumentContentJson(candidate.documentContent)
   ) {
     return null;
   }
