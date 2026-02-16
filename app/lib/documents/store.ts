@@ -58,7 +58,7 @@ function loadState(): DocumentStoreState {
             : now;
         const normalizedUpdatedAt =
           typeof doc.updatedAt === "number" && Number.isFinite(doc.updatedAt)
-            ? doc.updatedAt
+            ? Math.max(doc.updatedAt, normalizedCreatedAt)
             : normalizedCreatedAt;
 
         return [

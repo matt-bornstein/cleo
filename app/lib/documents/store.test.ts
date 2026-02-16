@@ -106,6 +106,7 @@ describe("document store", () => {
       }),
     );
     expect(documents[0].createdAt).toEqual(expect.any(Number));
+    expect(documents[0].updatedAt).toBeGreaterThanOrEqual(documents[0].createdAt);
   });
 
   it("gets a document by id", () => {
