@@ -132,6 +132,42 @@ describe("document store", () => {
     expect(listDocuments()[0]?.title).toBe("Untitled");
   });
 
+  it("uses one shared fallback timestamp when normalizing malformed persisted docs", () => {
+    const nowSpy = vi
+      .spyOn(Date, "now")
+      .mockImplementationOnce(() => 100)
+      .mockImplementation(() => 999);
+
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({
+        documents: [
+          {
+            id: "legacy-a",
+            title: "A",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "owner@example.com",
+            createdAt: "bad",
+            updatedAt: "bad",
+          },
+          {
+            id: "legacy-b",
+            title: "B",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "owner@example.com",
+            createdAt: "bad",
+            updatedAt: "bad",
+          },
+        ],
+      }),
+    );
+
+    const documents = listDocuments();
+    expect(documents.map((document) => document.createdAt)).toEqual([100, 100]);
+    expect(documents.map((document) => document.updatedAt)).toEqual([100, 100]);
+    nowSpy.mockRestore();
+  });
+
   it("filters malformed persisted documents and normalizes legacy fields", () => {
     window.localStorage.setItem(
       "plan00.documents.v1",

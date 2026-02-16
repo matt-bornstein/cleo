@@ -42,6 +42,7 @@ function loadState(): DocumentStoreState {
       return { documents: [] };
     }
 
+    const fallbackNow = Math.max(0, Date.now());
     const sanitizedDocuments = parsed.documents.flatMap((doc) => {
         const normalizedDocumentId = normalizeDocumentId(doc.id);
         if (!isValidDocumentId(normalizedDocumentId)) {
@@ -49,7 +50,6 @@ function loadState(): DocumentStoreState {
         }
 
         const normalizedTitle = normalizeDocumentTitle(doc.title);
-        const now = Math.max(0, Date.now());
         const hasValidCreatedAt =
           typeof doc.createdAt === "number" &&
           Number.isFinite(doc.createdAt) &&
@@ -59,7 +59,7 @@ function loadState(): DocumentStoreState {
           Number.isFinite(doc.updatedAt) &&
           doc.updatedAt >= 0;
         const normalizedCreatedAt =
-          hasValidCreatedAt ? doc.createdAt : now;
+          hasValidCreatedAt ? doc.createdAt : fallbackNow;
         const normalizedUpdatedAt =
           hasValidUpdatedAt
             ? Math.max(doc.updatedAt, normalizedCreatedAt)
