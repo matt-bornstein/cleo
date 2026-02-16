@@ -9,7 +9,13 @@ type LockStatus = {
 };
 
 export function useAILockStatus(documentId: string) {
-  const [status, setStatus] = useState<LockStatus>({ locked: false });
+  const [state, setState] = useState<{
+    documentId: string;
+    status: LockStatus;
+  }>({
+    documentId: "",
+    status: { locked: false },
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -17,9 +23,6 @@ export function useAILockStatus(documentId: string) {
 
     async function fetchStatus() {
       if (!documentId) {
-        if (isMounted) {
-          setStatus({ locked: false });
-        }
         return;
       }
 
@@ -29,17 +32,17 @@ export function useAILockStatus(documentId: string) {
         );
         if (!response.ok) {
           if (isMounted) {
-            setStatus({ locked: false });
+            setState({ documentId, status: { locked: false } });
           }
           return;
         }
         const payload = (await response.json()) as LockStatus;
         if (isMounted) {
-          setStatus(payload);
+          setState({ documentId, status: payload });
         }
       } catch {
         if (isMounted) {
-          setStatus({ locked: false });
+          setState({ documentId, status: { locked: false } });
         }
       }
     }
@@ -63,5 +66,9 @@ export function useAILockStatus(documentId: string) {
     };
   }, [documentId]);
 
-  return status;
+  if (state.documentId !== documentId) {
+    return { locked: false };
+  }
+
+  return state.status;
 }

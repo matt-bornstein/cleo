@@ -3,6 +3,14 @@ import { vi } from "vitest";
 
 import { useAILockStatus } from "@/hooks/useAILockStatus";
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolveFn) => {
+    resolve = resolveFn;
+  });
+  return { promise, resolve };
+}
+
 describe("useAILockStatus", () => {
   it("fetches lock status on mount", async () => {
     const fetchMock = vi
@@ -68,6 +76,48 @@ describe("useAILockStatus", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(result.current).toEqual({ locked: false });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("returns unlocked immediately when switching to another document", async () => {
+    const deferredDoc2 = createDeferred<{
+      ok: boolean;
+      json: () => Promise<{ locked: boolean; lockedBy?: string }>;
+    }>();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ locked: true, lockedBy: "alice" }),
+      })
+      .mockReturnValueOnce(deferredDoc2.promise);
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result, rerender } = renderHook(
+      ({ documentId }) => useAILockStatus(documentId),
+      {
+        initialProps: { documentId: "doc-one" },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.locked).toBe(true);
+    });
+
+    rerender({ documentId: "doc-two" });
+    expect(result.current.locked).toBe(false);
+
+    deferredDoc2.resolve({
+      ok: true,
+      json: async () => ({ locked: true, lockedBy: "bob" }),
+    });
+
+    await waitFor(() => {
+      expect(result.current.locked).toBe(true);
+      expect(result.current.lockedBy).toBe("bob");
+    });
 
     vi.unstubAllGlobals();
   });
