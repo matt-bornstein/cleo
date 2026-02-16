@@ -236,6 +236,14 @@ describe("ai chat store", () => {
             createdAt: 2,
           },
           {
+            id: 123,
+            documentId: "doc-legacy",
+            userId: "u-1",
+            role: "assistant",
+            content: "Numeric id",
+            createdAt: 2,
+          },
+          {
             id: "bad-doc",
             documentId: "doc-\ninvalid",
             userId: "u-1",

@@ -31,7 +31,10 @@ function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettin
     normalizedThemeCandidate && VALID_THEMES.has(normalizedThemeCandidate)
       ? (normalizedThemeCandidate as AppUserSettings["theme"])
       : defaultSettings.theme;
-  const normalizedModel = settings?.defaultModel?.trim();
+  const normalizedModel =
+    typeof settings?.defaultModel === "string"
+      ? settings.defaultModel.trim()
+      : undefined;
   const normalizedFontSize = clampSettingNumber(
     settings?.editorFontSize,
     MIN_EDITOR_FONT_SIZE,

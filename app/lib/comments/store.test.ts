@@ -281,6 +281,18 @@ describe("comments store", () => {
             updatedAt: 3,
           },
           {
+            id: 123,
+            documentId: "doc-legacy",
+            userId: "user-2",
+            content: "Numeric id",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: 3,
+            updatedAt: 3,
+          },
+          {
             id: "bad-doc",
             documentId: "doc-\ninvalid",
             userId: "user-3",

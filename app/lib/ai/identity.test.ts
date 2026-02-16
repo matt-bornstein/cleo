@@ -9,6 +9,7 @@ describe("normalizeAIUserId", () => {
     expect(normalizeAIUserId("   ")).toBe(DEFAULT_AI_USER_ID);
     expect(normalizeAIUserId(undefined)).toBe(DEFAULT_AI_USER_ID);
     expect(normalizeAIUserId(null)).toBe(DEFAULT_AI_USER_ID);
+    expect(normalizeAIUserId(123)).toBe(DEFAULT_AI_USER_ID);
   });
 
   it("falls back to local default for oversized identities", () => {

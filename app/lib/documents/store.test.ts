@@ -228,6 +228,14 @@ describe("document store", () => {
             updatedAt: 1,
           },
           {
+            id: 123,
+            title: "Numeric id",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "user@example.com",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          {
             id: "doc-legacy",
             title: "Latest title",
             content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),

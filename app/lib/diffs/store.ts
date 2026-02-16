@@ -108,8 +108,8 @@ function createDiffPatch(previousSnapshot: string, nextSnapshot: string) {
   return dmp.patch_toText(patches);
 }
 
-function normalizeDiffUserId(userId: string | undefined) {
-  const normalizedUserId = userId?.trim();
+function normalizeDiffUserId(userId: unknown) {
+  const normalizedUserId = typeof userId === "string" ? userId.trim() : undefined;
   if (
     !normalizedUserId ||
     normalizedUserId.length > MAX_USER_ID_LENGTH ||
@@ -121,8 +121,8 @@ function normalizeDiffUserId(userId: string | undefined) {
   return normalizedUserId;
 }
 
-function normalizeDiffReferenceId(diffId: string | undefined) {
-  const normalizedDiffId = diffId?.trim();
+function normalizeDiffReferenceId(diffId: unknown) {
+  const normalizedDiffId = typeof diffId === "string" ? diffId.trim() : undefined;
   if (
     !normalizedDiffId ||
     normalizedDiffId.length > MAX_USER_ID_LENGTH ||

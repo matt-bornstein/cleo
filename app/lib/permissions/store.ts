@@ -234,8 +234,8 @@ export function resetPermissionsForTests() {
   persistState({ permissions: [] });
 }
 
-function normalizePermissionId(value: string | undefined) {
-  const normalizedValue = value?.trim();
+function normalizePermissionId(value: unknown) {
+  const normalizedValue = typeof value === "string" ? value.trim() : undefined;
   if (
     !normalizedValue ||
     normalizedValue.length > MAX_USER_ID_LENGTH ||

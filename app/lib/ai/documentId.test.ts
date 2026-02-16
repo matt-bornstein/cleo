@@ -11,5 +11,7 @@ describe("ai document id helpers", () => {
     expect(isValidDocumentId("   ")).toBe(false);
     expect(isValidDocumentId("d".repeat(257))).toBe(false);
     expect(isValidDocumentId("doc-\n123")).toBe(false);
+    expect(isValidDocumentId(123)).toBe(false);
+    expect(normalizeDocumentId(123)).toBe("");
   });
 });

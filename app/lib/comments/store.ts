@@ -32,12 +32,14 @@ function loadState(): CommentState {
     const sanitizedComments = parsed.comments.flatMap((comment) => {
       const normalizedDocumentId = normalizeDocumentId(comment.documentId);
       const normalizedCommentId = normalizeCommentReferenceId(comment.id);
-      const normalizedContent = comment.content?.trim();
+      const normalizedContent =
+        typeof comment.content === "string" ? comment.content.trim() : undefined;
       const normalizedAnchorText = normalizeAnchorText(comment.anchorText);
       const normalizedParentCommentId = normalizeCommentReferenceId(
         comment.parentCommentId,
       );
-      const normalizedUserId = comment.userId?.trim();
+      const normalizedUserId =
+        typeof comment.userId === "string" ? comment.userId.trim() : undefined;
       const safeUserId =
         normalizedUserId &&
         normalizedUserId.length <= MAX_USER_ID_LENGTH &&
@@ -196,7 +198,8 @@ export function addComment(params: {
       ? normalizedParentCommentId
       : undefined;
   const now = Math.max(0, Date.now());
-  const normalizedUserId = params.userId?.trim();
+  const normalizedUserId =
+    typeof params.userId === "string" ? params.userId.trim() : undefined;
   const comment: CommentRecord = {
     id: crypto.randomUUID(),
     documentId: normalizedDocumentId,
@@ -243,8 +246,8 @@ export function resetCommentsForTests() {
   persistState({ comments: [] });
 }
 
-function normalizeCommentReferenceId(value: string | undefined) {
-  const normalizedValue = value?.trim();
+function normalizeCommentReferenceId(value: unknown) {
+  const normalizedValue = typeof value === "string" ? value.trim() : undefined;
   if (
     !normalizedValue ||
     normalizedValue.length > MAX_USER_ID_LENGTH ||
@@ -256,8 +259,8 @@ function normalizeCommentReferenceId(value: string | undefined) {
   return normalizedValue;
 }
 
-function normalizeAnchorText(value: string | undefined) {
-  const normalizedValue = value?.trim();
+function normalizeAnchorText(value: unknown) {
+  const normalizedValue = typeof value === "string" ? value.trim() : undefined;
   if (!normalizedValue || hasControlChars(normalizedValue)) {
     return "Comment";
   }

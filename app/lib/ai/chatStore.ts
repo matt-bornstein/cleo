@@ -124,7 +124,8 @@ export function resetMessagesForTests() {
 
 function normalizeMessage(message: AIMessage): AIMessage | null {
   const normalizedDocumentId = normalizeDocumentId(message.documentId);
-  const normalizedMessageId = message.id?.trim();
+  const normalizedMessageId =
+    typeof message.id === "string" ? message.id.trim() : undefined;
   if (
     !normalizedMessageId ||
     normalizedMessageId.length > MAX_USER_ID_LENGTH ||

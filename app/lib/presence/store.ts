@@ -162,8 +162,8 @@ export function resetPresenceForTests() {
   persistState({ presence: [] });
 }
 
-function normalizePresenceVisitorId(value: string | undefined) {
-  const normalizedValue = value?.trim();
+function normalizePresenceVisitorId(value: unknown) {
+  const normalizedValue = typeof value === "string" ? value.trim() : undefined;
   if (
     !normalizedValue ||
     normalizedValue.length > MAX_USER_ID_LENGTH ||
@@ -175,8 +175,8 @@ function normalizePresenceVisitorId(value: string | undefined) {
   return normalizedValue;
 }
 
-function normalizePresenceRecordId(value: string | undefined) {
-  const normalizedValue = value?.trim();
+function normalizePresenceRecordId(value: unknown) {
+  const normalizedValue = typeof value === "string" ? value.trim() : undefined;
   if (
     !normalizedValue ||
     normalizedValue.length > MAX_USER_ID_LENGTH ||
@@ -188,8 +188,8 @@ function normalizePresenceRecordId(value: string | undefined) {
   return normalizedValue;
 }
 
-function normalizePresenceUserId(value: string | undefined) {
-  const normalizedValue = value?.trim();
+function normalizePresenceUserId(value: unknown) {
+  const normalizedValue = typeof value === "string" ? value.trim() : undefined;
   if (
     !normalizedValue ||
     normalizedValue.length > MAX_USER_ID_LENGTH ||

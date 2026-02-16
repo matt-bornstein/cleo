@@ -13,6 +13,7 @@ describe("user email normalization helpers", () => {
     expect(normalizeEmailOrUndefined("   ")).toBeUndefined();
     expect(normalizeEmailOrUndefined("user\n@example.com")).toBeUndefined();
     expect(normalizeEmailOrUndefined("u".repeat(257))).toBeUndefined();
+    expect(normalizeEmailOrUndefined(123)).toBeUndefined();
   });
 
   it("falls back when value cannot be normalized", () => {

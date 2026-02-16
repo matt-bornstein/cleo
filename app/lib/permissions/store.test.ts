@@ -139,6 +139,12 @@ describe("permissions store", () => {
             role: "viewer",
           },
           {
+            id: 123,
+            documentId: "doc-valid",
+            email: "user@example.com",
+            role: "viewer",
+          },
+          {
             id: "bad\nid",
             documentId: "doc-invalid",
             email: "user@example.com",

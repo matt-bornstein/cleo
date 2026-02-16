@@ -330,8 +330,8 @@ export function resetDocumentsForTests() {
   persistState({ documents: [] });
 }
 
-function normalizeDocumentTitle(value: string | undefined) {
-  const normalizedValue = value?.trim();
+function normalizeDocumentTitle(value: unknown) {
+  const normalizedValue = typeof value === "string" ? value.trim() : undefined;
   if (!normalizedValue || hasControlChars(normalizedValue)) {
     return "Untitled";
   }
