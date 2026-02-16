@@ -25,8 +25,8 @@ export function useDocuments(search?: string) {
   }, [refreshCounter, search]);
 
   const create = useCallback(
-    (title: string) => {
-      const document = createDocument(title);
+    (title: string, ownerEmail?: string) => {
+      const document = createDocument(title, ownerEmail);
       refresh();
       return document;
     },

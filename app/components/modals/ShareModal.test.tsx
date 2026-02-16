@@ -44,4 +44,18 @@ describe("ShareModal", () => {
 
     expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
   });
+
+  it("renders owner row when owner email is provided", () => {
+    render(
+      <ShareModal
+        open
+        onOpenChange={vi.fn()}
+        documentId="doc-owner"
+        ownerEmail="owner@example.com"
+      />,
+    );
+
+    expect(screen.getByText("owner@example.com · owner")).toBeInTheDocument();
+    expect(screen.getByText("Fixed")).toBeInTheDocument();
+  });
 });

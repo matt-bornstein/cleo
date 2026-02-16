@@ -47,7 +47,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const currentDocument = getById(documentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
   const currentUserEmail = settings.userEmail ?? "me@local.dev";
-  const myRole = getRoleForUser(documentId, currentUserEmail);
+  const myRole = getRoleForUser(
+    documentId,
+    currentUserEmail,
+    currentDocument?.ownerEmail,
+  );
   const canEdit = hasPermission(myRole, "editor");
   const canComment = hasPermission(myRole, "commenter");
   const canShare = hasPermission(myRole, "owner");
@@ -185,7 +189,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
         open={newModalOpen}
         onOpenChange={setNewModalOpen}
         onCreateDocument={(title) => {
-          const newDocument = create(title);
+          const newDocument = create(title, currentUserEmail);
           ensureCreatedDiff({
             documentId: newDocument.id,
             snapshot: newDocument.content,
@@ -231,6 +235,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
         documentId={documentId}
+        ownerEmail={currentDocument?.ownerEmail}
       />
       <SettingsModal
         open={settingsModalOpen}

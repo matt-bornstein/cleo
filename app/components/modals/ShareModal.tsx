@@ -22,11 +22,17 @@ type ShareModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   documentId: string;
+  ownerEmail?: string;
 };
 
 const roleOptions: Role[] = ["editor", "commenter", "viewer"];
 
-export function ShareModal({ open, onOpenChange, documentId }: ShareModalProps) {
+export function ShareModal({
+  open,
+  onOpenChange,
+  documentId,
+  ownerEmail,
+}: ShareModalProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("editor");
   const [version, setVersion] = useState(0);
@@ -97,6 +103,14 @@ export function ShareModal({ open, onOpenChange, documentId }: ShareModalProps) 
             </Button>
           </div>
           <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
+            {ownerEmail ? (
+              <div className="flex items-center justify-between rounded-md bg-white px-2 py-1">
+                <span className="text-xs text-slate-700">{ownerEmail} · owner</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  Fixed
+                </span>
+              </div>
+            ) : null}
             {permissions.map((permission) => (
               <div
                 key={permission.id}

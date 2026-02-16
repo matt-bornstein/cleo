@@ -31,7 +31,16 @@ function loadState(): DocumentStoreState {
 
   try {
     const parsed = JSON.parse(raw) as DocumentStoreState;
-    return parsed.documents ? parsed : { documents: [] };
+    if (!parsed.documents) {
+      return { documents: [] };
+    }
+
+    return {
+      documents: parsed.documents.map((doc) => ({
+        ...doc,
+        ownerEmail: doc.ownerEmail ?? "me@local.dev",
+      })),
+    };
   } catch {
     return { documents: [] };
   }
@@ -46,7 +55,7 @@ function persistState(state: DocumentStoreState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function createDocument(title: string): AppDocument {
+export function createDocument(title: string, ownerEmail = "me@local.dev"): AppDocument {
   const now = Date.now();
   const normalizedTitle = title.trim() || "Untitled";
   const state = loadState();
@@ -54,6 +63,7 @@ export function createDocument(title: string): AppDocument {
     id: crypto.randomUUID(),
     title: normalizedTitle,
     content: EMPTY_EDITOR_DOC,
+    ownerEmail: ownerEmail.trim().toLowerCase(),
     createdAt: now,
     updatedAt: now,
   };

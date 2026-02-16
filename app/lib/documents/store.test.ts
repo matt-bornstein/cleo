@@ -18,6 +18,7 @@ describe("document store", () => {
 
     expect(document.title).toBe("Product spec");
     expect(document.content).toContain('"type":"doc"');
+    expect(document.ownerEmail).toBe("me@local.dev");
     expect(document.id).toBeTruthy();
   });
 

@@ -22,6 +22,7 @@ export type AppDocument = {
   id: string;
   title: string;
   content: string;
+  ownerEmail?: string;
   createdAt: number;
   updatedAt: number;
   lastDiffAt?: number;

@@ -27,9 +27,12 @@ describe("permissions store", () => {
     expect(listPermissions("doc-1")).toHaveLength(0);
   });
 
-  it("returns owner role by default and explicit shared role when present", () => {
-    expect(getRoleForUser("doc-2", "me@local.dev")).toBe("owner");
-    upsertPermission("doc-2", "me@local.dev", "viewer");
-    expect(getRoleForUser("doc-2", "me@local.dev")).toBe("viewer");
+  it("returns owner role for document owner and viewer by default otherwise", () => {
+    expect(getRoleForUser("doc-2", "me@local.dev", "me@local.dev")).toBe("owner");
+    expect(getRoleForUser("doc-2", "other@local.dev", "me@local.dev")).toBe("viewer");
+    upsertPermission("doc-2", "other@local.dev", "commenter");
+    expect(getRoleForUser("doc-2", "other@local.dev", "me@local.dev")).toBe(
+      "commenter",
+    );
   });
 });
