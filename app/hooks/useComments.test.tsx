@@ -56,6 +56,22 @@ describe("useComments", () => {
     );
   });
 
+  it("omits malformed control-character current user ids when creating comments", () => {
+    const { result } = renderHook(() =>
+      useComments("doc-1", "bad\nuser"),
+    );
+
+    act(() => {
+      result.current.createComment("Looks good", "Intro");
+    });
+
+    expect(addCommentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: undefined,
+      }),
+    );
+  });
+
   it("short-circuits malformed non-string comment inputs before dispatch", () => {
     const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
 

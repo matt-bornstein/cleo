@@ -2,15 +2,23 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { addComment, listComments, resolveComment } from "@/lib/comments/store";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 export function useComments(documentId: unknown, currentUserId?: unknown) {
   const [version, setVersion] = useState(0);
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
-  const normalizedCurrentUserId =
+  const normalizedCurrentUserIdCandidate =
     typeof currentUserId === "string" ? currentUserId.trim() : undefined;
+  const normalizedCurrentUserId =
+    normalizedCurrentUserIdCandidate &&
+    normalizedCurrentUserIdCandidate.length <= MAX_USER_ID_LENGTH &&
+    !hasControlChars(normalizedCurrentUserIdCandidate)
+      ? normalizedCurrentUserIdCandidate
+      : undefined;
 
   const refresh = useCallback(() => {
     setVersion((current) => current + 1);
