@@ -4,6 +4,10 @@ import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
 import { prosemirrorJsonToHtml } from "./lib/htmlSerializer";
 import { htmlToProsemirrorJson } from "./lib/htmlToJson";
+import { getServerSchema } from "./lib/schema";
+import { prosemirrorSync } from "./prosemirrorSync";
+import { Node } from "@tiptap/pm/model";
+import { Transform } from "@tiptap/pm/transform";
 
 const http = httpRouter();
 
@@ -129,20 +133,58 @@ http.route({
             console.error("Failed to save AI message:", e);
           }
 
-          // Try to apply AI edits to the document
+          // Try to apply AI edits to the document via prosemirror-sync
           try {
             if (fullResponse && documentHtml) {
               const newHtml = applyAIEdits(fullResponse, documentHtml);
               if (newHtml && newHtml !== documentHtml) {
                 // Convert new HTML to ProseMirror JSON
-                const newDoc = htmlToProsemirrorJson(newHtml);
-                const newContent = JSON.stringify(newDoc);
+                const newDocJson = htmlToProsemirrorJson(newHtml);
+                const newContent = JSON.stringify(newDocJson);
 
-                // Update the document content cache
-                await ctx.runMutation(api.documents.updateContent, {
-                  id: documentId,
-                  content: newContent,
-                });
+                // Apply via prosemirrorSync.transform() for live OT collaboration
+                const schema = getServerSchema();
+                let transformApplied = false;
+                try {
+                  await prosemirrorSync.transform(
+                    ctx,
+                    documentId,
+                    schema,
+                    (currentDoc) => {
+                      // Build the new ProseMirror Node from our JSON
+                      const targetDoc = Node.fromJSON(schema, newDocJson);
+
+                      // Create a transform that replaces the entire content
+                      // with the new doc's content
+                      const tr = new Transform(currentDoc);
+                      tr.replaceWith(
+                        0,
+                        currentDoc.content.size,
+                        targetDoc.content
+                      );
+
+                      // Only return the transform if it has steps (changes)
+                      if (tr.steps.length === 0) return null;
+                      return tr;
+                    }
+                  );
+                  transformApplied = true;
+                } catch (transformErr) {
+                  console.error("prosemirrorSync.transform() failed, falling back to content update:", transformErr);
+                  // Fallback: update cached content directly
+                  await ctx.runMutation(api.documents.updateContent, {
+                    id: documentId,
+                    content: newContent,
+                  });
+                }
+
+                // Also update cached content for consistency
+                if (transformApplied) {
+                  await ctx.runMutation(api.documents.updateContent, {
+                    id: documentId,
+                    content: newContent,
+                  });
+                }
 
                 // Save AI diff record for version history
                 await ctx.runMutation(api.diffs.createAiDiff, {
@@ -155,7 +197,12 @@ http.route({
                 // Notify client that changes were applied
                 await writer.write(
                   encoder.encode(
-                    `data: ${JSON.stringify({ type: "changes_applied", content: "Document updated" })}\n\n`
+                    `data: ${JSON.stringify({
+                      type: "changes_applied",
+                      content: transformApplied
+                        ? "Document updated (live sync)"
+                        : "Document updated (will appear on reload)",
+                    })}\n\n`
                   )
                 );
               }
