@@ -27,4 +27,18 @@ describe("generateLocalId", () => {
     nowSpy.mockRestore();
     randomSpy.mockRestore();
   });
+
+  it("falls back to safe id segment when Math.random is malformed", () => {
+    vi.stubGlobal("crypto", {} as unknown as Crypto);
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(12345);
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(Number.NaN);
+
+    const id = generateLocalId(123);
+
+    expect(id).toContain("fallback");
+    expect(id.startsWith("123-")).toBe(false);
+
+    nowSpy.mockRestore();
+    randomSpy.mockRestore();
+  });
 });
