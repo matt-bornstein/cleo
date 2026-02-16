@@ -122,4 +122,43 @@ describe("middleware auth guard", () => {
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain("/sign-in?next=%2Feditor%2Fdoc-1");
   });
+
+  it("ignores cookies.get getter failures when checking auth cookie", () => {
+    const malformedRequest = {
+      url: "http://localhost/editor/doc-1",
+      nextUrl: {
+        pathname: "/editor/doc-1",
+        search: "",
+      },
+      cookies: Object.create(null) as { get: unknown },
+    };
+    Object.defineProperty(malformedRequest.cookies, "get", {
+      get() {
+        throw new Error("cookies.get getter failed");
+      },
+    });
+
+    const response = middleware(malformedRequest as unknown as NextRequest);
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/sign-in?next=%2Feditor%2Fdoc-1");
+  });
+
+  it("ignores cookies.get invocation failures when checking auth cookie", () => {
+    const malformedRequest = {
+      url: "http://localhost/editor/doc-1",
+      nextUrl: {
+        pathname: "/editor/doc-1",
+        search: "",
+      },
+      cookies: {
+        get: () => {
+          throw new Error("cookies.get failed");
+        },
+      },
+    } as unknown as NextRequest;
+
+    const response = middleware(malformedRequest);
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/sign-in?next=%2Feditor%2Fdoc-1");
+  });
 });

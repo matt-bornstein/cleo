@@ -75,18 +75,14 @@ function getCookieValue(request: unknown, cookieName: string) {
     return undefined;
   }
 
-  if (
-    !cookies ||
-    typeof cookies !== "object" ||
-    !("get" in cookies) ||
-    typeof cookies.get !== "function"
-  ) {
+  const getCookie = readCookiesGetFunction(cookies);
+  if (!getCookie) {
     return undefined;
   }
 
   let value: unknown;
   try {
-    value = cookies.get(cookieName);
+    value = getCookie(cookieName);
   } catch {
     return undefined;
   }
@@ -95,6 +91,24 @@ function getCookieValue(request: unknown, cookieName: string) {
   }
 
   return typeof value.value === "string" ? value.value : undefined;
+}
+
+function readCookiesGetFunction(cookies: unknown) {
+  if (!cookies || typeof cookies !== "object" || !("get" in cookies)) {
+    return undefined;
+  }
+
+  try {
+    const candidate = (cookies as { get?: unknown }).get;
+    if (typeof candidate !== "function") {
+      return undefined;
+    }
+
+    const owner = cookies as { get: (name: string) => unknown };
+    return (name: string) => Reflect.apply(candidate, owner, [name]);
+  } catch {
+    return undefined;
+  }
 }
 
 function createSignInUrl(request: unknown) {
