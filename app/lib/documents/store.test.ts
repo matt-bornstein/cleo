@@ -342,6 +342,27 @@ describe("document store", () => {
     nowSpy.mockRestore();
   });
 
+  it("keeps updatedAt non-negative when update clock is negative", () => {
+    const created = createDocument("Negative clock updates");
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(-42);
+
+    const updatedTitle = updateDocumentTitle(created.id, "Still valid");
+    expect(updatedTitle?.updatedAt).toBe(created.updatedAt);
+    expect(updatedTitle?.updatedAt).toBeGreaterThanOrEqual(0);
+
+    const updatedContent = updateDocumentContent(
+      created.id,
+      JSON.stringify({
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Updated" }] }],
+      }),
+    );
+    expect(updatedContent?.updatedAt).toBe(created.updatedAt);
+    expect(updatedContent?.updatedAt).toBeGreaterThanOrEqual(0);
+
+    nowSpy.mockRestore();
+  });
+
   it("deletes document by id", () => {
     const created = createDocument("Delete me");
     const removed = deleteDocument(created.id);
