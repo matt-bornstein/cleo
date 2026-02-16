@@ -133,4 +133,20 @@ describe("AILockManager", () => {
     });
     nowSpy.mockRestore();
   });
+
+  it("falls back to zero timestamp when Date.now throws", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+    const manager = new AILockManager();
+
+    expect(manager.acquire("doc-7", "alice")).toEqual({ acquired: true });
+    expect(manager.getStatus("doc-7")).toEqual({
+      locked: true,
+      lockedBy: "alice",
+      lockedAt: 0,
+    });
+
+    nowSpy.mockRestore();
+  });
 });
