@@ -55,7 +55,10 @@ export function listMessagesByDocument(documentId: string, chatClearedAt?: numbe
   if (!isValidDocumentId(normalizedDocumentId)) return [];
 
   const state = loadState();
-  const clearedAt = chatClearedAt ?? 0;
+  const clearedAt =
+    typeof chatClearedAt === "number" && Number.isFinite(chatClearedAt)
+      ? chatClearedAt
+      : 0;
   return state.messages
     .filter((message) => message.documentId === normalizedDocumentId)
     .filter((message) => message.createdAt >= clearedAt)

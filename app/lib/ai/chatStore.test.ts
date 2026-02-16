@@ -55,6 +55,21 @@ describe("ai chat store", () => {
     expect(visible[0].id).toBe("m-4");
   });
 
+  it("ignores malformed chatClearedAt values when filtering", () => {
+    saveMessage({
+      id: "m-nan",
+      documentId: "doc-clear-invalid",
+      userId: "u-1",
+      role: "assistant",
+      content: "Message should remain visible",
+      createdAt: 100,
+    });
+
+    const visible = listMessagesByDocument("doc-clear-invalid", Number.NaN);
+    expect(visible).toHaveLength(1);
+    expect(visible[0].id).toBe("m-nan");
+  });
+
   it("normalizes document ids and rejects invalid document ids", () => {
     const saved = saveMessage({
       id: "m-5",
