@@ -63,6 +63,24 @@ export function getRoleForUser(
   return match?.role ?? "viewer";
 }
 
+export function hasDocumentAccess(
+  documentId: string,
+  email: string,
+  ownerEmail?: string,
+) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedOwnerEmail = ownerEmail?.trim().toLowerCase();
+  if (normalizedOwnerEmail && normalizedOwnerEmail === normalizedEmail) {
+    return true;
+  }
+
+  return loadState().permissions.some(
+    (entry) =>
+      entry.documentId === documentId &&
+      entry.email.trim().toLowerCase() === normalizedEmail,
+  );
+}
+
 export function upsertPermission(documentId: string, email: string, role: Role) {
   const state = loadState();
   const normalizedEmail = email.trim().toLowerCase();

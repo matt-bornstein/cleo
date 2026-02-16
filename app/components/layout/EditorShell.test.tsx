@@ -149,4 +149,18 @@ describe("EditorShell", () => {
       expect(screen.getByText("commenter")).toBeInTheDocument();
     });
   });
+
+  it("shows access required screen for user without access", () => {
+    saveSettings({
+      userEmail: "outsider@example.com",
+    });
+    const document = createDocument("Private Doc");
+
+    render(<EditorShell documentId={document.id} />);
+
+    expect(screen.getByText("Access required")).toBeInTheDocument();
+    expect(
+      screen.getByText("You do not have permission to open this document."),
+    ).toBeInTheDocument();
+  });
 });

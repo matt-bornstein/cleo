@@ -4,10 +4,13 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { useDocuments } from "@/hooks/useDocuments";
+import { useSettings } from "@/hooks/useSettings";
 
 export default function EditorIndexPage() {
   const router = useRouter();
-  const { documents, create } = useDocuments();
+  const { settings } = useSettings();
+  const currentUserEmail = settings.userEmail ?? "me@local.dev";
+  const { documents, create } = useDocuments(undefined, currentUserEmail);
 
   const handleContinue = () => {
     if (documents.length > 0) {
@@ -15,7 +18,7 @@ export default function EditorIndexPage() {
       return;
     }
 
-    const document = create("Untitled");
+    const document = create("Untitled", currentUserEmail);
     router.push(`/editor/${document.id}`);
   };
 

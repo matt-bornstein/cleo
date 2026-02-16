@@ -1,5 +1,6 @@
 import {
   getRoleForUser,
+  hasDocumentAccess,
   listPermissions,
   removePermission,
   resetPermissionsForTests,
@@ -33,6 +34,20 @@ describe("permissions store", () => {
     upsertPermission("doc-2", "other@local.dev", "commenter");
     expect(getRoleForUser("doc-2", "other@local.dev", "me@local.dev")).toBe(
       "commenter",
+    );
+  });
+
+  it("checks document access using owner or explicit permission", () => {
+    expect(hasDocumentAccess("doc-3", "owner@example.com", "owner@example.com")).toBe(
+      true,
+    );
+    expect(hasDocumentAccess("doc-3", "viewer@example.com", "owner@example.com")).toBe(
+      false,
+    );
+
+    upsertPermission("doc-3", "viewer@example.com", "viewer");
+    expect(hasDocumentAccess("doc-3", "viewer@example.com", "owner@example.com")).toBe(
+      true,
     );
   });
 });

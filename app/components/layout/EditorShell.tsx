@@ -21,7 +21,11 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDocuments } from "@/hooks/useDocuments";
 import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
-import { getRoleForUser, upsertPermission } from "@/lib/permissions/store";
+import {
+  getRoleForUser,
+  hasDocumentAccess,
+  upsertPermission,
+} from "@/lib/permissions/store";
 import { hasPermission } from "@/lib/permissions";
 import { sanitizeShareRole } from "@/lib/permissions/shareLink";
 
@@ -32,6 +36,8 @@ type EditorShellProps = {
 export function EditorShell({ documentId }: EditorShellProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { settings, refreshSettings } = useSettings();
+  const currentUserEmail = settings.userEmail ?? "me@local.dev";
   const {
     documents,
     create,
@@ -41,7 +47,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
     setChatClearedAt,
     remove,
     refresh: refreshDocuments,
-  } = useDocuments();
+  } = useDocuments(undefined, currentUserEmail);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -49,15 +55,18 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [saveStateLabel, setSaveStateLabel] = useState("Saved");
-  const { settings, refreshSettings } = useSettings();
   const isOnline = useOnlineStatus();
   const { others, updateMyPresence } = usePresence(documentId);
   const { comments, createComment, createReply, markResolved } = useComments(documentId);
 
   const currentDocument = getById(documentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
-  const currentUserEmail = settings.userEmail ?? "me@local.dev";
   const myRole = getRoleForUser(
+    documentId,
+    currentUserEmail,
+    currentDocument?.ownerEmail,
+  );
+  const hasAccess = hasDocumentAccess(
     documentId,
     currentUserEmail,
     currentDocument?.ownerEmail,
@@ -97,8 +106,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
 
   useEffect(() => {
     if (!requestedShareRole) return;
-    if (myRole === "owner") return;
-    if (myRole === requestedShareRole) return;
+    if (myRole === "owner" || myRole === requestedShareRole) return;
 
     upsertPermission(documentId, currentUserEmail, requestedShareRole);
     refreshDocuments();
@@ -129,6 +137,26 @@ export function EditorShell({ documentId }: EditorShellProps) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  if (!hasAccess && !requestedShareRole) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <section className="w-full max-w-md rounded-xl border border-red-200 bg-white p-6 shadow-sm">
+          <h1 className="text-lg font-semibold text-slate-900">Access required</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            You do not have permission to open this document.
+          </p>
+          <button
+            type="button"
+            className="mt-4 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white"
+            onClick={() => router.push("/editor")}
+          >
+            Return to document list
+          </button>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100">
       <Toolbar
@@ -148,6 +176,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
       {!isOnline ? (
         <div className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-xs font-medium text-amber-900">
           You are offline. Reconnect to sync collaboration and AI features.
+        </div>
+      ) : null}
+      {!hasAccess && requestedShareRole ? (
+        <div className="border-b border-blue-300 bg-blue-100 px-4 py-2 text-xs font-medium text-blue-900">
+          Applying shared access permissions...
         </div>
       ) : null}
       <EditorLayout

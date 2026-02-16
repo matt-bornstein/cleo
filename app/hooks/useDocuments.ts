@@ -11,9 +11,10 @@ import {
   updateDocumentTitle,
   updateDocumentContent,
 } from "@/lib/documents/store";
+import { hasDocumentAccess } from "@/lib/permissions/store";
 import type { AppDocument } from "@/lib/types";
 
-export function useDocuments(search?: string) {
+export function useDocuments(search?: string, currentUserEmail = "me@local.dev") {
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   const refresh = useCallback(() => {
@@ -22,8 +23,10 @@ export function useDocuments(search?: string) {
 
   const documents = useMemo(() => {
     void refreshCounter;
-    return listDocuments(search);
-  }, [refreshCounter, search]);
+    return listDocuments(search).filter((document) =>
+      hasDocumentAccess(document.id, currentUserEmail, document.ownerEmail),
+    );
+  }, [currentUserEmail, refreshCounter, search]);
 
   const create = useCallback(
     (title: string, ownerEmail?: string) => {
