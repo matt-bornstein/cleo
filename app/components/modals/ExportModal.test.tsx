@@ -243,4 +243,50 @@ describe("ExportModal", () => {
     await user.click(screen.getByRole("button", { name: "Markdown" }));
     await user.click(screen.getByRole("button", { name: "HTML" }));
   });
+
+  it("does not throw when export serializers throw", async () => {
+    const user = userEvent.setup();
+    exportMarkdownMock.mockImplementation(() => {
+      throw new Error("markdown failed");
+    });
+    exportHtmlMock.mockImplementation(() => {
+      throw new Error("html failed");
+    });
+
+    render(
+      <ExportModal
+        open
+        onOpenChange={vi.fn()}
+        documentTitle="Broken serializers"
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Markdown" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "HTML" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "PDF" })),
+    ).resolves.toBeUndefined();
+  });
+
+  it("does not throw when onOpenChange callback throws", async () => {
+    const user = userEvent.setup();
+    render(
+      <ExportModal
+        open
+        onOpenChange={() => {
+          throw new Error("onOpenChange failed");
+        }}
+        documentTitle="Throwing callback"
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    const closeButtons = screen.getAllByRole("button", { name: "Close" });
+    await expect(user.click(closeButtons[0])).resolves.toBeUndefined();
+  });
 });

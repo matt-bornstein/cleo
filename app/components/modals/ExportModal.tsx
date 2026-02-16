@@ -42,9 +42,7 @@ export function ExportModal({
     <Dialog
       open={normalizedOpen}
       onOpenChange={(nextOpen) => {
-        if (typeof onOpenChange === "function") {
-          onOpenChange(nextOpen);
-        }
+        safeOnOpenChange(onOpenChange, nextOpen);
       }}
     >
       <DialogContent>
@@ -57,25 +55,33 @@ export function ExportModal({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Button
             variant="outline"
-            onClick={() =>
+            onClick={() => {
+              const markdown = readExportMarkdownSafely(content);
+              if (typeof markdown !== "string") {
+                return;
+              }
               downloadFile(
-                exportMarkdown(content),
+                markdown,
                 `${safeTitle}.md`,
                 "text/markdown;charset=utf-8",
-              )
-            }
+              );
+            }}
           >
             Markdown
           </Button>
           <Button
             variant="outline"
-            onClick={() =>
+            onClick={() => {
+              const html = readExportHtmlSafely(content);
+              if (typeof html !== "string") {
+                return;
+              }
               downloadFile(
-                exportHtml(content),
+                html,
                 `${safeTitle}.html`,
                 "text/html;charset=utf-8",
-              )
-            }
+              );
+            }}
           >
             HTML
           </Button>
@@ -130,6 +136,14 @@ function readExportHtmlSafely(content: unknown) {
   }
 }
 
+function readExportMarkdownSafely(content: unknown) {
+  try {
+    return exportMarkdown(content);
+  } catch {
+    return undefined;
+  }
+}
+
 function writePrintWindowDocumentSafely(printWindow: Window, html: string) {
   try {
     if (
@@ -171,6 +185,18 @@ function triggerPrintSafely(printWindow: Window) {
     if (typeof printWindow.print === "function") {
       printWindow.print();
     }
+  } catch {
+    return;
+  }
+}
+
+function safeOnOpenChange(onOpenChange: unknown, nextOpen: boolean) {
+  if (typeof onOpenChange !== "function") {
+    return;
+  }
+
+  try {
+    onOpenChange(nextOpen);
   } catch {
     return;
   }
