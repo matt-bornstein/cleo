@@ -94,7 +94,13 @@ export function OpenDocModal({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => onDeleteDocument(document.id)}
+                  onClick={() => {
+                    const confirmed = window.confirm(
+                      `Delete "${document.title}"? This action cannot be undone.`,
+                    );
+                    if (!confirmed) return;
+                    onDeleteDocument(document.id);
+                  }}
                 >
                   Delete
                 </Button>
