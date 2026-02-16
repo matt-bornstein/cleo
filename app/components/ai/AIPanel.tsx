@@ -62,7 +62,7 @@ export function AIPanel({
           type="button"
           className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
           onClick={clearChat}
-          disabled={isLoading || messages.length === 0}
+          disabled={isLoading || (messages.length === 0 && !error)}
         >
           Clear chat
         </button>
