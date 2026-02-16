@@ -45,6 +45,7 @@ describe("permissions store", () => {
   it("returns false when removing unknown permission id", () => {
     expect(removePermission("missing-id")).toBe(false);
     expect(removePermission("   ")).toBe(false);
+    expect(removePermission("bad\nid")).toBe(false);
   });
 
   it("returns owner role for document owner and viewer by default otherwise", () => {
@@ -112,6 +113,12 @@ describe("permissions store", () => {
           },
           {
             id: "",
+            documentId: "doc-invalid",
+            email: "user@example.com",
+            role: "viewer",
+          },
+          {
+            id: "bad\nid",
             documentId: "doc-invalid",
             email: "user@example.com",
             role: "viewer",

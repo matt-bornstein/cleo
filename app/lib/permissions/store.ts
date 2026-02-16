@@ -1,6 +1,8 @@
+import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { Role } from "@/lib/types";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.permissions.v1";
 const ALLOWED_ROLES = new Set<Role>(["owner", "editor", "commenter", "viewer"]);
@@ -41,7 +43,7 @@ function loadState(): PermissionState {
     const sanitizedPermissions = parsed.permissions.flatMap((entry) => {
         const normalizedDocumentId = normalizeDocumentId(entry.documentId);
         const normalizedEmail = normalizeEmailOrUndefined(entry.email);
-        const normalizedPermissionId = entry.id?.trim();
+        const normalizedPermissionId = normalizePermissionId(entry.id);
         if (
           !isValidDocumentId(normalizedDocumentId) ||
           !normalizedEmail ||
@@ -199,7 +201,7 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
 }
 
 export function removePermission(permissionId: string) {
-  const normalizedPermissionId = permissionId.trim();
+  const normalizedPermissionId = normalizePermissionId(permissionId);
   if (!normalizedPermissionId) {
     return false;
   }
@@ -215,4 +217,17 @@ export function removePermission(permissionId: string) {
 
 export function resetPermissionsForTests() {
   persistState({ permissions: [] });
+}
+
+function normalizePermissionId(value: string | undefined) {
+  const normalizedValue = value?.trim();
+  if (
+    !normalizedValue ||
+    normalizedValue.length > MAX_USER_ID_LENGTH ||
+    hasControlChars(normalizedValue)
+  ) {
+    return undefined;
+  }
+
+  return normalizedValue;
 }
