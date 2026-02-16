@@ -67,14 +67,19 @@ export function useAIChat({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isSendingRef = useRef(false);
+  const normalizedDocumentId = useMemo(() => documentId.trim(), [documentId]);
   const normalizedCurrentUserId = useMemo(
     () => normalizeAIUserId(currentUserId),
     [currentUserId],
   );
 
   useEffect(() => {
-    setMessages(listMessagesByDocument(documentId, chatClearedAt));
-  }, [chatClearedAt, documentId]);
+    if (!normalizedDocumentId) {
+      setMessages([]);
+      return;
+    }
+    setMessages(listMessagesByDocument(normalizedDocumentId, chatClearedAt));
+  }, [chatClearedAt, normalizedDocumentId]);
 
   useEffect(() => {
     if (defaultModel) {
@@ -89,6 +94,10 @@ export function useAIChat({
   const sendPrompt = useCallback(
     async (prompt: string) => {
       if (isSendingRef.current) return;
+      if (!normalizedDocumentId) {
+        setError("Document is unavailable.");
+        return;
+      }
       const normalizedPrompt = prompt.trim();
       if (!normalizedPrompt) {
         setError("Prompt is required.");
@@ -101,13 +110,13 @@ export function useAIChat({
 
       isSendingRef.current = true;
       const userMessage = createMessage(
-        documentId,
+        normalizedDocumentId,
         normalizedCurrentUserId,
         "user",
         normalizedPrompt,
       );
       const assistantDraft = createMessage(
-        documentId,
+        normalizedDocumentId,
         "assistant",
         "assistant",
         "",
@@ -126,12 +135,12 @@ export function useAIChat({
             "x-user-id": normalizedCurrentUserId,
           },
           body: JSON.stringify({
-            documentId,
+            documentId: normalizedDocumentId,
             prompt: normalizedPrompt,
             model: selectedModel,
             documentContent: currentDocumentContent,
             messages: getRecentMessages(
-              listMessagesByDocument(documentId, chatClearedAt),
+              listMessagesByDocument(normalizedDocumentId, chatClearedAt),
             ),
           }),
         });
@@ -163,7 +172,7 @@ export function useAIChat({
             const didContentChange = payload.nextContent !== currentDocumentContent;
             const diff = didContentChange
               ? createDiff({
-                  documentId,
+                  documentId: normalizedDocumentId,
                   userId: normalizedCurrentUserId,
                   snapshotAfter: payload.nextContent,
                   source: "ai",
@@ -235,7 +244,7 @@ export function useAIChat({
     [
       currentDocumentContent,
       chatClearedAt,
-      documentId,
+      normalizedDocumentId,
       normalizedCurrentUserId,
       onApplyContent,
       selectedModel,

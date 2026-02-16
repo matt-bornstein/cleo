@@ -384,6 +384,55 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("trims document id before chat history lookup and request payload", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-doc-trim" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied using trimmed document id.",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "  doc-trim-id  ",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Apply update");
+    });
+
+    expect(listMessagesByDocumentMock).toHaveBeenCalledWith("doc-trim-id", undefined);
+
+    const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      documentId: string;
+    };
+    expect(requestBody.documentId).toBe("doc-trim-id");
+    expect(saveMessageMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        documentId: "doc-trim-id",
+      }),
+    );
+    expect(createDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-trim-id",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("rejects blank prompts without sending requests", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi.fn();
@@ -406,6 +455,32 @@ describe("useAIChat", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(saveMessageMock).not.toHaveBeenCalled();
     expect(result.current.messages).toEqual([]);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects prompts when document id is blank after trimming", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "   ",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Help improve this");
+    });
+
+    expect(result.current.error).toBe("Document is unavailable.");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).not.toHaveBeenCalled();
+    expect(listMessagesByDocumentMock).not.toHaveBeenCalled();
 
     vi.unstubAllGlobals();
   });
