@@ -330,6 +330,63 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("sanitizes listed history entries before stream updates", async () => {
+    const historyEntryWithThrowingId = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(historyEntryWithThrowingId, "id", {
+      get() {
+        throw new Error("history id getter failed");
+      },
+    });
+    Object.defineProperty(historyEntryWithThrowingId, "documentId", {
+      value: "doc-history-getter",
+    });
+    Object.defineProperty(historyEntryWithThrowingId, "userId", {
+      value: "reviewer@example.com",
+    });
+    Object.defineProperty(historyEntryWithThrowingId, "role", {
+      value: "assistant",
+    });
+    Object.defineProperty(historyEntryWithThrowingId, "content", {
+      value: "Previous summary",
+    });
+    Object.defineProperty(historyEntryWithThrowingId, "createdAt", {
+      value: 1,
+    });
+    listMessagesByDocumentMock.mockReturnValue([historyEntryWithThrowingId]);
+    createDiffMock.mockReturnValue({ id: "diff-history-getter" });
+    const fetchMock = vi.fn().mockResolvedValue(
+      createStreamResponse([
+        { type: "token", text: "Drafting..." },
+        {
+          type: "done",
+          assistantMessage: "Applied update",
+          nextContent: "<p>Updated</p>",
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-history-getter",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+    expect(result.current.messages[0]?.id).toBe("message-0");
+
+    await expect(
+      act(async () => {
+        await result.current.sendPrompt("Apply with malformed history");
+      }),
+    ).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
   it("does not throw when saveMessage throws during request lifecycle", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     saveMessageMock.mockImplementation(() => {

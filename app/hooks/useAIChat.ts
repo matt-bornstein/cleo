@@ -58,9 +58,13 @@ function normalizeModelId(modelId?: unknown) {
 }
 
 function updateMessageContent(messages: AIMessage[], messageId: string, content: string) {
-  return messages.map((message) =>
-    message.id === messageId ? { ...message, content } : message,
-  );
+  return messages.map((message) => {
+    try {
+      return message.id === messageId ? { ...message, content } : message;
+    } catch {
+      return message;
+    }
+  });
 }
 
 function parseAIStreamPayload(raw: string): AIStreamPayload | null {
@@ -511,11 +515,14 @@ function safeListMessagesByDocument(
   documentId: string,
   chatClearedAt?: number,
 ) {
+  let listedMessages: unknown;
   try {
-    return listMessagesByDocument(documentId, chatClearedAt);
+    listedMessages = listMessagesByDocument(documentId, chatClearedAt);
   } catch {
     return [];
   }
+
+  return normalizeListedMessages(listedMessages, documentId);
 }
 
 function safeSaveMessage(message: AIMessage) {
@@ -555,5 +562,78 @@ function safeOnClearChat(onClearChat: unknown, clearedAt: number) {
     onClearChat(clearedAt);
   } catch {
     return;
+  }
+}
+
+function normalizeListedMessages(messages: unknown, fallbackDocumentId: string) {
+  if (!Array.isArray(messages)) {
+    return [] as AIMessage[];
+  }
+
+  return messages.map((message, index) =>
+    normalizeListedMessage(message, fallbackDocumentId, index),
+  );
+}
+
+function normalizeListedMessage(
+  message: unknown,
+  fallbackDocumentId: string,
+  fallbackIndex: number,
+): AIMessage {
+  const id = readListedMessageField(message, "id");
+  const documentId = readListedMessageField(message, "documentId");
+  const userId = readListedMessageField(message, "userId");
+  const role = readListedMessageField(message, "role");
+  const content = readListedMessageField(message, "content");
+  const model = readListedMessageField(message, "model");
+  const diffId = readListedMessageField(message, "diffId");
+  const createdAt = readListedMessageField(message, "createdAt");
+  const normalizedDocumentIdCandidate =
+    typeof documentId === "string" ? normalizeDocumentId(documentId) : undefined;
+  const normalizedDocumentId =
+    typeof normalizedDocumentIdCandidate === "string" &&
+    isValidDocumentId(normalizedDocumentIdCandidate)
+      ? normalizedDocumentIdCandidate
+      : fallbackDocumentId;
+
+  return {
+    id:
+      typeof id === "string" && id.trim().length > 0
+        ? id.trim()
+        : `message-${fallbackIndex}`,
+    documentId: normalizedDocumentId,
+    userId: normalizeAIUserId(userId),
+    role:
+      role === "user" || role === "assistant" || role === "system"
+        ? role
+        : "assistant",
+    content: typeof content === "string" ? content : "",
+    model:
+      typeof model === "string" && model.trim().length > 0
+        ? safeGetModelConfigId(model.trim())
+        : undefined,
+    diffId:
+      typeof diffId === "string" && diffId.trim().length > 0
+        ? diffId.trim()
+        : undefined,
+    createdAt:
+      typeof createdAt === "number" && Number.isFinite(createdAt) && createdAt >= 0
+        ? createdAt
+        : 0,
+  };
+}
+
+function readListedMessageField(
+  message: unknown,
+  key: keyof AIMessage,
+) {
+  if (!message || typeof message !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (message as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
   }
 }
