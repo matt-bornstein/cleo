@@ -29,15 +29,24 @@ const inMemoryState: DiffStoreState = {
 };
 const ALLOWED_SOURCES = new Set<DiffSource>(["manual", "created", "ai"]);
 
-function canUseStorage() {
-  return typeof window !== "undefined" && !!window.localStorage;
+function getStorage() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function loadState(): DiffStoreState {
-  if (!canUseStorage()) {
+  const storage = getStorage();
+  if (!storage) {
     return inMemoryState;
   }
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const raw = safeGetItem(storage, STORAGE_KEY);
   if (!raw) return { diffs: [] };
   try {
     const parsed = JSON.parse(raw) as { diffs?: unknown };
@@ -106,11 +115,12 @@ function loadState(): DiffStoreState {
 }
 
 function persistState(state: DiffStoreState) {
-  if (!canUseStorage()) {
-    inMemoryState.diffs = state.diffs;
+  inMemoryState.diffs = [...state.diffs];
+  const storage = getStorage();
+  if (!storage) {
     return;
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  safeSetItem(storage, STORAGE_KEY, JSON.stringify(state));
 }
 
 function createDiffPatch(previousSnapshot: string, nextSnapshot: string) {
@@ -334,6 +344,7 @@ export function triggerIdleSave(params: {
 }
 
 export function resetDiffsForTests() {
+  inMemoryState.diffs = [];
   persistState({ diffs: [] });
 }
 
@@ -408,4 +419,20 @@ function resolvePreviousSnapshot(params: {
   }
 
   return JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
+}
+
+function safeGetItem(storage: Storage, key: string) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
 }

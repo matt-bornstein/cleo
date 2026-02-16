@@ -17,7 +17,16 @@ import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
 describe("diff store triggerIdleSave", () => {
+  const localStorageDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    "localStorage",
+  );
+
   beforeEach(() => {
+    vi.restoreAllMocks();
+    if (localStorageDescriptor) {
+      Object.defineProperty(window, "localStorage", localStorageDescriptor);
+    }
     resetDocumentsForTests();
     resetDiffsForTests();
     window.localStorage.clear();
@@ -560,5 +569,71 @@ describe("diff store triggerIdleSave", () => {
       "diff-a",
       "diff-b",
     ]);
+  });
+
+  it("falls back to in-memory diffs when localStorage getter throws", () => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("localStorage getter failed");
+      },
+    });
+    const document = createDocument("Memory diff doc");
+    const snapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "memory change" }] }],
+    });
+
+    const diff = createDiff({
+      documentId: document.id,
+      userId: "u-1",
+      snapshotAfter: snapshot,
+      source: "manual",
+    });
+
+    expect(diff).not.toBeNull();
+    expect(listDiffsByDocument(document.id)).toEqual([
+      expect.objectContaining({
+        id: diff?.id,
+      }),
+    ]);
+  });
+
+  it("returns empty list when localStorage getItem throws", () => {
+    const document = createDocument("GetItem diff doc");
+    createDiff({
+      documentId: document.id,
+      userId: "u-1",
+      snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+      source: "manual",
+    });
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("getItem failed");
+    });
+
+    expect(listDiffsByDocument(document.id)).toEqual([]);
+  });
+
+  it("returns normalized diff writes when localStorage setItem throws", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("setItem failed");
+    });
+    const document = createDocument("SetItem diff doc");
+    const snapshot = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
+
+    const diff = createDiff({
+      documentId: `  ${document.id}  `,
+      userId: "bad\nuser",
+      snapshotAfter: snapshot,
+      source: "manual",
+    });
+
+    expect(diff).toEqual(
+      expect.objectContaining({
+        documentId: document.id,
+        userId: DEFAULT_LOCAL_USER_ID,
+        source: "manual",
+      }),
+    );
   });
 });
