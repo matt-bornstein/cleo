@@ -3,17 +3,9 @@ import { vi } from "vitest";
 
 import { AIPanel } from "@/components/ai/AIPanel";
 
+const useAIChatMock = vi.fn();
 vi.mock("@/hooks/useAIChat", () => ({
-  useAIChat: () => ({
-    messages: [],
-    selectedModel: "gpt-4o",
-    selectedModelLabel: "OpenAI GPT-4o",
-    setSelectedModel: vi.fn(),
-    sendPrompt: vi.fn(),
-    isLoading: false,
-    error: null,
-    clearChat: vi.fn(),
-  }),
+  useAIChat: () => useAIChatMock(),
 }));
 
 const useAILockStatusMock = vi.fn();
@@ -24,6 +16,17 @@ vi.mock("@/hooks/useAILockStatus", () => ({
 describe("AIPanel", () => {
   beforeEach(() => {
     useAILockStatusMock.mockReset();
+    useAIChatMock.mockReset();
+    useAIChatMock.mockReturnValue({
+      messages: [],
+      selectedModel: "gpt-4o",
+      selectedModelLabel: "OpenAI GPT-4o",
+      setSelectedModel: vi.fn(),
+      sendPrompt: vi.fn(),
+      isLoading: false,
+      error: null,
+      clearChat: vi.fn(),
+    });
   });
 
   it("shows collaborator busy indicator and disables send when locked by others", () => {
@@ -81,5 +84,32 @@ describe("AIPanel", () => {
 
     expect(screen.queryByText(/AI \(.*\) is working/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
+  });
+
+  it("disables clear chat action while ai request is loading", () => {
+    useAILockStatusMock.mockReturnValue({
+      locked: false,
+    });
+    useAIChatMock.mockReturnValue({
+      messages: [],
+      selectedModel: "gpt-4o",
+      selectedModelLabel: "OpenAI GPT-4o",
+      setSelectedModel: vi.fn(),
+      sendPrompt: vi.fn(),
+      isLoading: true,
+      error: null,
+      clearChat: vi.fn(),
+    });
+
+    render(
+      <AIPanel
+        documentId="doc-1"
+        currentDocumentContent="{}"
+        currentUserId="bob@example.com"
+        onApplyContent={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Clear chat" })).toBeDisabled();
   });
 });
