@@ -1,3 +1,4 @@
+import { MAX_MESSAGE_CONTENT_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { normalizeAIUserId } from "@/lib/ai/identity";
 import type { AIMessage } from "@/lib/types";
@@ -101,6 +102,7 @@ function normalizeMessage(message: AIMessage): AIMessage | null {
     !ALLOWED_MESSAGE_ROLES.has(message.role) ||
     typeof message.content !== "string" ||
     message.content.trim().length === 0 ||
+    message.content.length > MAX_MESSAGE_CONTENT_LENGTH ||
     typeof message.createdAt !== "number" ||
     !Number.isFinite(message.createdAt)
   ) {
