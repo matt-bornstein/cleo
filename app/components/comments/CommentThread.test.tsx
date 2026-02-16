@@ -37,4 +37,32 @@ describe("CommentThread", () => {
 
     expect(onReply).toHaveBeenCalledWith("comment-1", "Thanks!");
   });
+
+  it("renders comment and reply author labels", () => {
+    render(
+      <CommentThread
+        comment={baseComment}
+        replies={[
+          {
+            id: "reply-1",
+            documentId: "doc-1",
+            userId: "reviewer@example.com",
+            content: "Agreed",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "section",
+            resolved: false,
+            parentCommentId: "comment-1",
+            createdAt: 2,
+            updatedAt: 2,
+          },
+        ]}
+        onResolve={vi.fn()}
+        onReply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("By: user-1")).toBeInTheDocument();
+    expect(screen.getByText("↳ reviewer@example.com: Agreed")).toBeInTheDocument();
+  });
 });
