@@ -38,4 +38,11 @@ describe("MessageBubble", () => {
 
     expect(screen.queryByText("Changes applied")).not.toBeInTheDocument();
   });
+
+  it("falls back safely for malformed non-object messages", () => {
+    render(<MessageBubble message={123} />);
+
+    expect(screen.getByText("Assistant")).toBeInTheDocument();
+    expect(screen.getByText("…")).toBeInTheDocument();
+  });
 });
