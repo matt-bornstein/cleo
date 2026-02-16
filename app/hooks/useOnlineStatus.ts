@@ -7,7 +7,11 @@ function getInitialOnlineStatus() {
     return true;
   }
 
-  return typeof navigator.onLine === "boolean" ? navigator.onLine : true;
+  try {
+    return typeof navigator.onLine === "boolean" ? navigator.onLine : true;
+  } catch {
+    return true;
+  }
 }
 
 export function useOnlineStatus() {

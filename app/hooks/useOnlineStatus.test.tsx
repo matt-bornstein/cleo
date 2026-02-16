@@ -38,6 +38,18 @@ describe("useOnlineStatus", () => {
     expect(result.current).toBe(true);
   });
 
+  it("falls back to online when navigator.onLine getter throws", () => {
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get() {
+        throw new Error("onLine getter failed");
+      },
+    });
+
+    const { result } = renderHook(() => useOnlineStatus());
+    expect(result.current).toBe(true);
+  });
+
   it("does not throw when addEventListener throws", () => {
     vi.spyOn(window, "addEventListener").mockImplementation(() => {
       throw new Error("addEventListener failed");
