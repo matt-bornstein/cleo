@@ -150,6 +150,7 @@ describe("useAIChat", () => {
       expect.objectContaining({
         documentId: "doc-1",
         userId: "owner@example.com",
+        previousSnapshot: "<p>Original</p>",
         source: "ai",
       }),
     );

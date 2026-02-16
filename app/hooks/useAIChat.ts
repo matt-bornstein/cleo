@@ -189,6 +189,7 @@ export function useAIChat({
               ? createDiff({
                   documentId: normalizedDocumentId,
                   userId: normalizedCurrentUserId,
+                  previousSnapshot: currentDocumentContent,
                   snapshotAfter: payload.nextContent,
                   source: "ai",
                   aiPrompt: normalizedPrompt,
