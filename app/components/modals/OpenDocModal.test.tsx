@@ -63,6 +63,37 @@ describe("OpenDocModal", () => {
     expect(onDeleteDocument).not.toHaveBeenCalled();
   });
 
+  it("does not delete when confirmation throws", async () => {
+    const user = userEvent.setup();
+    const onDeleteDocument = vi.fn();
+    vi.spyOn(window, "confirm").mockImplementation(() => {
+      throw new Error("confirm failed");
+    });
+
+    render(
+      <OpenDocModal
+        open
+        onOpenChange={vi.fn()}
+        documents={[
+          {
+            id: "doc-1",
+            title: "Delete Target",
+            content: "{}",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ]}
+        onOpenDocument={vi.fn()}
+        onDeleteDocument={onDeleteDocument}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Delete" })),
+    ).resolves.toBeUndefined();
+    expect(onDeleteDocument).not.toHaveBeenCalled();
+  });
+
   it("does not throw when callbacks are malformed non-functions", async () => {
     const user = userEvent.setup();
 

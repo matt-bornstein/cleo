@@ -151,7 +151,7 @@ export function OpenDocModal({
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    const confirmed = window.confirm(
+                    const confirmed = safeConfirm(
                       `Delete "${document.title}"? This action cannot be undone.`,
                     );
                     if (!confirmed) return;
@@ -209,4 +209,16 @@ export function OpenDocModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+function safeConfirm(message: string) {
+  if (typeof window === "undefined" || typeof window.confirm !== "function") {
+    return false;
+  }
+
+  try {
+    return window.confirm(message);
+  } catch {
+    return false;
+  }
 }
