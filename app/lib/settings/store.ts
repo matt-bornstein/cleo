@@ -66,7 +66,7 @@ function normalizeSettings(settings: unknown): AppUserSettings {
     theme: normalizedTheme,
     defaultModel:
       normalizedModel && !hasControlChars(normalizedModel)
-        ? getModelConfig(normalizedModel).id
+        ? normalizeDefaultModel(normalizedModel)
         : defaultSettings.defaultModel,
     editorFontSize: normalizedFontSize,
     editorLineSpacing: normalizedLineSpacing,
@@ -123,5 +123,13 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function normalizeDefaultModel(modelId: string) {
+  try {
+    return getModelConfig(modelId).id;
+  } catch {
+    return defaultSettings.defaultModel;
   }
 }

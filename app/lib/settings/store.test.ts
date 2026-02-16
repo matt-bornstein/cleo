@@ -1,4 +1,5 @@
 import { getSettings, saveSettings } from "@/lib/settings/store";
+import * as aiModels from "@/lib/ai/models";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
@@ -110,6 +111,29 @@ describe("settings store", () => {
       "plan00.settings.v1",
       JSON.stringify({
         defaultModel: "unknown-model-id",
+      }),
+    );
+    expect(getSettings().defaultModel).toBe("gpt-4o");
+  });
+
+  it("falls back to default model when model lookup throws", () => {
+    vi.spyOn(aiModels, "getModelConfig").mockImplementation(() => {
+      throw new Error("model lookup failed");
+    });
+
+    const saved = saveSettings({
+      theme: "dark",
+      defaultModel: "gpt-4o",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: "test@example.com",
+    });
+    expect(saved.defaultModel).toBe("gpt-4o");
+
+    window.localStorage.setItem(
+      "plan00.settings.v1",
+      JSON.stringify({
+        defaultModel: "gpt-4o",
       }),
     );
     expect(getSettings().defaultModel).toBe("gpt-4o");
