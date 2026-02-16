@@ -84,12 +84,12 @@ export function usePresence(documentId: unknown) {
 
   useEffect(() => {
     if (!hasValidDocumentId) {
-      removePresence(visitorId);
+      safeRemovePresence(visitorId);
       return;
     }
 
     const heartbeatInterval = safeSetInterval(() => {
-      updatePresence({
+      safeUpdatePresence({
         documentId: normalizedDocumentId,
         visitorId,
         userId: CURRENT_USER.id,
@@ -105,7 +105,7 @@ export function usePresence(documentId: unknown) {
       if (heartbeatInterval) {
         safeClearInterval(heartbeatInterval);
       }
-      removePresence(visitorId);
+      safeRemovePresence(visitorId);
       refresh();
     };
   }, [hasValidDocumentId, normalizedDocumentId, refresh, visitorId]);
@@ -113,7 +113,10 @@ export function usePresence(documentId: unknown) {
   const allPresence = useMemo(() => {
     void version;
     if (!hasValidDocumentId) return [];
-    return filterStalePresence(listPresence(normalizedDocumentId), currentTime);
+    return filterStalePresence(
+      safeListPresence(normalizedDocumentId),
+      currentTime,
+    );
   }, [currentTime, hasValidDocumentId, normalizedDocumentId, version]);
 
   const me = allPresence.find((entry) => entry.visitorId === visitorId);
@@ -123,7 +126,7 @@ export function usePresence(documentId: unknown) {
     (data: unknown) => {
       if (!hasValidDocumentId) return;
       const normalizedData = normalizePresenceData(data);
-      updatePresence({
+      safeUpdatePresence({
         documentId: normalizedDocumentId,
         visitorId,
         userId: CURRENT_USER.id,
@@ -160,6 +163,30 @@ function safeSetInterval(callback: () => void, delayMs: number) {
 function safeClearInterval(intervalId: ReturnType<typeof setInterval>) {
   try {
     clearInterval(intervalId);
+  } catch {
+    return;
+  }
+}
+
+function safeListPresence(documentId: string) {
+  try {
+    return listPresence(documentId);
+  } catch {
+    return [];
+  }
+}
+
+function safeUpdatePresence(payload: Parameters<typeof updatePresence>[0]) {
+  try {
+    updatePresence(payload);
+  } catch {
+    return;
+  }
+}
+
+function safeRemovePresence(visitorId: string) {
+  try {
+    removePresence(visitorId);
   } catch {
     return;
   }

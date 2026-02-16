@@ -193,4 +193,26 @@ describe("usePresence", () => {
     expect(() => renderHook(() => usePresence("doc-presence"))).not.toThrow();
     expect(listPresenceMock).toHaveBeenCalledWith("doc-presence");
   });
+
+  it("does not throw when presence store methods throw", () => {
+    listPresenceMock.mockImplementation(() => {
+      throw new Error("list failed");
+    });
+    updatePresenceMock.mockImplementation(() => {
+      throw new Error("update failed");
+    });
+    removePresenceMock.mockImplementation(() => {
+      throw new Error("remove failed");
+    });
+
+    const { result, unmount } = renderHook(() => usePresence("doc-presence"));
+    expect(result.current.others).toEqual([]);
+
+    expect(() => {
+      act(() => {
+        result.current.updateMyPresence({ name: "Me", color: "#000" });
+      });
+      unmount();
+    }).not.toThrow();
+  });
 });
