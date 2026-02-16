@@ -1,7 +1,9 @@
 import { createDocument, getDocumentById, resetDocumentsForTests } from "@/lib/documents/store";
 import {
+  ensureCreatedDiff,
   listDiffsByDocument,
   resetDiffsForTests,
+  restoreVersion,
   triggerIdleSave,
 } from "@/lib/diffs/store";
 
@@ -52,5 +54,33 @@ describe("diff store triggerIdleSave", () => {
     expect(diffs).toHaveLength(1);
     expect(diffs[0].snapshotAfter).toBe(changedSnapshot);
     expect(getDocumentById(document.id)?.content).toBe(changedSnapshot);
+  });
+
+  it("creates an initial created diff and restores historical snapshot", () => {
+    const document = createDocument("History doc");
+    ensureCreatedDiff({
+      documentId: document.id,
+      snapshot: document.content,
+    });
+
+    const changedSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "New version" }] }],
+    });
+    triggerIdleSave({
+      documentId: document.id,
+      snapshot: changedSnapshot,
+      dedupWindowMs: 0,
+    });
+
+    const restoreResult = restoreVersion({
+      documentId: document.id,
+      snapshot: document.content,
+    });
+    expect(restoreResult.restored).toBe(true);
+
+    const diffs = listDiffsByDocument(document.id);
+    expect(diffs.map((diff) => diff.source)).toContain("created");
+    expect(getDocumentById(document.id)?.content).toBe(document.content);
   });
 });

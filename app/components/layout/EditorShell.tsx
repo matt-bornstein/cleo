@@ -14,7 +14,7 @@ import { ExportModal } from "@/components/modals/ExportModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
-import { triggerIdleSave } from "@/lib/diffs/store";
+import { ensureCreatedDiff, restoreVersion, triggerIdleSave } from "@/lib/diffs/store";
 import { useComments } from "@/hooks/useComments";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { useDocuments } from "@/hooks/useDocuments";
@@ -156,6 +156,10 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenChange={setNewModalOpen}
         onCreateDocument={(title) => {
           const newDocument = create(title);
+          ensureCreatedDiff({
+            documentId: newDocument.id,
+            snapshot: newDocument.content,
+          });
           router.push(`/editor/${newDocument.id}`);
         }}
       />
@@ -170,8 +174,14 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenChange={setHistoryModalOpen}
         documentId={documentId}
         onRestoreSnapshot={(snapshot) => {
-          updateContent(documentId, snapshot);
-          setSaveStateLabel("Saved");
+          const result = restoreVersion({
+            documentId,
+            snapshot,
+          });
+          if (result.restored) {
+            updateContent(documentId, snapshot);
+            setSaveStateLabel("Saved");
+          }
         }}
       />
       <ExportModal

@@ -87,6 +87,47 @@ export function listDiffsByDocument(documentId: string) {
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
+export function ensureCreatedDiff(params: {
+  documentId: string;
+  snapshot: string;
+  userId?: string;
+}) {
+  const existing = listDiffsByDocument(params.documentId);
+  if (existing.length > 0) {
+    return existing[0];
+  }
+
+  return createDiff({
+    documentId: params.documentId,
+    userId: params.userId ?? "local-dev-user",
+    snapshotAfter: params.snapshot,
+    source: "created",
+  });
+}
+
+export function restoreVersion(params: {
+  documentId: string;
+  snapshot: string;
+  userId?: string;
+}) {
+  const document = getDocumentById(params.documentId);
+  if (!document) {
+    return { restored: false as const, reason: "missing_document" as const };
+  }
+
+  const now = Date.now();
+  updateDocumentContent(params.documentId, params.snapshot);
+  setDocumentLastDiffAt(params.documentId, now);
+  const diff = createDiff({
+    documentId: params.documentId,
+    userId: params.userId ?? "local-dev-user",
+    snapshotAfter: params.snapshot,
+    source: "manual",
+  });
+
+  return { restored: true as const, diffId: diff.id };
+}
+
 export function triggerIdleSave(params: {
   documentId: string;
   snapshot: string;
