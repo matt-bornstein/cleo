@@ -106,15 +106,18 @@ The AI reads and writes **HTML**, not ProseMirror JSON or markdown. With `@conve
                          │
 2. Convex action fetches current doc via prosemirrorSync.getDoc()
                          │
-3. Serialize doc to HTML → send to LLM (in same action)
+3. Serialize doc to HTML (via linkedom DOM) → send to LLM
                          │
 4. LLM returns edited HTML
                          │
-5. Apply HTML changes to doc via prosemirrorSync.transform()
-   (parse HTML → build ProseMirror Transform → apply as OT steps)
+5. Parse response HTML → build new ProseMirror doc (via linkedom DOM)
+   → compute minimal Transform via prosemirror-recreate-steps
+   → apply via prosemirrorSync.transform() as OT steps
                          │
 6. All clients receive changes automatically via prosemirror-sync ✓
 ```
+
+**Server-side DOM requirement:** ProseMirror's `DOMSerializer` and `DOMParser` require a DOM environment. Convex actions run in serverless Node.js with no browser DOM. We use **`linkedom`** to provide a lightweight DOM implementation. This is used in two places: (1) serializing the current ProseMirror doc to HTML for the LLM, and (2) parsing the LLM's response HTML back into a ProseMirror document. See `lib/editor/serverDom.ts` for the helper.
 
 **Why HTML over markdown for AI:**
 - ProseMirror has lossless, built-in HTML serialization (`DOMSerializer`) and parsing (`DOMParser`).
@@ -123,9 +126,9 @@ The AI reads and writes **HTML**, not ProseMirror JSON or markdown. With `@conve
 - No markdown normalization concerns — what the LLM returns is exactly what the user sees.
 
 **Why this doesn't cause flicker:**
-- AI changes are applied as ProseMirror `Transform` steps via `prosemirrorSync.transform()`, not via `setContent`.
+- AI changes are computed as **minimal** ProseMirror `Transform` steps using `prosemirror-recreate-steps`, which diffs the old and new documents and produces the smallest possible set of steps. These are applied via `prosemirrorSync.transform()`, not via `setContent`.
+- Because the steps are minimal (only touching changed regions), **cursors, selections, and scroll positions outside the changed region are preserved** for all collaborators. A full-document `replaceWith` would destroy all cursor positions — `prosemirror-recreate-steps` avoids this.
 - The OT layer in `prosemirror-sync` handles conflict resolution if a user is editing concurrently.
-- Cursors, selections, and scroll positions outside the changed region are preserved for all users.
 - Changes propagate to all clients as normal collaborative edit steps.
 
 ---
@@ -160,11 +163,13 @@ export default defineSchema({
   documents: defineTable({
     title: v.string(),
     content: v.string(),              // ProseMirror JSON (stringified) — cached snapshot
-    ownerId: v.id("users"),
+    lastDiffAt: v.optional(v.number()), // timestamp of last idle-save diff (for server-side dedup)
+    chatClearedAt: v.optional(v.number()), // timestamp when chat was last cleared; messages before this are hidden in UI and excluded from AI context
+    aiLockedBy: v.optional(v.id("users")),  // user ID of who has an active AI request; null when idle
+    aiLockedAt: v.optional(v.number()),     // timestamp when the AI lock was acquired (for stale lock detection)
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_owner", ["ownerId"])
     .index("by_updatedAt", ["updatedAt"]),
 
   // --- Presence ---
@@ -222,6 +227,8 @@ export default defineSchema({
     anchorFrom: v.number(),           // ProseMirror position start
     anchorTo: v.number(),             // ProseMirror position end
     anchorText: v.string(),           // the text that was highlighted (for re-anchoring fallback)
+    lastRemapVersion: v.optional(v.number()), // prosemirror-sync version at which positions were last remapped
+    orphaned: v.optional(v.boolean()),  // true if anchor text was deleted and comment can't be positioned
     resolved: v.boolean(),
     parentCommentId: v.optional(v.id("comments")), // for threaded replies
     createdAt: v.number(),
@@ -242,7 +249,6 @@ export default defineSchema({
     content: v.string(),
     model: v.optional(v.string()),    // which model responded
     diffId: v.optional(v.id("diffs")), // link to the diff created by this AI response
-    cleared: v.optional(v.boolean()), // true if this message has been cleared; cleared messages are hidden in the UI and excluded from AI context
     createdAt: v.number(),
   }).index("by_document", ["documentId"]),
 });
@@ -253,6 +259,8 @@ export default defineSchema({
 **Why `content` is a stringified JSON, not a Convex object:** ProseMirror JSON is deeply nested with variable structure (different node types, optional attrs, variable-length content arrays). Storing it as a string avoids fighting Convex's type system for a structure that is better validated by ProseMirror itself.
 
 **Why `snapshotAfter` in diffs:** Every diff record includes a full ProseMirror JSON snapshot of the document after the change. This allows any version to be restored without replaying the entire diff chain. Storage cost is acceptable for text documents.
+
+**Why `lastDiffAt` on documents:** Used for server-side deduplication of idle-save diffs. When multiple collaborators are editing the same document, each client independently fires a 5-second idle timer and calls `triggerIdleSave`. The mutation checks `lastDiffAt` — if a diff was already saved within the last 4 seconds, it skips. Because Convex mutations are transactionally serialized, concurrent triggers are naturally ordered and only one produces a diff per edit window. See section 5.3 for the full flow.
 
 **Comment anchoring:** Comments use ProseMirror positions (`anchorFrom`, `anchorTo`) which are stable within a document version. For collaborative editing, ProseMirror's mapping capabilities (via the steps stored by `prosemirror-sync`) can be used to remap comment positions as the document changes. The `anchorText` field is a fallback for re-anchoring if positions drift.
 
@@ -293,12 +301,28 @@ export default defineSchema({
 - Active formatting is visually indicated (e.g., bold button is highlighted when cursor is in bold text).
 - Keyboard shortcuts for common formatting (Cmd/Ctrl+B, Cmd/Ctrl+I, etc.).
 
-#### Idle-Save Diff
-- A **5-second idle timer** triggers after the last edit.
-- On trigger, serialize the current ProseMirror doc to HTML, compute a diff between the last saved HTML snapshot and the current HTML.
-- If changes are detected, store a new `diffs` record with `source: "manual"`.
-- Update the document's `content` field (ProseMirror JSON) and `updatedAt` timestamp.
-- Implementation: `useEffect` with a debounced callback watching editor updates. Note: `prosemirror-sync` already handles debounced snapshots internally, but the diff records for version history are a separate concern.
+#### Idle-Save Diff (Server-Coordinated)
+
+Idle-save diffs are **coordinated server-side** to prevent duplicate diffs when multiple collaborators are editing the same document. The client detects idleness; the server decides whether to actually save.
+
+**Client side (`useIdleSave` hook):**
+- A **5-second idle timer** resets after each local edit (via Tiptap's `onUpdate` callback).
+- When the timer fires, the client calls a lightweight Convex mutation: `diffs.triggerIdleSave({ documentId })`.
+- The client does **not** compute diffs, serialize HTML, or decide whether to save — that's all server-side.
+
+**Server side (`diffs.triggerIdleSave` mutation):**
+1. **Deduplicate:** Read the document's `lastDiffAt` timestamp. If a diff was already saved within the last 4 seconds, skip (another client's trigger already saved a diff for this edit window). This works because Convex mutations on the same document are serialized — concurrent triggers from multiple clients are processed one at a time, and the second one sees the `lastDiffAt` written by the first.
+2. **Snapshot:** Fetch the current ProseMirror doc via `prosemirrorSync.getDoc()`. Serialize to HTML (via `linkedom`).
+3. **Diff:** Load the last diff record's `snapshotAfter` for this document. Serialize it to HTML. Compute an HTML-level diff via `diff-match-patch`.
+4. **Save (if changed):** If the diff is non-empty, store a new `diffs` record with `source: "manual"`. Update the document's `content` field (cached ProseMirror JSON), `updatedAt`, and `lastDiffAt` timestamps.
+5. **Skip (if unchanged):** If the diff is empty (e.g., the user typed and then undid), update only `lastDiffAt` to prevent redundant retriggers.
+
+**Why this is safe:**
+- Convex mutations are **transactionally serialized** per-document. Even if 5 clients call `triggerIdleSave` at the same instant, they execute one at a time. The first writes `lastDiffAt`; the remaining 4 see the fresh timestamp and skip.
+- The 4-second dedup window is slightly shorter than the 5-second idle timer, ensuring that a genuinely new edit window (where no one has typed for 5+ seconds) always produces a diff.
+- No client-side coordination, locking, or leader election is needed.
+
+Note: `prosemirror-sync` already handles its own debounced snapshots internally for sync purposes. The idle-save diff system is a separate concern — it creates version history records for the user-facing timeline.
 
 ### 5.4 AI Assistant Panel (Right, 1/3 Width)
 
@@ -322,34 +346,39 @@ User submits prompt
         │
         ▼
 ┌──────────────────────────────────────────┐
-│ Client-side:                             │
-│ 1. Broadcast "AI (<username>) is         │
-│    working..." indicator to all          │
-│    collaborators via presence            │
-│ 2. Stream AI text response in chat panel │
+│ Server-side (mutation):                  │
+│ 1. Acquire AI lock on document           │
+│    (set aiLockedBy + aiLockedAt).        │
+│    If already locked by another user     │
+│    (and lock is <120s old), reject with  │
+│    "AI is busy" error.                   │
+│ 2. All collaborators see the lock via    │
+│    reactive query → UI shows             │
+│    "AI (<username>) is working..."       │
 └───────────┬──────────────────────────────┘
             │
             ▼
 ┌──────────────────────────────────────────┐
-│ Convex action (server-side):             │
+│ Server-side (HTTP action, streaming):    │
 │ 1. Fetch doc via prosemirrorSync.getDoc()│
 │ 2. Serialize to HTML                     │
 │ 3. Build context (system prompt + HTML   │
-│    + last 5 non-cleared chat messages   │
+│    + last 5 chat messages after         │
+│      chatClearedAt                     │
 │    + user prompt)                       │
-│ 4. Call user's selected model            │
-│ 5. Parse response (extract HTML edits)   │
-│ 6. Apply via prosemirrorSync.transform() │
-│    (parse new HTML → ProseMirror doc →   │
-│     build Transform → OT merges it)      │
-│ 7. Save diff record (source: "ai")       │
-│ 8. Save AI message record                │
+│ 4. Stream response to client (chat UI)   │
+│ 5. After stream completes:               │
+│    - Parse response (extract HTML edits) │
+│    - Apply via prosemirrorSync.transform()│
+│    - Save diff record (source: "ai")     │
+│    - Save AI message record              │
+│    - Release AI lock (clear aiLockedBy)  │
 └───────────┬──────────────────────────────┘
             │
             ▼
   All clients receive changes automatically
   via prosemirror-sync reactive subscriptions ✓
-  "AI is working..." indicator cleared.
+  Lock cleared → "AI is working..." disappears.
 ```
 
 #### Applying AI Responses (Detailed)
@@ -357,14 +386,17 @@ User submits prompt
 **Step-by-step process (all server-side in a Convex action):**
 
 1. **Fetch** the current ProseMirror document via `prosemirrorSync.getDoc(ctx, id, schema)`.
-2. **Serialize** the document to HTML using ProseMirror's `DOMSerializer`.
+2. **Serialize** the document to HTML using ProseMirror's `DOMSerializer` with a `linkedom` DOM. (Convex actions run in serverless Node.js — there is no browser DOM. `linkedom` provides a lightweight DOM implementation for `DOMSerializer` and `DOMParser`.)
 3. **Send** the HTML + user prompt + system prompt to the selected model.
 4. **Parse** the model's response to extract the edited HTML (search/replace blocks or full HTML from a code fence).
-5. **Apply** the changes via `prosemirrorSync.transform(ctx, id, schema, (doc) => { ... })`:
-   - Parse the response HTML into a new ProseMirror document using ProseMirror's `DOMParser`.
-   - Build a `Transform` that replaces the relevant content (either surgical replacements for search/replace blocks, or a full `replaceWith` for complete rewrites).
+5. **Build the new HTML** — For search/replace blocks: apply the string-level replacements to the serialized HTML. For full-doc responses: use the returned HTML as-is.
+6. **Apply** the changes via `prosemirrorSync.transform(ctx, id, schema, (doc) => { ... })`:
+   - Parse the new HTML into a ProseMirror document using ProseMirror's `DOMParser` (with `linkedom`).
+   - Compute a **minimal set of steps** from the current `doc` to the new doc using **`prosemirror-recreate-steps`** (`recreateTransform(oldDoc, newDoc)`). This produces the smallest possible `Transform` — only the changed regions are touched, preserving collaborator cursors and selections outside those regions.
    - Return the Transform. The component applies it as OT steps and syncs to all clients.
-6. **Save** a diff record with the HTML-level diff (for version history) and the new ProseMirror JSON snapshot.
+7. **Save** a diff record with the HTML-level diff (for version history) and the new ProseMirror JSON snapshot.
+
+> **Why `prosemirror-recreate-steps` is required (not optional):** Without it, the only way to go from doc A to doc B is `tr.replaceWith(0, doc.content.size, newDoc.content)` — a single step that replaces the entire document. ProseMirror maps all remote cursor/selection positions through each step; a full-document replace maps every position to the end of the document, destroying all collaborators' cursor positions. `prosemirror-recreate-steps` diffs the two documents structurally and produces granular steps (e.g., "replace characters 45-60", "insert node at position 120"), so positions outside the changed regions survive the mapping.
 
 **Conflict handling:** If a user is editing concurrently, `prosemirrorSync.transform()` handles OT rebasing automatically. The callback may be re-invoked with an updated `doc` if the document changed between fetch and apply. The second argument to the callback provides the current version, which can be compared to detect concurrent changes.
 
@@ -425,13 +457,13 @@ Every version is stored as a `diffs` record:
 
 ### 5.6 Sharing and Permissions
 
-- Each document has an **owner** (the creator).
+- Each document has an **owner** — tracked via a `permissions` record with `role: "owner"`, created atomically when the document is created. There is no separate `ownerId` field on the documents table; ownership is determined solely from the `permissions` table. This avoids dual-source ambiguity.
 - The owner can share with other users by email, assigning a role:
   - **Editor** — can edit, comment, and view.
   - **Commenter** — can comment and view.
   - **Viewer** — can only view.
-- Permissions are checked server-side in every Convex mutation/query.
-- The Share modal shows current collaborators and their roles, with the ability to change roles or revoke access.
+- Permissions are checked server-side in every Convex mutation/query via a single lookup on the `permissions` table (using the `by_document_user` index). Owner checks also use this table — no need to join with the documents table.
+- The Share modal shows current collaborators and their roles, with the ability to change roles or revoke access. The owner role cannot be revoked (the UI should prevent this).
 - Shareable links: Generate a link containing the document ID. When a user opens the link, they are prompted to sign in if not already, and then granted viewer access (or the role specified by the owner).
 
 ### 5.7 Comments
@@ -441,7 +473,20 @@ Every version is stored as a `diffs` record:
 - Threaded replies are supported (via `parentCommentId`).
 - Comments can be resolved (hidden but not deleted).
 - Real-time: Comments are stored in Convex and appear instantly for all collaborators via reactive queries.
-- Comment anchor positions can be remapped using ProseMirror's step mapping (via the steps stored by `prosemirror-sync`) so they survive concurrent edits.
+
+**Comment anchor remapping strategy:**
+
+Comments store ProseMirror positions (`anchorFrom`, `anchorTo`) and a fallback `anchorText` (the highlighted text at creation time). Positions drift as the document is edited. The remapping strategy:
+
+1. **On each idle-save diff:** The `triggerIdleSave` mutation already fetches the current doc and computes diffs. After saving a diff, it also remaps all active (unresolved) comments for that document. For each comment, map `anchorFrom` and `anchorTo` through the ProseMirror steps accumulated since the comment was last remapped (tracked via a `lastRemapVersion` field on each comment, compared against the prosemirror-sync version). Update the stored positions in-place.
+
+2. **On AI edits:** The `submitPrompt` action already applies a Transform via `prosemirrorSync.transform()`. After applying, remap all active comments through the same Transform steps. This happens in the same server-side flow.
+
+3. **Text fallback:** After remapping, verify that the text at the new `anchorFrom..anchorTo` range matches `anchorText`. If it doesn't (position drifted into different content), fall back to a text search: scan the document for `anchorText` and re-anchor to the first match. If no match is found (text was deleted), mark the comment as orphaned (still visible in the sidebar but without a highlight in the editor).
+
+4. **Client-side rendering:** The client reads the stored positions and renders highlights. No client-side remapping — the server keeps positions up to date.
+
+This keeps remapping batched (not per-keystroke) and server-authoritative. The worst-case staleness is ~5 seconds (one idle-save cycle).
 
 ### 5.8 Presence
 
@@ -450,6 +495,7 @@ Every version is stored as a `diffs` record:
 - A `usePresence` hook provides a `useState`-like API: `[myPresence, othersPresence, updateMyPresence]`.
 - Cursors and selections are rendered as colored overlays in the Tiptap editor, with a small name label next to each remote cursor.
 - Stale presence entries (no update in 10+ seconds) are considered offline and filtered out client-side.
+- **Server-side cleanup:** A Convex cron job runs every 60 seconds and deletes all presence records with `updatedAt` older than 60 seconds. This prevents the `presence` table from accumulating dead records over time. The 60-second threshold is deliberately conservative (6× the heartbeat interval) to avoid deleting entries during transient network hiccups — client-side filtering at 10 seconds handles the fast "offline" detection, while the cron handles garbage collection.
 - Presence updates are throttled via single-flighting: only the latest update is sent, skipping intermediate states. This provides graceful degradation as the number of concurrent users increases.
 
 ---
@@ -501,7 +547,8 @@ Every version is stored as a `diffs` record:
 │   ├── users.ts                  # User queries/mutations
 │   ├── documents.ts              # Document CRUD, permissions checks
 │   ├── prosemirrorSync.ts        # prosemirror-sync API (exposes sync endpoints with auth)
-│   ├── presence.ts               # Presence mutations/queries (cursor, selection, heartbeat)
+│   ├── presence.ts               # Presence mutations/queries (cursor, selection, heartbeat, cleanup)
+│   ├── crons.ts                  # Convex cron jobs (presence cleanup every 60s)
 │   ├── diffs.ts                  # Diff storage, version history
 │   ├── comments.ts               # Comment CRUD
 │   ├── permissions.ts            # Permission management
@@ -515,12 +562,14 @@ Every version is stored as a `diffs` record:
 │   │   └── parseResponse.ts      # Parse search/replace or full-doc HTML responses
 │   ├── editor/
 │   │   ├── extensions.ts         # Tiptap extension configuration
+│   │   ├── serverDom.ts          # linkedom DOM helper for server-side ProseMirror HTML serialization/parsing
+│   │   ├── serverHtml.ts         # Server-side doc→HTML and HTML→doc using serverDom + ProseMirror
 │   │   └── diffing.ts            # HTML diff computation for version history
 │   ├── permissions.ts            # Permission checking utilities
 │   └── utils.ts                  # General utilities
 │
 ├── hooks/
-│   ├── useIdleSave.ts            # 5-second idle auto-save with diff
+│   ├── useIdleSave.ts            # 5-second idle timer → calls server-side triggerIdleSave mutation
 │   ├── useAIChat.ts              # AI chat interaction logic
 │   ├── usePresence.ts            # Presence hook (cursor, selection, heartbeat)
 │   └── useComments.ts            # Comments management
@@ -545,9 +594,9 @@ Every version is stored as a `diffs` record:
 
 | Function | Type | Description |
 |---|---|---|
-| `create` | mutation | Create a new document (title, empty ProseMirror JSON, set owner). Also calls `prosemirrorSync.create()` to initialize the sync document. |
+| `create` | mutation | Create a new document (title, empty ProseMirror JSON). Atomically inserts a `permissions` record with `role: "owner"` for the creating user. Also calls `prosemirrorSync.create()` to initialize the sync document. |
 | `get` | query | Get a document by ID (with permission check). |
-| `list` | query | List documents accessible to the current user. |
+| `list` | query | List documents accessible to the current user. Queries the `permissions` table by `userId` (via `by_user` index), then fetches the corresponding documents. |
 | `updateContent` | mutation | Update cached document ProseMirror JSON and `updatedAt` (with editor permission check). Called by idle-save. |
 | `delete` | mutation | Delete a document (owner only). Also cleans up prosemirror-sync data. |
 
@@ -572,12 +621,14 @@ export const { getSnapshot, submitSnapshot, latestVersion, getSteps, submitSteps
 | `heartbeat` | mutation | Touch the `updatedAt` timestamp without changing data. |
 | `list` | query | List all presence entries for a document. Clients filter stale entries (>10s old). |
 | `remove` | mutation | Remove presence entry on disconnect/navigation away. |
+| `cleanup` | mutation | Called by a cron job every 60 seconds. Deletes all presence records with `updatedAt` older than 60 seconds. Prevents stale records from accumulating. |
 
 ### 7.3 Diffs (`convex/diffs.ts`)
 
 | Function | Type | Description |
 |---|---|---|
-| `create` | mutation | Store a new diff record (with ProseMirror JSON snapshot). |
+| `triggerIdleSave` | mutation | Server-coordinated idle save. Deduplicates via `lastDiffAt` (skips if a diff was saved within the last 4s). If enough time has passed: fetches the current doc via `prosemirrorSync.getDoc()`, serializes to HTML (via `linkedom`), computes an HTML diff against the last snapshot, and saves a new diff record with `source: "manual"` if changes are detected. Updates the document's `content`, `updatedAt`, and `lastDiffAt`. |
+| `create` | mutation | Store a new diff record (with ProseMirror JSON snapshot). Used internally by `triggerIdleSave` and AI edit flow. |
 | `listByDocument` | query | List all diffs for a document, ordered by time. |
 | `getVersion` | query | Get a specific version's ProseMirror JSON snapshot. |
 | `restore` | mutation | Restore a document to a specific version (replaces content, creates a new diff). |
@@ -586,7 +637,9 @@ export const { getSnapshot, submitSnapshot, latestVersion, getSteps, submitSteps
 
 | Function | Type | Description |
 |---|---|---|
-| `submitPrompt` | action | Main AI flow: fetch doc, serialize to HTML, call LLM, parse response, apply changes via `prosemirrorSync.transform()`, save diff and message records. |
+| `acquireLock` | mutation | Acquire the AI lock on a document. Sets `aiLockedBy` + `aiLockedAt` if the document is unlocked (or the existing lock is stale >120s). Rejects if another user holds a fresh lock. |
+| `releaseLock` | mutation | Release the AI lock. Clears `aiLockedBy` and `aiLockedAt`. Called after the AI action completes (success or error). |
+| `submitPrompt` | HTTP action | Main AI flow (streaming): fetch doc, serialize to HTML, call LLM with streaming, pipe tokens to response, parse buffered response, apply changes via `prosemirrorSync.transform()`, save diff and message records, release lock. |
 | `callModel` | (internal) | Call the appropriate AI provider API based on model selection. |
 | `saveMessage` | mutation | Store an AI chat message. |
 | `getMessages` | query | Get chat history for a document. |
@@ -623,7 +676,9 @@ export const { getSnapshot, submitSnapshot, latestVersion, getSteps, submitSteps
 ### 8.2 System Prompt (Draft)
 
 ```
-You are an AI writing assistant helping edit a rich text document. The user will give you instructions for changes to make. The document is provided as HTML.
+You are an AI writing assistant helping edit a rich text document collaboratively. Multiple users may be working on this document. Each message in the conversation is prefixed with the user's name (e.g., "[Alice]: fix the grammar"). Pay attention to who is asking — different users may have different requests.
+
+The document is provided as HTML.
 
 RESPONSE FORMAT:
 - For small, targeted changes, use SEARCH/REPLACE blocks operating on the HTML:
@@ -665,26 +720,62 @@ Each model call should:
 
 ### 8.4 Streaming Responses
 
-For a good UX, AI responses should stream to the client:
-- Use a Convex HTTP action that returns a streaming response, consumed by the client via `fetch` with a `ReadableStream`.
-- The chat panel displays tokens as they arrive.
-- Document changes are applied only after the full response is received and parsed (not during streaming), to avoid partial/broken HTML being applied to the editor.
+AI responses stream to the client for real-time UX, then document changes are applied as a batch after streaming completes.
+
+**Architecture:** The flow uses two Convex entry points — an HTTP streaming endpoint and an internal action:
+
+```
+Client                          Convex
+  │                               │
+  │  POST /ai/stream              │
+  │  {documentId, prompt, model}  │
+  │──────────────────────────────→│
+  │                               │  HTTP action:
+  │                               │  1. Fetch doc, serialize to HTML
+  │                               │  2. Build context
+  │                               │  3. Call LLM with streaming
+  │  ← streaming tokens ─────────│  4. Stream tokens to response body
+  │  (client renders in chat)     │     while buffering full response
+  │                               │  5. After stream ends:
+  │                               │     - Parse buffered response
+  │                               │     - Apply transform (prosemirrorSync.transform)
+  │                               │     - Save diff + AI message records
+  │  ← prosemirror-sync sub ─────│  6. All clients receive doc changes
+  │  (editor updates via OT)      │     via reactive subscriptions
+  │                               │
+```
+
+**Details:**
+- The HTTP action creates a `ReadableStream` that pipes LLM tokens to the client as they arrive. The client consumes this via `fetch` with `getReader()` and renders tokens in the chat panel.
+- Simultaneously, the action buffers the full response in memory. When the stream completes, it parses the response (search/replace blocks or full HTML), applies the document transform, and saves records — all within the same action invocation.
+- The client does **not** need to signal "stream complete" — the server knows when the LLM stream ends and handles everything after that point autonomously.
+- Document changes arrive at all clients via `prosemirror-sync`'s reactive subscriptions, independent of the streaming response. The chat panel shows a "changes applied" indicator when it detects a new diff record linked to the AI message (via `diffId`).
+- If the LLM call fails or times out, the HTTP action returns an error chunk in the stream and does not apply any document changes.
 
 ### 8.5 Server-Side AI Orchestration
 
-The AI flow is orchestrated **server-side** in a single Convex action, thanks to `prosemirrorSync.transform()`:
+The AI flow is orchestrated **server-side** via a lock-acquire mutation followed by a streaming HTTP action:
 
-1. Client calls the Convex `submitPrompt` action with the document ID, user prompt, and selected model.
-2. The action fetches the current document via `prosemirrorSync.getDoc()` and serializes it to HTML.
-3. The action builds context: system prompt + document HTML + last 5 non-cleared chat messages (for conversational continuity) + user prompt. Messages with `cleared: true` are excluded from context — clearing the chat resets the AI's conversational memory for all collaborators. Before submitting, check total token count — drop oldest chat history messages first if needed to fit the model's context window (document + system prompt + user prompt always take priority).
-4. The action calls the user's selected model.
-5. The action parses the response (search/replace blocks or full HTML).
-6. The action applies changes via `prosemirrorSync.transform()`, which handles OT and syncs to all clients.
+**Step 0 — Acquire lock (mutation, called before the HTTP action):**
+The client calls an `ai.acquireLock({ documentId })` mutation. This checks the document's `aiLockedBy` field:
+- If `null` (or the existing lock is stale — `aiLockedAt` > 120 seconds ago): set `aiLockedBy` to the current user's ID and `aiLockedAt` to now. Return success.
+- If locked by another user (and lock is fresh): reject with an "AI is already processing a request from \<username\>" error. The client shows this to the user.
+- All collaborators see `aiLockedBy` via a reactive query on the document → the UI shows "AI (\<username\>) is working..." automatically.
+
+**Steps 1–8 — Streaming HTTP action (`POST /ai/stream`):**
+
+1. Client calls the HTTP streaming endpoint with the document ID, user prompt, and selected model.
+2. The action fetches the current document via `prosemirrorSync.getDoc()` and serializes it to HTML using ProseMirror's `DOMSerializer` with a **`linkedom`** DOM (Convex actions have no browser DOM — `linkedom` provides a lightweight server-side DOM for ProseMirror's HTML serialization and parsing; see `lib/editor/serverDom.ts`).
+3. The action builds context: system prompt + document HTML + last 5 chat messages after `chatClearedAt` (for conversational continuity) + user prompt. Filtering: query `aiMessages` by `documentId`, ordered by `createdAt`, then filter out any messages with `createdAt < document.chatClearedAt` (these are "cleared" — hidden from UI and excluded from AI context). Each user message in the chat history is prefixed with the sender's name (e.g., `[Alice]: fix the grammar`) so the model can distinguish requests from different collaborators. Before submitting, check total token count — drop oldest chat history messages first if needed to fit the model's context window (document + system prompt + user prompt always take priority).
+4. The action calls the user's selected model with streaming. Tokens are piped to the HTTP response body while simultaneously buffered in memory.
+5. After the stream completes, the action parses the buffered response (search/replace blocks or full HTML) and builds the new HTML string.
+6. The action applies changes via `prosemirrorSync.transform()`: inside the callback, parse the new HTML into a ProseMirror doc (via `DOMParser` + `linkedom`), then compute a **minimal Transform** using **`prosemirror-recreate-steps`** (`recreateTransform(currentDoc, newDoc)`). This produces granular steps that only touch changed regions, preserving all collaborator cursors and selections outside those regions. The component applies the steps via OT and syncs to all clients.
 7. The action saves the diff record and AI message record via mutations.
+8. The action **releases the lock** by clearing `aiLockedBy` and `aiLockedAt` on the document. (Also released in error/timeout paths to prevent stuck locks. The 120-second stale lock timeout is a safety net for cases where the action crashes without cleanup.)
 
 This is a major simplification over client-side orchestration: no ProseMirror instance is needed on the client for AI edits, the entire flow is a single action call, and the client simply receives the changes as normal collaborative edits via the sync extension.
 
-**Client role:** The `useAIChat` hook on the client calls the action, displays the streaming response in the chat panel, and manages the "AI (\<username\>) is working..." indicator (broadcast to all collaborators via presence). Document changes are applied as a batch after the full response is received — the client does not need to parse HTML or apply ProseMirror transactions.
+**Client role:** The `useAIChat` hook on the client calls `acquireLock`, then the streaming HTTP endpoint, and renders tokens in the chat panel as they arrive. Document changes arrive via `prosemirror-sync` reactive subscriptions. The "AI is working..." indicator is driven by the document's `aiLockedBy` field (reactive query), not by client-side state — so it's automatically visible to all collaborators and automatically clears when the lock is released.
 
 ---
 
@@ -821,7 +912,7 @@ Presence is handled separately from document sync using the Convex presence patt
 2. Configure Tiptap extensions (StarterKit, underline, task lists, tables, links, images, code blocks).
 3. Implement document loading: fetch ProseMirror JSON from Convex, load into Tiptap.
 4. Implement document saving: serialize ProseMirror JSON, save to Convex.
-5. Implement idle-save (5s debounce) with HTML diff computation and diff record storage.
+5. Implement idle-save: client-side `useIdleSave` hook (5s debounce → calls `triggerIdleSave` mutation) + server-side deduplication and diff computation.
 
 ### Phase 3: AI Assistant
 1. Build AI chat panel UI (messages, input, model selector).
@@ -872,6 +963,8 @@ Presence is handled separately from document sync using the Convex presence patt
     "openai": "^6.x",
     "@anthropic-ai/sdk": "^0.72.x",
     "@google/genai": "^1.x",
+    "prosemirror-recreate-steps": "^1.x",
+    "linkedom": "^0.x",
     "diff-match-patch": "^1.x",
     "tailwindcss": "^4.x",
     "@radix-ui/react-dialog": "^1.x",
@@ -881,12 +974,15 @@ Presence is handled separately from document sync using the Convex presence patt
 }
 ```
 
+**Packages added (for server-side AI edit flow):**
+- `linkedom` — Lightweight server-side DOM implementation. Required because ProseMirror's `DOMSerializer` and `DOMParser` need a DOM environment, and Convex actions run in serverless Node.js with no browser DOM. Used for HTML serialization (doc → HTML for the LLM) and HTML parsing (LLM response → ProseMirror doc). Much lighter than `jsdom` (~50KB vs ~2MB).
+- `prosemirror-recreate-steps` — Computes a minimal set of ProseMirror `Transform` steps to go from one document to another. Required for AI edits to preserve collaborator cursors and selections. Without it, the only option is a full-document `replaceWith`, which destroys all cursor positions.
+
 **Packages removed (replaced by `@convex-dev/prosemirror-sync` + Convex presence pattern):**
 - `yjs` — CRDT layer no longer needed; prosemirror-sync uses OT.
 - `y-prosemirror` — ProseMirror ↔ Yjs binding no longer needed.
 - `@tiptap/extension-collaboration` — Replaced by prosemirror-sync's Tiptap extension.
 - `@tiptap/extension-collaboration-cursor` — Replaced by Convex presence + custom cursor rendering.
-- `prosemirror-recreate-steps` — No longer needed; AI edits use `prosemirrorSync.transform()` with ProseMirror's built-in `Transform` API.
 
 ---
 
@@ -895,6 +991,8 @@ Presence is handled separately from document sync using the Convex presence patt
 | Risk | Impact | Mitigation |
 |---|---|---|
 | `prosemirror-sync` component limitations | Medium | The component is relatively new (v0.2.x). Monitor for edge cases in OT merging. The component is open-source and maintained by the Convex team, so issues can be reported and patched. |
+| `prosemirror-recreate-steps` step quality | Low | The library heuristically diffs two ProseMirror documents to produce minimal steps. For complex structural changes (e.g., paragraphs → table), the steps may not be perfectly minimal, but they will be correct. In the worst case, it degrades to a full-content replace — same as not using it at all. |
+| `linkedom` compatibility with ProseMirror | Low | `linkedom` is a lightweight DOM and may not implement every DOM API. ProseMirror's `DOMSerializer` and `DOMParser` use a limited subset (`createElement`, `createTextNode`, `appendChild`, etc.) that `linkedom` supports. If edge cases arise, `jsdom` is a drop-in replacement (heavier but more complete). |
 | AI models returning unparseable HTML | Medium | Implement robust parsing with fallback to full-doc replacement. Validate HTML structure before applying. Add retry logic. |
 | Server-side `transform()` callback re-invocation | Medium | The `transform()` callback may be re-invoked if the document changes concurrently. Ensure the callback is idempotent and doesn't perform slow operations internally (do AI calls beforehand, only build the Transform in the callback). |
 | Document too large for AI context | Medium | Defer to large-context models (Gemini 2.5 Pro). Implement truncation warning. |
@@ -919,7 +1017,7 @@ Presence is handled separately from document sync using the Convex presence patt
 
 > **Question 6 (Document title management) — RESOLVED:** Both. A separate editable title field (stored in `documents.title`) is the primary title. If the user hasn't set one, fall back to the first H1 in the document, then "Untitled".
 
-> **Question 7 (AI chat history persistence) — RESOLVED:** Chat history is stored permanently in the database (never deleted server-side). In the chat UI, history is persistent across sessions but any collaborator can clear the chat for a document, which sets `cleared: true` on all existing messages. Clearing is global — it affects all collaborators and resets the AI's conversational memory (cleared messages are excluded from model context, not just hidden in the UI). For AI context, include the last 5 non-cleared messages as conversation history so the model can reference prior instructions. Before submitting, check total token count against the model's context limit — drop oldest historical messages first if needed to fit within the window (document HTML + system prompt + user prompt always take priority over chat history).
+> **Question 7 (AI chat history persistence) — RESOLVED:** Chat history is stored permanently in the database (never deleted server-side). In the chat UI, history is persistent across sessions but any collaborator can clear the chat for a document, which sets `chatClearedAt` on the `documents` record to the current timestamp. This is a single field update (not a mass-update of every message). Clearing is global — it affects all collaborators and resets the AI's conversational memory. Messages with `createdAt < chatClearedAt` are hidden in the UI and excluded from model context. For AI context, include the last 5 messages after `chatClearedAt` as conversation history so the model can reference prior instructions. Before submitting, check total token count against the model's context limit — drop oldest historical messages first if needed to fit within the window (document HTML + system prompt + user prompt always take priority over chat history).
 
 > **Question 8 (Real-time presence performance) — RESOLVED:** Design for small teams (~10 concurrent collaborators) for v1. No extra throttling beyond the existing single-flighted mutations and per-room query caching. Optimize for larger groups later if needed.
 
