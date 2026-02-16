@@ -177,7 +177,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
       <Toolbar
         documentTitle={documentTitle}
         roleLabel={myRole}
-        onRenameDocument={(nextTitle) => {
+        onRenameDocument={(nextTitle: string) => {
           updateTitle(documentId, nextTitle);
         }}
         onNewDocument={() => setNewModalOpen(true)}

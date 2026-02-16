@@ -1,18 +1,19 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 type ToolbarProps = {
-  documentTitle: string;
-  roleLabel?: string;
-  onRenameDocument: (nextTitle: string) => void;
-  onNewDocument: () => void;
-  onOpenDocument: () => void;
-  onHistory: () => void;
-  onExport: () => void;
-  onShare: () => void;
-  onSettings: () => void;
-  canShare?: boolean;
+  documentTitle: unknown;
+  roleLabel?: unknown;
+  onRenameDocument: unknown;
+  onNewDocument: unknown;
+  onOpenDocument: unknown;
+  onHistory: unknown;
+  onExport: unknown;
+  onShare: unknown;
+  onSettings: unknown;
+  canShare?: unknown;
 };
 
 export function Toolbar({
@@ -27,46 +28,109 @@ export function Toolbar({
   onSettings,
   canShare = true,
 }: ToolbarProps) {
+  const normalizedDocumentTitle =
+    typeof documentTitle === "string" && documentTitle.trim().length > 0
+      ? documentTitle.trim()
+      : "Untitled";
+  const normalizedRoleLabel =
+    typeof roleLabel === "string" &&
+    roleLabel.trim().length > 0 &&
+    !hasControlChars(roleLabel.trim())
+      ? roleLabel.trim()
+      : undefined;
+  const normalizedCanShare = canShare !== false;
+
   return (
     <header className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onNewDocument}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (typeof onNewDocument === "function") {
+              onNewDocument();
+            }
+          }}
+        >
           New
         </Button>
-        <Button variant="outline" size="sm" onClick={onOpenDocument}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (typeof onOpenDocument === "function") {
+              onOpenDocument();
+            }
+          }}
+        >
           Open
         </Button>
         <Button
           variant="outline"
           size="sm"
           onClick={() => {
-            const nextTitle = window.prompt("Rename document", documentTitle);
+            const nextTitle = window.prompt("Rename document", normalizedDocumentTitle);
             if (nextTitle === null) return;
-            onRenameDocument(nextTitle);
+            if (typeof onRenameDocument === "function") {
+              onRenameDocument(nextTitle);
+            }
           }}
         >
           Rename
         </Button>
-        <Button variant="outline" size="sm" onClick={onHistory}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (typeof onHistory === "function") {
+              onHistory();
+            }
+          }}
+        >
           History
         </Button>
-        <Button variant="outline" size="sm" onClick={onExport}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (typeof onExport === "function") {
+              onExport();
+            }
+          }}
+        >
           Export
         </Button>
-        <Button variant="outline" size="sm" onClick={onShare} disabled={!canShare}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (typeof onShare === "function") {
+              onShare();
+            }
+          }}
+          disabled={!normalizedCanShare}
+        >
           Share
         </Button>
-        <Button variant="outline" size="sm" onClick={onSettings}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (typeof onSettings === "function") {
+              onSettings();
+            }
+          }}
+        >
           Settings
         </Button>
       </div>
       <div className="max-w-[300px] truncate text-sm font-semibold text-slate-700">
-        {documentTitle}
+        {normalizedDocumentTitle}
       </div>
       <div className="hidden items-center gap-2 text-xs text-slate-600 sm:flex">
-        {roleLabel ? (
+        {normalizedRoleLabel ? (
           <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 uppercase tracking-wide">
-            {roleLabel}
+            {normalizedRoleLabel}
           </span>
         ) : null}
       </div>
