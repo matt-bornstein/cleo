@@ -3,6 +3,7 @@ import { hasPermission } from "@/lib/permissions";
 describe("hasPermission", () => {
   it("returns true when user role is equal or higher than required", () => {
     expect(hasPermission("owner", "viewer")).toBe(true);
+    expect(hasPermission(" OWNER ", " viewer ")).toBe(true);
     expect(hasPermission("editor", "commenter")).toBe(true);
     expect(hasPermission("viewer", "viewer")).toBe(true);
   });
@@ -12,5 +13,6 @@ describe("hasPermission", () => {
     expect(hasPermission(undefined, "viewer")).toBe(false);
     expect(hasPermission("owner", "admin")).toBe(false);
     expect(hasPermission(123, "viewer")).toBe(false);
+    expect(hasPermission("viewer\u0000", "viewer")).toBe(false);
   });
 });

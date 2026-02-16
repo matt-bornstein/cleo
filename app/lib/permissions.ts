@@ -1,4 +1,5 @@
 import type { Role } from "@/lib/types";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 const roleRank: Record<Role, number> = {
   viewer: 0,
@@ -15,9 +16,14 @@ export function hasPermission(userRole: unknown, minimumRole: unknown) {
 }
 
 function normalizeRole(value: unknown): Role | undefined {
-  if (value === "viewer") return "viewer";
-  if (value === "commenter") return "commenter";
-  if (value === "editor") return "editor";
-  if (value === "owner") return "owner";
+  const normalizedValue = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!normalizedValue || hasControlChars(normalizedValue)) {
+    return undefined;
+  }
+
+  if (normalizedValue === "viewer") return "viewer";
+  if (normalizedValue === "commenter") return "commenter";
+  if (normalizedValue === "editor") return "editor";
+  if (normalizedValue === "owner") return "owner";
   return undefined;
 }
