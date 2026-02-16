@@ -127,6 +127,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
             <div className="flex-1">
               <EditorPanel
                 key={documentId}
+                documentId={documentId}
                 title={documentTitle}
                 content={content}
                 otherPresence={others}

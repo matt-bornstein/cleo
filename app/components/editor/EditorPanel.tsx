@@ -3,6 +3,7 @@ import { RemoteCursors } from "@/components/editor/RemoteCursors";
 import type { PresenceRecord } from "@/lib/types";
 
 type EditorPanelProps = {
+  documentId: string;
   title?: string;
   content: string;
   onContentChange: (content: string) => void;
@@ -15,6 +16,7 @@ type EditorPanelProps = {
 };
 
 export function EditorPanel({
+  documentId,
   title = "Editor panel",
   content,
   onContentChange,
@@ -41,6 +43,7 @@ export function EditorPanel({
       ) : null}
       <div className="flex-1 overflow-hidden">
         <RichTextEditor
+          documentId={documentId}
           content={content}
           onContentChange={onContentChange}
           onLocalUpdate={onLocalUpdate}
