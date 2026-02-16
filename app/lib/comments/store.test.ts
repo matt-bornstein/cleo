@@ -168,7 +168,7 @@ describe("comments store", () => {
     const comment = addComment({
       documentId: "doc-6",
       content: "  Keep this  ",
-      anchorText: "   ",
+      anchorText: "bad\nanchor",
       parentCommentId: `  ${parent!.id}  `,
     });
     expect(comment).not.toBeNull();
@@ -252,7 +252,7 @@ describe("comments store", () => {
             content: "  Legacy content  ",
             anchorFrom: 0,
             anchorTo: 5,
-            anchorText: "   ",
+            anchorText: "bad\nanchor",
             resolved: "yes",
             parentCommentId: "  parent-1  ",
             createdAt: 1,

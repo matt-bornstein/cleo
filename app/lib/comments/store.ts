@@ -30,7 +30,7 @@ function loadState(): CommentState {
       const normalizedDocumentId = normalizeDocumentId(comment.documentId);
       const normalizedCommentId = normalizeCommentReferenceId(comment.id);
       const normalizedContent = comment.content?.trim();
-      const normalizedAnchorText = comment.anchorText?.trim() || "Comment";
+      const normalizedAnchorText = normalizeAnchorText(comment.anchorText);
       const normalizedParentCommentId = normalizeCommentReferenceId(
         comment.parentCommentId,
       );
@@ -175,7 +175,7 @@ export function addComment(params: {
   if (!normalizedContent) {
     return null;
   }
-  const normalizedAnchorText = params.anchorText.trim() || "Comment";
+  const normalizedAnchorText = normalizeAnchorText(params.anchorText);
   const normalizedParentCommentId = normalizeCommentReferenceId(params.parentCommentId);
 
   const state = loadState();
@@ -244,6 +244,15 @@ function normalizeCommentReferenceId(value: string | undefined) {
     hasControlChars(normalizedValue)
   ) {
     return undefined;
+  }
+
+  return normalizedValue;
+}
+
+function normalizeAnchorText(value: string | undefined) {
+  const normalizedValue = value?.trim();
+  if (!normalizedValue || hasControlChars(normalizedValue)) {
+    return "Comment";
   }
 
   return normalizedValue;
