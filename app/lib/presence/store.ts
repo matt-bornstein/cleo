@@ -28,28 +28,36 @@ function loadState(): PresenceState {
     }
 
     const sanitizedPresence = parsed.presence.flatMap((entry) => {
-        const normalizedDocumentId = normalizeDocumentId(entry.documentId);
-        const normalizedPresenceId = normalizePresenceRecordId(entry.id);
-        const normalizedVisitorId = normalizePresenceVisitorId(entry.visitorId);
+        if (!entry || typeof entry !== "object") {
+          return [];
+        }
+        const candidate = entry as Partial<PresenceRecord>;
+
+        const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+        const normalizedPresenceId = normalizePresenceRecordId(candidate.id);
+        const normalizedVisitorId = normalizePresenceVisitorId(candidate.visitorId);
         if (
           !normalizedPresenceId ||
           !normalizedVisitorId ||
           !isValidDocumentId(normalizedDocumentId) ||
-          typeof entry.updatedAt !== "number" ||
-          !Number.isFinite(entry.updatedAt) ||
-          entry.updatedAt < 0
+          typeof candidate.updatedAt !== "number" ||
+          !Number.isFinite(candidate.updatedAt) ||
+          candidate.updatedAt < 0
         ) {
           return [];
         }
 
+        const normalizedEntry: PresenceRecord = {
+          id: normalizedPresenceId,
+          documentId: normalizedDocumentId,
+          visitorId: normalizedVisitorId,
+          userId: normalizePresenceUserId(candidate.userId),
+          data: normalizePresenceData(candidate.data),
+          updatedAt: candidate.updatedAt,
+        };
+
         return [
-          {
-            ...entry,
-            id: normalizedPresenceId,
-            documentId: normalizedDocumentId,
-            visitorId: normalizedVisitorId,
-            userId: normalizePresenceUserId(entry.userId),
-          },
+          normalizedEntry,
         ];
       });
 

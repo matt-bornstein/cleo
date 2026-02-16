@@ -254,6 +254,7 @@ describe("document store", () => {
             createdAt: 1,
             updatedAt: 1,
           },
+          null,
         ],
       }),
     );

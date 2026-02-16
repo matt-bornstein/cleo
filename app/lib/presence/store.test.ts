@@ -164,6 +164,7 @@ describe("presence store", () => {
             data: { name: "Stale but later in array" },
             updatedAt: 1,
           },
+          null,
         ],
       }),
     );

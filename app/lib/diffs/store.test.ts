@@ -491,6 +491,7 @@ describe("diff store triggerIdleSave", () => {
             source: "manual",
             createdAt: 1,
           },
+          null,
         ],
       }),
     );

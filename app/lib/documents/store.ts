@@ -45,56 +45,72 @@ function loadState(): DocumentStoreState {
 
     const fallbackNow = Math.max(0, Date.now());
     const sanitizedDocuments = parsed.documents.flatMap((doc) => {
-        const normalizedDocumentId = normalizeDocumentId(doc.id);
+        if (!doc || typeof doc !== "object") {
+          return [];
+        }
+        const candidate = doc as Partial<AppDocument>;
+
+        const normalizedDocumentId = normalizeDocumentId(candidate.id);
         if (!isValidDocumentId(normalizedDocumentId)) {
           return [];
         }
 
-        const normalizedTitle = normalizeDocumentTitle(doc.title);
+        const normalizedTitle = normalizeDocumentTitle(candidate.title);
         const hasValidCreatedAt =
-          typeof doc.createdAt === "number" &&
-          Number.isFinite(doc.createdAt) &&
-          doc.createdAt >= 0;
+          typeof candidate.createdAt === "number" &&
+          Number.isFinite(candidate.createdAt) &&
+          candidate.createdAt >= 0;
         const hasValidUpdatedAt =
-          typeof doc.updatedAt === "number" &&
-          Number.isFinite(doc.updatedAt) &&
-          doc.updatedAt >= 0;
+          typeof candidate.updatedAt === "number" &&
+          Number.isFinite(candidate.updatedAt) &&
+          candidate.updatedAt >= 0;
         const normalizedCreatedAt =
-          hasValidCreatedAt ? doc.createdAt : fallbackNow;
+          hasValidCreatedAt ? (candidate.createdAt as number) : fallbackNow;
         const normalizedUpdatedAt =
           hasValidUpdatedAt
-            ? Math.max(doc.updatedAt, normalizedCreatedAt)
+            ? Math.max(candidate.updatedAt as number, normalizedCreatedAt)
             : normalizedCreatedAt;
+        const normalizedDocument: AppDocument = {
+          id: normalizedDocumentId,
+          title: normalizedTitle,
+          content: isValidDocumentContentJson(candidate.content)
+            ? candidate.content
+            : EMPTY_EDITOR_DOC,
+          ownerEmail: normalizeOwnerEmail(candidate.ownerEmail),
+          createdAt: normalizedCreatedAt,
+          updatedAt: normalizedUpdatedAt,
+          lastDiffAt:
+            typeof candidate.lastDiffAt === "number" &&
+            Number.isFinite(candidate.lastDiffAt) &&
+            candidate.lastDiffAt >= 0
+              ? candidate.lastDiffAt
+              : undefined,
+          chatClearedAt:
+            typeof candidate.chatClearedAt === "number" &&
+            Number.isFinite(candidate.chatClearedAt) &&
+            candidate.chatClearedAt >= 0
+              ? candidate.chatClearedAt
+              : undefined,
+          aiLockedBy:
+            typeof candidate.aiLockedBy === "string" &&
+            candidate.aiLockedBy.trim().length > 0
+              ? candidate.aiLockedBy.trim()
+              : undefined,
+          aiLockedAt:
+            typeof candidate.aiLockedAt === "number" &&
+            Number.isFinite(candidate.aiLockedAt) &&
+            candidate.aiLockedAt >= 0
+              ? candidate.aiLockedAt
+              : undefined,
+        };
 
         return [
           {
-            document: {
-              ...doc,
-              id: normalizedDocumentId,
-              title: normalizedTitle,
-              content: isValidDocumentContentJson(doc.content)
-                ? doc.content
-                : EMPTY_EDITOR_DOC,
-              ownerEmail: normalizeOwnerEmail(doc.ownerEmail),
-              createdAt: normalizedCreatedAt,
-              updatedAt: normalizedUpdatedAt,
-              lastDiffAt:
-                typeof doc.lastDiffAt === "number" &&
-                Number.isFinite(doc.lastDiffAt) &&
-                doc.lastDiffAt >= 0
-                  ? doc.lastDiffAt
-                  : undefined,
-              chatClearedAt:
-                typeof doc.chatClearedAt === "number" &&
-                Number.isFinite(doc.chatClearedAt) &&
-                doc.chatClearedAt >= 0
-                  ? doc.chatClearedAt
-                  : undefined,
-            },
+            document: normalizedDocument,
             dedupeUpdatedAt: hasValidUpdatedAt
-              ? doc.updatedAt
+              ? (candidate.updatedAt as number)
               : hasValidCreatedAt
-                ? doc.createdAt
+                ? (candidate.createdAt as number)
                 : Number.NEGATIVE_INFINITY,
           },
         ];

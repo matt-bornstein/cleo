@@ -46,29 +46,38 @@ function loadState(): DiffStoreState {
     }
 
     const sanitizedDiffs = parsed.diffs.flatMap((diff) => {
-      const normalizedDocumentId = normalizeDocumentId(diff.documentId);
-      const normalizedDiffId = normalizeDiffReferenceId(diff.id);
-      const normalizedMetadata = normalizeDiffMetadata(diff.aiPrompt, diff.aiModel);
+      if (!diff || typeof diff !== "object") {
+        return [];
+      }
+      const candidate = diff as Partial<DiffRecord>;
+
+      const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+      const normalizedDiffId = normalizeDiffReferenceId(candidate.id);
+      const normalizedMetadata = normalizeDiffMetadata(candidate.aiPrompt, candidate.aiModel);
       if (
         !normalizedDiffId ||
         !isValidDocumentId(normalizedDocumentId) ||
-        !ALLOWED_SOURCES.has(diff.source) ||
+        !ALLOWED_SOURCES.has(candidate.source as DiffSource) ||
         !normalizedMetadata ||
-        typeof diff.patch !== "string" ||
-        !isValidDocumentContentJson(diff.snapshotAfter) ||
-        typeof diff.createdAt !== "number" ||
-        !Number.isFinite(diff.createdAt) ||
-        diff.createdAt < 0
+        typeof candidate.patch !== "string" ||
+        !isValidDocumentContentJson(candidate.snapshotAfter) ||
+        typeof candidate.createdAt !== "number" ||
+        !Number.isFinite(candidate.createdAt) ||
+        candidate.createdAt < 0
       ) {
         return [];
       }
 
       return [
         {
-          ...diff,
+          ...candidate,
           id: normalizedDiffId,
           documentId: normalizedDocumentId,
-          userId: normalizeDiffUserId(diff.userId),
+          source: candidate.source as DiffSource,
+          patch: candidate.patch,
+          snapshotAfter: candidate.snapshotAfter,
+          createdAt: candidate.createdAt,
+          userId: normalizeDiffUserId(candidate.userId),
           aiPrompt: normalizedMetadata.aiPrompt,
           aiModel: normalizedMetadata.aiModel,
         },

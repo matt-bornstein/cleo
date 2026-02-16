@@ -31,16 +31,21 @@ function loadState(): CommentState {
     }
 
     const sanitizedComments = parsed.comments.flatMap((comment) => {
-      const normalizedDocumentId = normalizeDocumentId(comment.documentId);
-      const normalizedCommentId = normalizeCommentReferenceId(comment.id);
+      if (!comment || typeof comment !== "object") {
+        return [];
+      }
+      const candidate = comment as Partial<CommentRecord>;
+
+      const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+      const normalizedCommentId = normalizeCommentReferenceId(candidate.id);
       const normalizedContent =
-        typeof comment.content === "string" ? comment.content.trim() : undefined;
-      const normalizedAnchorText = normalizeAnchorText(comment.anchorText);
+        typeof candidate.content === "string" ? candidate.content.trim() : undefined;
+      const normalizedAnchorText = normalizeAnchorText(candidate.anchorText);
       const normalizedParentCommentId = normalizeCommentReferenceId(
-        comment.parentCommentId,
+        candidate.parentCommentId,
       );
       const normalizedUserId =
-        typeof comment.userId === "string" ? comment.userId.trim() : undefined;
+        typeof candidate.userId === "string" ? candidate.userId.trim() : undefined;
       const safeUserId =
         normalizedUserId &&
         normalizedUserId.length <= MAX_USER_ID_LENGTH &&
@@ -48,12 +53,12 @@ function loadState(): CommentState {
           ? normalizedUserId
           : DEFAULT_LOCAL_USER_ID;
       const normalizedAnchorFrom =
-        typeof comment.anchorFrom === "number" && Number.isFinite(comment.anchorFrom)
-          ? Math.max(0, comment.anchorFrom)
+        typeof candidate.anchorFrom === "number" && Number.isFinite(candidate.anchorFrom)
+          ? Math.max(0, candidate.anchorFrom)
           : 0;
       const normalizedAnchorTo =
-        typeof comment.anchorTo === "number" && Number.isFinite(comment.anchorTo)
-          ? Math.max(normalizedAnchorFrom, comment.anchorTo)
+        typeof candidate.anchorTo === "number" && Number.isFinite(candidate.anchorTo)
+          ? Math.max(normalizedAnchorFrom, candidate.anchorTo)
           : normalizedAnchorFrom;
 
       if (
@@ -61,22 +66,22 @@ function loadState(): CommentState {
         !isValidDocumentId(normalizedDocumentId) ||
         !normalizedContent ||
         hasDisallowedTextControlChars(normalizedContent) ||
-        typeof comment.createdAt !== "number" ||
-        !Number.isFinite(comment.createdAt) ||
-        comment.createdAt < 0 ||
-        typeof comment.updatedAt !== "number" ||
-        !Number.isFinite(comment.updatedAt) ||
-        comment.updatedAt < 0
+        typeof candidate.createdAt !== "number" ||
+        !Number.isFinite(candidate.createdAt) ||
+        candidate.createdAt < 0 ||
+        typeof candidate.updatedAt !== "number" ||
+        !Number.isFinite(candidate.updatedAt) ||
+        candidate.updatedAt < 0
       ) {
         return [];
       }
 
-      const normalizedCreatedAt = comment.createdAt;
-      const normalizedUpdatedAt = Math.max(comment.updatedAt, normalizedCreatedAt);
+      const normalizedCreatedAt = candidate.createdAt;
+      const normalizedUpdatedAt = Math.max(candidate.updatedAt, normalizedCreatedAt);
 
       return [
         {
-          ...comment,
+          ...candidate,
           id: normalizedCommentId,
           documentId: normalizedDocumentId,
           userId: safeUserId,
@@ -87,7 +92,7 @@ function loadState(): CommentState {
             normalizedParentCommentId !== normalizedCommentId
               ? normalizedParentCommentId
               : undefined,
-          resolved: Boolean(comment.resolved),
+          resolved: Boolean(candidate.resolved),
           anchorFrom: normalizedAnchorFrom,
           anchorTo: normalizedAnchorTo,
           createdAt: normalizedCreatedAt,
