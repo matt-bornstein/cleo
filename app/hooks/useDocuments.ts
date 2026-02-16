@@ -37,8 +37,9 @@ export function useDocuments(
 
   const documents = useMemo(() => {
     void refreshCounter;
-    return listDocuments(normalizedSearch).filter((document) =>
-      hasDocumentAccess(
+    const listedDocuments = safeListDocuments(normalizedSearch);
+    return listedDocuments.filter((document) =>
+      safeHasDocumentAccess(
         document.id,
         normalizedCurrentUserEmail,
         document.ownerEmail,
@@ -51,7 +52,10 @@ export function useDocuments(
       const normalizedTitle = typeof title === "string" ? title : "";
       const normalizedOwnerEmail =
         typeof ownerEmail === "string" ? ownerEmail : undefined;
-      const document = createDocument(normalizedTitle, normalizedOwnerEmail);
+      const document = safeCreateDocument(normalizedTitle, normalizedOwnerEmail);
+      if (!document) {
+        return null;
+      }
       refresh();
       return document;
     },
@@ -61,7 +65,7 @@ export function useDocuments(
   const getById = useCallback((documentId: unknown): AppDocument | undefined => {
     const normalizedDocumentId =
       typeof documentId === "string" ? documentId : "";
-    return getDocumentById(normalizedDocumentId);
+    return safeGetDocumentById(normalizedDocumentId);
   }, []);
 
   const updateContent = useCallback(
@@ -69,7 +73,7 @@ export function useDocuments(
       const normalizedDocumentId =
         typeof documentId === "string" ? documentId : "";
       const normalizedContent = typeof content === "string" ? content : "";
-      const updated = updateDocumentContent(
+      const updated = safeUpdateDocumentContent(
         normalizedDocumentId,
         normalizedContent,
       );
@@ -86,7 +90,7 @@ export function useDocuments(
       const normalizedDocumentId =
         typeof documentId === "string" ? documentId : "";
       const normalizedTitle = typeof title === "string" ? title : "";
-      const updated = updateDocumentTitle(normalizedDocumentId, normalizedTitle);
+      const updated = safeUpdateDocumentTitle(normalizedDocumentId, normalizedTitle);
       if (updated) {
         refresh();
       }
@@ -101,7 +105,7 @@ export function useDocuments(
         typeof documentId === "string" ? documentId : "";
       const normalizedTimestamp =
         typeof timestamp === "number" ? timestamp : Number.NaN;
-      const updated = setDocumentChatClearedAt(
+      const updated = safeSetDocumentChatClearedAt(
         normalizedDocumentId,
         normalizedTimestamp,
       );
@@ -117,7 +121,7 @@ export function useDocuments(
     (documentId: unknown) => {
       const normalizedDocumentId =
         typeof documentId === "string" ? documentId : "";
-      const removed = deleteDocument(normalizedDocumentId);
+      const removed = safeDeleteDocument(normalizedDocumentId);
       if (removed) {
         refresh();
       }
@@ -136,4 +140,72 @@ export function useDocuments(
     remove,
     refresh,
   };
+}
+
+function safeListDocuments(query?: string) {
+  try {
+    return listDocuments(query);
+  } catch {
+    return [];
+  }
+}
+
+function safeHasDocumentAccess(
+  documentId: string,
+  email: string,
+  ownerEmail?: string,
+) {
+  try {
+    return hasDocumentAccess(documentId, email, ownerEmail);
+  } catch {
+    return false;
+  }
+}
+
+function safeCreateDocument(title: string, ownerEmail?: string) {
+  try {
+    return createDocument(title, ownerEmail);
+  } catch {
+    return null;
+  }
+}
+
+function safeGetDocumentById(documentId: string) {
+  try {
+    return getDocumentById(documentId);
+  } catch {
+    return undefined;
+  }
+}
+
+function safeUpdateDocumentContent(documentId: string, content: string) {
+  try {
+    return updateDocumentContent(documentId, content);
+  } catch {
+    return undefined;
+  }
+}
+
+function safeUpdateDocumentTitle(documentId: string, title: string) {
+  try {
+    return updateDocumentTitle(documentId, title);
+  } catch {
+    return undefined;
+  }
+}
+
+function safeSetDocumentChatClearedAt(documentId: string, timestamp: number) {
+  try {
+    return setDocumentChatClearedAt(documentId, timestamp);
+  } catch {
+    return undefined;
+  }
+}
+
+function safeDeleteDocument(documentId: string) {
+  try {
+    return deleteDocument(documentId);
+  } catch {
+    return false;
+  }
 }

@@ -185,4 +185,66 @@ describe("useDocuments", () => {
     expect(deleteDocumentMock).toHaveBeenCalledWith("");
     expect(createDocumentMock).toHaveBeenCalledWith("", undefined);
   });
+
+  it("falls back safely when document list or access checks throw", () => {
+    listDocumentsMock.mockImplementation(() => {
+      throw new Error("list failed");
+    });
+
+    const { result, rerender } = renderHook(() =>
+      useDocuments(undefined, "me@example.com"),
+    );
+    expect(result.current.documents).toEqual([]);
+
+    listDocumentsMock.mockReturnValue([
+      {
+        id: "doc-1",
+        title: "Doc",
+        content: "{}",
+        ownerEmail: "owner@example.com",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]);
+    hasDocumentAccessMock.mockImplementation(() => {
+      throw new Error("access failed");
+    });
+    rerender();
+
+    expect(result.current.documents).toEqual([]);
+  });
+
+  it("does not throw when document store operations fail", () => {
+    createDocumentMock.mockImplementation(() => {
+      throw new Error("create failed");
+    });
+    getDocumentByIdMock.mockImplementation(() => {
+      throw new Error("get failed");
+    });
+    updateDocumentTitleMock.mockImplementation(() => {
+      throw new Error("title failed");
+    });
+    updateDocumentContentMock.mockImplementation(() => {
+      throw new Error("content failed");
+    });
+    setDocumentChatClearedAtMock.mockImplementation(() => {
+      throw new Error("chat failed");
+    });
+    deleteDocumentMock.mockImplementation(() => {
+      throw new Error("delete failed");
+    });
+
+    const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
+
+    expect(() => {
+      act(() => {
+        expect(result.current.create("Title", "owner@example.com")).toBeNull();
+        expect(result.current.getById("doc-1")).toBeUndefined();
+        expect(result.current.updateTitle("doc-1", "Title")).toBeUndefined();
+        expect(result.current.updateContent("doc-1", "{}")).toBeUndefined();
+        expect(result.current.setChatClearedAt("doc-1", 1)).toBeUndefined();
+        expect(result.current.remove("doc-1")).toBe(false);
+      });
+    }).not.toThrow();
+  });
 });

@@ -276,11 +276,27 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenChange={setNewModalOpen}
         onCreateDocument={(title: string) => {
           const newDocument = create(title, currentUserEmail);
+          if (!newDocument || typeof newDocument !== "object") {
+            safeRouterPush(router, "/editor");
+            return;
+          }
+          const newDocumentId =
+            "id" in newDocument && typeof newDocument.id === "string"
+              ? newDocument.id
+              : undefined;
+          const newDocumentContent =
+            "content" in newDocument && typeof newDocument.content === "string"
+              ? newDocument.content
+              : undefined;
+          if (!newDocumentId || !newDocumentContent) {
+            safeRouterPush(router, "/editor");
+            return;
+          }
           ensureCreatedDiff({
-            documentId: newDocument.id,
-            snapshot: newDocument.content,
+            documentId: newDocumentId,
+            snapshot: newDocumentContent,
           });
-          safeRouterPush(router, `/editor/${newDocument.id}`);
+          safeRouterPush(router, `/editor/${newDocumentId}`);
         }}
       />
       <OpenDocModal
