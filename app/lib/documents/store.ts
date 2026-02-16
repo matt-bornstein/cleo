@@ -206,7 +206,7 @@ export function updateDocumentContent(
   const updated: AppDocument = {
     ...existing,
     content,
-    updatedAt: Date.now(),
+    updatedAt: Math.max(Date.now(), existing.updatedAt),
   };
   state.documents[index] = updated;
   persistState(state);
@@ -232,7 +232,7 @@ export function updateDocumentTitle(
   const updated: AppDocument = {
     ...existing,
     title: normalizedTitle,
-    updatedAt: Date.now(),
+    updatedAt: Math.max(Date.now(), existing.updatedAt),
   };
   state.documents[index] = updated;
   persistState(state);

@@ -232,6 +232,24 @@ describe("document store", () => {
     expect(setDocumentChatClearedAt(created.id, 5677)).toBeUndefined();
   });
 
+  it("keeps updatedAt monotonic when content/title updates occur with skewed clocks", () => {
+    const created = createDocument("Monotonic");
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(created.updatedAt - 5_000);
+
+    const updatedTitle = updateDocumentTitle(created.id, "Monotonic updated");
+    expect(updatedTitle?.updatedAt).toBe(created.updatedAt);
+
+    const updatedContent = updateDocumentContent(
+      created.id,
+      JSON.stringify({
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Updated" }] }],
+      }),
+    );
+    expect(updatedContent?.updatedAt).toBe(created.updatedAt);
+    nowSpy.mockRestore();
+  });
+
   it("deletes document by id", () => {
     const created = createDocument("Delete me");
     const removed = deleteDocument(created.id);
