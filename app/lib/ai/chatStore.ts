@@ -74,7 +74,9 @@ export function listMessagesByDocument(documentId: string, chatClearedAt?: numbe
 
   const state = loadState();
   const clearedAt =
-    typeof chatClearedAt === "number" && Number.isFinite(chatClearedAt)
+    typeof chatClearedAt === "number" &&
+    Number.isFinite(chatClearedAt) &&
+    chatClearedAt >= 0
       ? chatClearedAt
       : 0;
   return state.messages

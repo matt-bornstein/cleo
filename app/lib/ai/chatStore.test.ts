@@ -68,6 +68,10 @@ describe("ai chat store", () => {
     const visible = listMessagesByDocument("doc-clear-invalid", Number.NaN);
     expect(visible).toHaveLength(1);
     expect(visible[0].id).toBe("m-nan");
+
+    const visibleWithNegative = listMessagesByDocument("doc-clear-invalid", -10);
+    expect(visibleWithNegative).toHaveLength(1);
+    expect(visibleWithNegative[0].id).toBe("m-nan");
   });
 
   it("uses deterministic id tie-breaker for same-timestamp messages", () => {
