@@ -135,7 +135,9 @@ export function SettingsModal({
             <Button
               onClick={() => {
                 saveSettings(settings);
-                onSaved?.();
+                if (typeof onSaved === "function") {
+                  onSaved();
+                }
                 onOpenChange(false);
               }}
             >

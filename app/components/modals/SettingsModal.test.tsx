@@ -39,4 +39,25 @@ describe("SettingsModal", () => {
     await user.click(screen.getByRole("button", { name: "Sign out" }));
     expect(onSignOut).toHaveBeenCalledTimes(1);
   });
+
+  it("does not throw when onSaved callback is malformed non-function", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+
+    render(
+      <SettingsModal
+        open
+        onOpenChange={onOpenChange}
+        onSaved={123 as unknown as () => void}
+      />,
+    );
+
+    const emailInput = screen.getByDisplayValue(DEFAULT_LOCAL_USER_EMAIL);
+    await user.clear(emailInput);
+    await user.type(emailInput, "owner@example.com");
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(getSettings().userEmail).toBe("owner@example.com");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });
