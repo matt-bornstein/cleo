@@ -38,13 +38,20 @@ export function useDocuments(
   const documents = useMemo(() => {
     void refreshCounter;
     const listedDocuments = safeListDocuments(normalizedSearch);
-    return listedDocuments.filter((document) =>
-      safeHasDocumentAccess(
-        document.id,
+    return listedDocuments.flatMap((document) => {
+      const normalizedDocument = safeNormalizeListedDocument(document);
+      if (!normalizedDocument) {
+        return [];
+      }
+
+      return safeHasDocumentAccess(
+        normalizedDocument.id,
         normalizedCurrentUserEmail,
-        document.ownerEmail,
-      ),
-    );
+        normalizedDocument.ownerEmail,
+      )
+        ? [normalizedDocument]
+        : [];
+    });
   }, [normalizedCurrentUserEmail, normalizedSearch, refreshCounter]);
 
   const create = useCallback(
@@ -207,5 +214,87 @@ function safeDeleteDocument(documentId: string) {
     return deleteDocument(documentId);
   } catch {
     return false;
+  }
+}
+
+function safeNormalizeListedDocument(document: unknown): AppDocument | null {
+  if (!document || typeof document !== "object") {
+    return null;
+  }
+
+  const id = safeReadObjectField(document, "id");
+  const normalizedId = typeof id === "string" ? id.trim() : "";
+  if (!normalizedId) {
+    return null;
+  }
+
+  const title = safeReadObjectField(document, "title");
+  const content = safeReadObjectField(document, "content");
+  const ownerEmail = safeReadObjectField(document, "ownerEmail");
+  const createdAt = safeReadObjectField(document, "createdAt");
+  const updatedAt = safeReadObjectField(document, "updatedAt");
+  const lastDiffAt = safeReadObjectField(document, "lastDiffAt");
+  const chatClearedAt = safeReadObjectField(document, "chatClearedAt");
+  const aiLockedBy = safeReadObjectField(document, "aiLockedBy");
+  const aiLockedAt = safeReadObjectField(document, "aiLockedAt");
+
+  const normalizedCreatedAt =
+    typeof createdAt === "number" && Number.isFinite(createdAt) && createdAt >= 0
+      ? createdAt
+      : 0;
+  const normalizedUpdatedAt =
+    typeof updatedAt === "number" && Number.isFinite(updatedAt) && updatedAt >= 0
+      ? Math.max(updatedAt, normalizedCreatedAt)
+      : normalizedCreatedAt;
+
+  return {
+    id: normalizedId,
+    title:
+      typeof title === "string" && title.trim().length > 0
+        ? title
+        : "Untitled",
+    content:
+      typeof content === "string"
+        ? content
+        : JSON.stringify({
+            type: "doc",
+            content: [{ type: "paragraph" }],
+          }),
+    ownerEmail:
+      typeof ownerEmail === "string" && ownerEmail.trim().length > 0
+        ? ownerEmail.trim()
+        : DEFAULT_LOCAL_USER_EMAIL,
+    createdAt: normalizedCreatedAt,
+    updatedAt: normalizedUpdatedAt,
+    lastDiffAt:
+      typeof lastDiffAt === "number" && Number.isFinite(lastDiffAt) && lastDiffAt >= 0
+        ? lastDiffAt
+        : undefined,
+    chatClearedAt:
+      typeof chatClearedAt === "number" &&
+      Number.isFinite(chatClearedAt) &&
+      chatClearedAt >= 0
+        ? chatClearedAt
+        : undefined,
+    aiLockedBy:
+      typeof aiLockedBy === "string" && aiLockedBy.trim().length > 0
+        ? aiLockedBy.trim()
+        : undefined,
+    aiLockedAt:
+      typeof aiLockedAt === "number" && Number.isFinite(aiLockedAt) && aiLockedAt >= 0
+        ? aiLockedAt
+        : undefined,
+  };
+}
+
+function safeReadObjectField(value: unknown, key: string) {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (value as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
   }
 }

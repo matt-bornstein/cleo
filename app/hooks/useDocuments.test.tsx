@@ -247,4 +247,63 @@ describe("useDocuments", () => {
       });
     }).not.toThrow();
   });
+
+  it("skips documents when document id getter throws", () => {
+    const documentWithThrowingId = Object.create(null) as { id: unknown };
+    Object.defineProperty(documentWithThrowingId, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    listDocumentsMock.mockReturnValue([documentWithThrowingId]);
+
+    const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
+    expect(result.current.documents).toEqual([]);
+  });
+
+  it("normalizes listed documents when field getters throw", () => {
+    const documentWithThrowingFields = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(documentWithThrowingFields, "id", {
+      value: "doc-getter-safe",
+    });
+    Object.defineProperty(documentWithThrowingFields, "title", {
+      get() {
+        throw new Error("title getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "content", {
+      get() {
+        throw new Error("content getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "ownerEmail", {
+      get() {
+        throw new Error("ownerEmail getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "createdAt", {
+      get() {
+        throw new Error("createdAt getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "updatedAt", {
+      get() {
+        throw new Error("updatedAt getter failed");
+      },
+    });
+    listDocumentsMock.mockReturnValue([documentWithThrowingFields]);
+    hasDocumentAccessMock.mockReturnValue(true);
+
+    const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
+    expect(result.current.documents).toEqual([
+      expect.objectContaining({
+        id: "doc-getter-safe",
+        title: "Untitled",
+        ownerEmail: "me@local.dev",
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    ]);
+    expect(result.current.documents[0]?.content).toContain('"type":"doc"');
+  });
 });
