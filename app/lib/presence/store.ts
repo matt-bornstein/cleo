@@ -113,7 +113,10 @@ export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">)
       existingIndex === -1
         ? crypto.randomUUID()
         : normalizedExistingRecordId ?? crypto.randomUUID(),
-    updatedAt: now,
+    updatedAt:
+      existingIndex === -1
+        ? now
+        : Math.max(now, state.presence[existingIndex].updatedAt),
   };
   if (existingIndex === -1) {
     state.presence.push(nextRecord);

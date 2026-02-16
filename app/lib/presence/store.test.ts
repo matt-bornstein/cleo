@@ -29,6 +29,28 @@ describe("presence store", () => {
     expect(listPresence("  doc-presence  ")).toHaveLength(1);
   });
 
+  it("keeps updatedAt monotonic when clocks move backwards", () => {
+    const first = updatePresence({
+      documentId: "doc-clock",
+      visitorId: "visitor-1",
+      userId: "user-1",
+      data: { state: "first" },
+    });
+    expect(first).not.toBeNull();
+
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue((first?.updatedAt ?? 0) - 5000);
+    const second = updatePresence({
+      documentId: "doc-clock",
+      visitorId: "visitor-1",
+      userId: "user-1",
+      data: { state: "second" },
+    });
+
+    expect(second).not.toBeNull();
+    expect(second?.updatedAt).toBe(first?.updatedAt);
+    nowSpy.mockRestore();
+  });
+
   it("rejects invalid presence updates and visitor removals", () => {
     const invalidDocument = updatePresence({
       documentId: "doc-\ninvalid",
