@@ -1,4 +1,8 @@
 import type { PresenceRecord } from "@/lib/types";
+import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
+import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.presence.v1";
 
@@ -18,7 +22,36 @@ function loadState(): PresenceState {
   if (!raw) return { presence: [] };
   try {
     const parsed = JSON.parse(raw) as PresenceState;
-    return parsed.presence ? parsed : { presence: [] };
+    if (!parsed.presence) {
+      return { presence: [] };
+    }
+
+    return {
+      presence: parsed.presence.flatMap((entry) => {
+        const normalizedDocumentId = normalizeDocumentId(entry.documentId);
+        const normalizedPresenceId = entry.id?.trim();
+        const normalizedVisitorId = normalizePresenceVisitorId(entry.visitorId);
+        if (
+          !normalizedPresenceId ||
+          !normalizedVisitorId ||
+          !isValidDocumentId(normalizedDocumentId) ||
+          typeof entry.updatedAt !== "number" ||
+          !Number.isFinite(entry.updatedAt)
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            ...entry,
+            id: normalizedPresenceId,
+            documentId: normalizedDocumentId,
+            visitorId: normalizedVisitorId,
+            userId: normalizePresenceUserId(entry.userId),
+          },
+        ];
+      }),
+    };
   } catch {
     return { presence: [] };
   }
@@ -33,13 +66,22 @@ function persistState(state: PresenceState) {
 }
 
 export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">) {
+  const normalizedDocumentId = normalizeDocumentId(record.documentId);
+  const normalizedVisitorId = normalizePresenceVisitorId(record.visitorId);
+  if (!isValidDocumentId(normalizedDocumentId) || !normalizedVisitorId) {
+    return null;
+  }
+
   const state = loadState();
   const now = Date.now();
   const existingIndex = state.presence.findIndex(
-    (entry) => entry.visitorId === record.visitorId,
+    (entry) => entry.visitorId === normalizedVisitorId,
   );
   const nextRecord: PresenceRecord = {
     ...record,
+    documentId: normalizedDocumentId,
+    visitorId: normalizedVisitorId,
+    userId: normalizePresenceUserId(record.userId),
     id: existingIndex === -1 ? crypto.randomUUID() : state.presence[existingIndex].id,
     updatedAt: now,
   };
@@ -53,15 +95,51 @@ export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">)
 }
 
 export function removePresence(visitorId: string) {
+  const normalizedVisitorId = normalizePresenceVisitorId(visitorId);
+  if (!normalizedVisitorId) {
+    return;
+  }
+
   const state = loadState();
-  state.presence = state.presence.filter((entry) => entry.visitorId !== visitorId);
+  state.presence = state.presence.filter((entry) => entry.visitorId !== normalizedVisitorId);
   persistState(state);
 }
 
 export function listPresence(documentId: string) {
-  return loadState().presence.filter((entry) => entry.documentId === documentId);
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) {
+    return [];
+  }
+
+  return loadState().presence.filter((entry) => entry.documentId === normalizedDocumentId);
 }
 
 export function resetPresenceForTests() {
   persistState({ presence: [] });
+}
+
+function normalizePresenceVisitorId(value: string | undefined) {
+  const normalizedValue = value?.trim();
+  if (
+    !normalizedValue ||
+    normalizedValue.length > MAX_USER_ID_LENGTH ||
+    hasControlChars(normalizedValue)
+  ) {
+    return undefined;
+  }
+
+  return normalizedValue;
+}
+
+function normalizePresenceUserId(value: string | undefined) {
+  const normalizedValue = value?.trim();
+  if (
+    !normalizedValue ||
+    normalizedValue.length > MAX_USER_ID_LENGTH ||
+    hasControlChars(normalizedValue)
+  ) {
+    return DEFAULT_LOCAL_USER_ID;
+  }
+
+  return normalizedValue;
 }
