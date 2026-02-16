@@ -15,6 +15,7 @@ import {
 export const runtime = "nodejs";
 const MAX_MESSAGE_COUNT = 100;
 const MAX_PROMPT_LENGTH = 4_000;
+const MAX_MESSAGE_CONTENT_LENGTH = 8_000;
 
 type StreamRequestPayload = {
   documentId: string;
@@ -87,6 +88,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     const role = item.role;
     if (role !== "user" && role !== "assistant" && role !== "system") return null;
     if (typeof item.content !== "string") return null;
+    if (item.content.length > MAX_MESSAGE_CONTENT_LENGTH) return null;
     if (item.userId !== undefined && !hasText(item.userId)) return null;
 
     return {

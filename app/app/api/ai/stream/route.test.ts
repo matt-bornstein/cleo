@@ -294,6 +294,33 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toBe("Invalid request payload");
   });
 
+  it("returns bad request when message content exceeds maximum length", async () => {
+    const oversizedMessages = [
+      {
+        role: "user",
+        content: "a".repeat(8_001),
+        userId: "alice@example.com",
+      },
+    ];
+
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        createRequestBody({
+          messages: oversizedMessages,
+        }),
+      ),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
   it("normalizes trimmed fields before lock lookup", async () => {
     aiLockManager.acquire("doc-trim", "alice");
 
