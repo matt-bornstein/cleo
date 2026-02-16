@@ -1,11 +1,53 @@
-import type { PresenceRecord } from "@/lib/types";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 type RemoteCursorsProps = {
-  others: PresenceRecord[];
+  others: unknown;
 };
 
 export function RemoteCursors({ others }: RemoteCursorsProps) {
-  if (others.length === 0) {
+  const normalizedOthers = Array.isArray(others)
+    ? others.flatMap((presence) => {
+        if (!presence || typeof presence !== "object") {
+          return [];
+        }
+        const candidate = presence as {
+          id?: unknown;
+          data?: unknown;
+        };
+        const normalizedId =
+          typeof candidate.id === "string" && candidate.id.trim().length > 0
+            ? candidate.id.trim()
+            : undefined;
+        if (!normalizedId || hasControlChars(normalizedId)) {
+          return [];
+        }
+
+        const data =
+          candidate.data && typeof candidate.data === "object"
+            ? (candidate.data as { name?: unknown; color?: unknown })
+            : undefined;
+        const normalizedName =
+          typeof data?.name === "string" &&
+          data.name.trim().length > 0 &&
+          !hasControlChars(data.name.trim())
+            ? data.name.trim()
+            : "Collaborator";
+        const normalizedColor =
+          typeof data?.color === "string" && data.color.trim().length > 0
+            ? data.color.trim()
+            : "#64748b";
+
+        return [
+          {
+            id: normalizedId,
+            name: normalizedName,
+            color: normalizedColor,
+          },
+        ];
+      })
+    : [];
+
+  if (normalizedOthers.length === 0) {
     return (
       <div className="text-xs text-slate-500">No other collaborators online.</div>
     );
@@ -13,8 +55,7 @@ export function RemoteCursors({ others }: RemoteCursorsProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {others.map((presence) => {
-        const data = presence.data as { name?: string; color?: string };
+      {normalizedOthers.map((presence) => {
         return (
           <span
             key={presence.id}
@@ -22,9 +63,9 @@ export function RemoteCursors({ others }: RemoteCursorsProps) {
           >
             <span
               className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: data.color ?? "#64748b" }}
+              style={{ backgroundColor: presence.color }}
             />
-            {data.name ?? "Collaborator"}
+            {presence.name}
           </span>
         );
       })}
