@@ -1,0 +1,35 @@
+import { POST } from "@/app/api/auth/local-signin/route";
+
+describe("POST /api/auth/local-signin", () => {
+  it("sets local auth cookie and returns next path", async () => {
+    const request = new Request("http://localhost/api/auth/local-signin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ next: "/editor/abc" }),
+    });
+
+    const response = await POST(request);
+    const payload = (await response.json()) as { ok: boolean; next: string };
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.next).toBe("/editor/abc");
+    expect(response.headers.get("set-cookie")).toContain("plan00_local_auth=1");
+  });
+
+  it("falls back to /editor when next path is invalid", async () => {
+    const request = new Request("http://localhost/api/auth/local-signin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ next: "https://evil.example.com" }),
+    });
+
+    const response = await POST(request);
+    const payload = (await response.json()) as { next: string };
+    expect(payload.next).toBe("/editor");
+  });
+});
