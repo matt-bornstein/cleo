@@ -10,6 +10,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { editorExtensions } from "@/lib/editor/extensions";
 import { RemoteCursorsExtension, type RemoteCursor } from "@/lib/editor/remoteCursors";
+import { CommentHighlightsExtension, type CommentAnchor } from "@/lib/editor/commentHighlights";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { usePresence } from "@/hooks/usePresence";
@@ -89,6 +90,7 @@ function SyncedEditor({
   const me = useQuery(api.users.me);
   const userName = me?.name ?? me?.email ?? "Anonymous";
   const { othersPresence, updateMyPresence } = usePresence(documentId, userName);
+  const comments = useQuery(api.comments.list, { documentId });
 
   // Build remote cursor data from presence
   const remoteCursors: RemoteCursor[] = useMemo(() => {
@@ -101,6 +103,20 @@ function SyncedEditor({
     }));
   }, [othersPresence]);
 
+  // Build comment anchors for highlight decorations
+  const commentAnchors: CommentAnchor[] = useMemo(() => {
+    if (!comments) return [];
+    // Only show top-level comments (not replies)
+    return comments
+      .filter((c) => !c.parentCommentId)
+      .map((c) => ({
+        id: c._id,
+        anchorFrom: c.anchorFrom,
+        anchorTo: c.anchorTo,
+        resolved: c.resolved,
+      }));
+  }, [comments]);
+
   // Create the remote cursors extension instance with current cursor data
   const remoteCursorsExt = useMemo(
     () =>
@@ -110,9 +126,18 @@ function SyncedEditor({
     [remoteCursors]
   );
 
+  // Create comment highlights extension
+  const commentHighlightsExt = useMemo(
+    () =>
+      CommentHighlightsExtension.configure({
+        comments: commentAnchors,
+      }),
+    [commentAnchors]
+  );
+
   const allExtensions = useMemo(
-    () => [...editorExtensions, syncExtension, remoteCursorsExt],
-    [syncExtension, remoteCursorsExt]
+    () => [...editorExtensions, syncExtension, remoteCursorsExt, commentHighlightsExt],
+    [syncExtension, remoteCursorsExt, commentHighlightsExt]
   );
 
   return (

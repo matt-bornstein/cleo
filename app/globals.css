@@ -275,6 +275,27 @@
   border-radius: 2px;
 }
 
+/* Comment highlights */
+.comment-highlight {
+  background-color: oklch(0.92 0.08 90);
+  border-bottom: 2px solid oklch(0.75 0.12 90);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.comment-highlight:hover {
+  background-color: oklch(0.88 0.1 90);
+}
+
+.dark .comment-highlight {
+  background-color: oklch(0.3 0.06 90);
+  border-bottom-color: oklch(0.5 0.1 90);
+}
+
+.dark .comment-highlight:hover {
+  background-color: oklch(0.35 0.08 90);
+}
+
 /* AI message content styling */
 .ai-message-content code.ai-inline-code {
   background-color: var(--muted);
