@@ -24,6 +24,17 @@ const CURRENT_USER = {
   color: "#3b82f6",
 };
 
+function normalizePresenceData(data: unknown): PresenceData {
+  if (data && typeof data === "object") {
+    return data as PresenceData;
+  }
+
+  return {
+    name: CURRENT_USER.name,
+    color: CURRENT_USER.color,
+  };
+}
+
 function createVisitorId() {
   return generateLocalId("visitor");
 }
@@ -107,13 +118,14 @@ export function usePresence(documentId: unknown) {
   const others = allPresence.filter((entry) => entry.visitorId !== visitorId);
 
   const updateMyPresence = useCallback(
-    (data: PresenceData) => {
+    (data: unknown) => {
       if (!hasValidDocumentId) return;
+      const normalizedData = normalizePresenceData(data);
       updatePresence({
         documentId: normalizedDocumentId,
         visitorId,
         userId: CURRENT_USER.id,
-        data,
+        data: normalizedData,
       });
       refresh();
     },

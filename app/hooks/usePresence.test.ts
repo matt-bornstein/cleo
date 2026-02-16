@@ -141,4 +141,23 @@ describe("usePresence", () => {
       }),
     );
   });
+
+  it("normalizes malformed non-object update payloads before dispatch", () => {
+    const { result } = renderHook(() => usePresence("doc-presence"));
+    updatePresenceMock.mockClear();
+
+    act(() => {
+      result.current.updateMyPresence(123 as unknown as { name: string; color: string });
+    });
+
+    expect(updatePresenceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-presence",
+        data: expect.objectContaining({
+          name: "You",
+          color: "#3b82f6",
+        }),
+      }),
+    );
+  });
 });
