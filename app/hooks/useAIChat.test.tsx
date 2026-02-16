@@ -410,6 +410,31 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects oversized prompts without sending requests", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-oversized-prompt",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("a".repeat(4_001));
+    });
+
+    expect(result.current.error).toBe("Prompt must be 4,000 characters or less.");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
   it("trims prompt text before persistence and diff attribution", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     createDiffMock.mockReturnValue({ id: "diff-trim-prompt" });

@@ -10,6 +10,7 @@ import { createDiff } from "@/lib/diffs/store";
 import type { AIMessage } from "@/lib/types";
 
 const DEFAULT_MODEL = "gpt-4o";
+const MAX_PROMPT_LENGTH = 4_000;
 
 type UseAIChatArgs = {
   documentId: string;
@@ -91,6 +92,10 @@ export function useAIChat({
       const normalizedPrompt = prompt.trim();
       if (!normalizedPrompt) {
         setError("Prompt is required.");
+        return;
+      }
+      if (normalizedPrompt.length > MAX_PROMPT_LENGTH) {
+        setError("Prompt must be 4,000 characters or less.");
         return;
       }
 
