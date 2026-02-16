@@ -141,6 +141,18 @@ describe("ShareModal", () => {
     }
   });
 
+  it("resets copied state when link role changes", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-link-role-reset" />);
+
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+
+    const [linkRoleSelect] = screen.getAllByRole("combobox");
+    await user.selectOptions(linkRoleSelect, "editor");
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+  });
+
   it("shows validation error for invalid collaborator email", async () => {
     const user = userEvent.setup();
     render(

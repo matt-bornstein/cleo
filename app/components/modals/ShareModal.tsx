@@ -108,9 +108,12 @@ export function ShareModal({
               <select
                 className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs"
                 value={linkRole}
-                onChange={(event) =>
-                  setLinkRole(event.target.value as "editor" | "commenter" | "viewer")
-                }
+                onChange={(event) => {
+                  setLinkRole(event.target.value as "editor" | "commenter" | "viewer");
+                  if (copyState !== "idle") {
+                    setCopyState("idle");
+                  }
+                }}
               >
                 <option value="viewer">viewer</option>
                 <option value="commenter">commenter</option>
