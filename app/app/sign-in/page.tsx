@@ -12,7 +12,14 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nextPath = useMemo(() => {
-    return sanitizeNextPath(searchParams.get("next"));
+    const rawNextPath =
+      searchParams &&
+      typeof searchParams === "object" &&
+      "get" in searchParams &&
+      typeof (searchParams as { get?: unknown }).get === "function"
+        ? (searchParams as { get: (key: string) => string | null }).get("next")
+        : undefined;
+    return sanitizeNextPath(rawNextPath);
   }, [searchParams]);
 
   const handleLocalSignIn = async () => {
@@ -24,11 +31,15 @@ export default function SignInPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ next: nextPath }),
       });
-      if (!response.ok) {
+      if (!response || typeof response !== "object" || response.ok !== true) {
         throw new Error("Unable to sign in.");
       }
-      router.push(nextPath);
-      router.refresh();
+      if (typeof router.push === "function") {
+        router.push(nextPath);
+      }
+      if (typeof router.refresh === "function") {
+        router.refresh();
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Sign in failed.");
     } finally {
