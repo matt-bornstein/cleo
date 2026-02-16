@@ -9,6 +9,7 @@ type LockStatus = {
 };
 
 export function useAILockStatus(documentId: string) {
+  const normalizedDocumentId = documentId.trim();
   const [state, setState] = useState<{
     documentId: string;
     status: LockStatus;
@@ -22,33 +23,33 @@ export function useAILockStatus(documentId: string) {
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     async function fetchStatus() {
-      if (!documentId) {
+      if (!normalizedDocumentId) {
         return;
       }
 
       try {
         const response = await fetch(
-          `/api/ai/stream?documentId=${encodeURIComponent(documentId)}`,
+          `/api/ai/stream?documentId=${encodeURIComponent(normalizedDocumentId)}`,
         );
         if (!response.ok) {
           if (isMounted) {
-            setState({ documentId, status: { locked: false } });
+            setState({ documentId: normalizedDocumentId, status: { locked: false } });
           }
           return;
         }
         const payload = (await response.json()) as LockStatus;
         if (isMounted) {
-          setState({ documentId, status: payload });
+          setState({ documentId: normalizedDocumentId, status: payload });
         }
       } catch {
         if (isMounted) {
-          setState({ documentId, status: { locked: false } });
+          setState({ documentId: normalizedDocumentId, status: { locked: false } });
         }
       }
     }
 
     void fetchStatus();
-    if (!documentId) {
+    if (!normalizedDocumentId) {
       return () => {
         isMounted = false;
       };
@@ -64,9 +65,9 @@ export function useAILockStatus(documentId: string) {
         clearInterval(intervalId);
       }
     };
-  }, [documentId]);
+  }, [normalizedDocumentId]);
 
-  if (state.documentId !== documentId) {
+  if (state.documentId !== normalizedDocumentId) {
     return { locked: false };
   }
 

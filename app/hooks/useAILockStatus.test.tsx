@@ -80,6 +80,37 @@ describe("useAILockStatus", () => {
     vi.unstubAllGlobals();
   });
 
+  it("does not poll when document id contains only whitespace", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("   "));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current).toEqual({ locked: false });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("trims document id before lock status fetch", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ locked: true, lockedBy: "alice" }),
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("  doc-trimmed  "));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith("/api/ai/stream?documentId=doc-trimmed");
+      expect(result.current.locked).toBe(true);
+      expect(result.current.lockedBy).toBe("alice");
+    });
+
+    vi.unstubAllGlobals();
+  });
+
   it("returns unlocked immediately when switching to another document", async () => {
     const deferredDoc2 = createDeferred<{
       ok: boolean;
