@@ -402,6 +402,50 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("trims prompt text before persistence and diff attribution", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-trim-prompt" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied prompt trim edit.",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-trim-prompt",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("   polish this paragraph   ");
+    });
+
+    expect(saveMessageMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        role: "user",
+        content: "polish this paragraph",
+      }),
+    );
+    expect(createDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        aiPrompt: "polish this paragraph",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("clears visible errors when chat history is cleared", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi
