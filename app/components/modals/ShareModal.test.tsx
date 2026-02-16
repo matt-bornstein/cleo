@@ -12,7 +12,8 @@ describe("ShareModal", () => {
   beforeEach(() => {
     resetPermissionsForTests();
     window.localStorage.clear();
-    writeTextMock.mockClear();
+    writeTextMock.mockReset();
+    writeTextMock.mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
@@ -38,6 +39,24 @@ describe("ShareModal", () => {
         "http://localhost/editor/doc-copy?share=viewer",
       );
     }
+  });
+
+  it("shows copy failure state when clipboard write rejects", async () => {
+    const user = userEvent.setup();
+    const rejectingWriteText = vi.fn().mockRejectedValue(new Error("permission denied"));
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: rejectingWriteText,
+      },
+    });
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-copy-failed" />);
+
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(rejectingWriteText).toHaveBeenCalledWith(
+      expect.stringContaining("/editor/doc-copy-failed?share=viewer"),
+    );
+    expect(await screen.findByRole("button", { name: "Copy failed" })).toBeInTheDocument();
   });
 
   it("resets copy button label after copied timeout", async () => {

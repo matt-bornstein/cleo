@@ -38,7 +38,7 @@ export function ShareModal({
   const [role, setRole] = useState<Role>("editor");
   const [linkRole, setLinkRole] = useState<"editor" | "commenter" | "viewer">("viewer");
   const [version, setVersion] = useState(0);
-  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [addError, setAddError] = useState<string | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -69,6 +69,16 @@ export function ShareModal({
     setEmail("");
     setAddError(null);
     setCopyState("idle");
+  }, []);
+
+  const scheduleCopyStateReset = useCallback((delayMs = 1500) => {
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+    }
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopyState("idle");
+      copyTimeoutRef.current = null;
+    }, delayMs);
   }, []);
 
   const handleOpenChange = useCallback(
@@ -112,18 +122,23 @@ export function ShareModal({
               <Button
                 variant="outline"
                 onClick={async () => {
-                  await navigator.clipboard?.writeText?.(shareableLink);
-                  setCopyState("copied");
-                  if (copyTimeoutRef.current) {
-                    clearTimeout(copyTimeoutRef.current);
+                  try {
+                    if (!navigator.clipboard?.writeText) {
+                      throw new Error("Clipboard API unavailable");
+                    }
+                    await navigator.clipboard.writeText(shareableLink);
+                    setCopyState("copied");
+                  } catch {
+                    setCopyState("error");
                   }
-                  copyTimeoutRef.current = setTimeout(() => {
-                    setCopyState("idle");
-                    copyTimeoutRef.current = null;
-                  }, 1500);
+                  scheduleCopyStateReset();
                 }}
               >
-                {copyState === "copied" ? "Copied" : "Copy link"}
+                {copyState === "copied"
+                  ? "Copied"
+                  : copyState === "error"
+                    ? "Copy failed"
+                    : "Copy link"}
               </Button>
             </div>
           </div>
