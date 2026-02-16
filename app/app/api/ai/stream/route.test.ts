@@ -1,4 +1,5 @@
 import { aiLockManager } from "@/lib/ai/lock";
+import { DEFAULT_AI_USER_ID } from "@/lib/ai/identity";
 import { GET, POST } from "@/app/api/ai/stream/route";
 
 function createRequestBody(overrides?: Partial<Record<string, unknown>>) {
@@ -396,7 +397,7 @@ describe("POST /api/ai/stream", () => {
   });
 
   it("normalizes blank user header to default lock identity", async () => {
-    aiLockManager.acquire("doc-user-normalize", "local-dev-user");
+    aiLockManager.acquire("doc-user-normalize", DEFAULT_AI_USER_ID);
 
     const request = new Request("http://localhost/api/ai/stream", {
       method: "POST",
@@ -414,7 +415,7 @@ describe("POST /api/ai/stream", () => {
   });
 
   it("normalizes oversized user header to default lock identity", async () => {
-    aiLockManager.acquire("doc-user-long", "local-dev-user");
+    aiLockManager.acquire("doc-user-long", DEFAULT_AI_USER_ID);
 
     const request = new Request("http://localhost/api/ai/stream", {
       method: "POST",
@@ -432,7 +433,7 @@ describe("POST /api/ai/stream", () => {
   });
 
   it("normalizes control-character user header to default lock identity", async () => {
-    aiLockManager.acquire("doc-user-control", "local-dev-user");
+    aiLockManager.acquire("doc-user-control", DEFAULT_AI_USER_ID);
 
     const request = new Request("http://localhost/api/ai/stream", {
       method: "POST",
