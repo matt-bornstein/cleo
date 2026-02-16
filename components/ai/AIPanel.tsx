@@ -63,10 +63,11 @@ export function AIPanel({ documentId }: AIPanelProps) {
         )}
       </div>
 
-      {/* AI Lock indicator */}
+      {/* AI Lock indicator (visible to all collaborators) */}
       {isLocked && !isStreaming && (
-        <div className="border-b bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
-          AI is processing a request...
+        <div className="flex items-center gap-2 border-b bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          <span>AI is processing a request from another collaborator...</span>
         </div>
       )}
 
