@@ -15,16 +15,19 @@ describe("permissions store", () => {
 
   it("adds and updates a collaborator role by email", () => {
     const created = upsertPermission("doc-1", "user@example.com", "viewer");
-    expect(created.role).toBe("viewer");
+    expect(created).not.toBeNull();
+    expect(created?.role).toBe("viewer");
 
     const updated = upsertPermission("doc-1", "user@example.com", "editor");
-    expect(updated.id).toBe(created.id);
-    expect(updated.role).toBe("editor");
+    expect(updated).not.toBeNull();
+    expect(updated!.id).toBe(created!.id);
+    expect(updated!.role).toBe("editor");
   });
 
   it("removes collaborator permission", () => {
     const created = upsertPermission("doc-1", "user@example.com", "commenter");
-    removePermission(created.id);
+    expect(created).not.toBeNull();
+    removePermission(created!.id);
     expect(listPermissions("doc-1")).toHaveLength(0);
   });
 
@@ -67,9 +70,18 @@ describe("permissions store", () => {
     );
 
     const updated = upsertPermission("doc-legacy", "legacy@example.com", "editor");
-    expect(updated.id).toBe("legacy-perm");
-    expect(updated.email).toBe("legacy@example.com");
-    expect(updated.role).toBe("editor");
+    expect(updated).not.toBeNull();
+    expect(updated!.id).toBe("legacy-perm");
+    expect(updated!.email).toBe("legacy@example.com");
+    expect(updated!.role).toBe("editor");
     expect(listPermissions("doc-legacy")).toHaveLength(1);
+  });
+
+  it("rejects invalid document ids and malformed user emails", () => {
+    expect(upsertPermission("   ", "user@example.com", "viewer")).toBeNull();
+    expect(upsertPermission("doc-1", "bad\nemail@example.com", "viewer")).toBeNull();
+    expect(listPermissions("doc-\ninvalid")).toEqual([]);
+    expect(getRoleForUser("doc-\ninvalid", "user@example.com")).toBe("viewer");
+    expect(hasDocumentAccess("doc-\ninvalid", "user@example.com")).toBe(false);
   });
 });

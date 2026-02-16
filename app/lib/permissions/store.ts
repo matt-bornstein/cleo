@@ -1,4 +1,6 @@
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { Role } from "@/lib/types";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.permissions.v1";
 
@@ -40,7 +42,12 @@ function persistState(state: PermissionState) {
 }
 
 export function listPermissions(documentId: string) {
-  return loadState().permissions.filter((entry) => entry.documentId === documentId);
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return [];
+
+  return loadState().permissions.filter(
+    (entry) => entry.documentId === normalizedDocumentId,
+  );
 }
 
 export function getRoleForUser(
@@ -48,7 +55,15 @@ export function getRoleForUser(
   email: string,
   ownerEmail?: string,
 ): Role {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) {
+    return "viewer";
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || hasControlChars(normalizedEmail)) {
+    return "viewer";
+  }
   const normalizedOwnerEmail = ownerEmail?.trim().toLowerCase();
 
   if (normalizedOwnerEmail && normalizedEmail === normalizedOwnerEmail) {
@@ -57,7 +72,7 @@ export function getRoleForUser(
 
   const match = loadState().permissions.find(
     (entry) =>
-      entry.documentId === documentId &&
+      entry.documentId === normalizedDocumentId &&
       entry.email.trim().toLowerCase() === normalizedEmail,
   );
   return match?.role ?? "viewer";
@@ -68,7 +83,15 @@ export function hasDocumentAccess(
   email: string,
   ownerEmail?: string,
 ) {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) {
+    return false;
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || hasControlChars(normalizedEmail)) {
+    return false;
+  }
   const normalizedOwnerEmail = ownerEmail?.trim().toLowerCase();
   if (normalizedOwnerEmail && normalizedOwnerEmail === normalizedEmail) {
     return true;
@@ -76,23 +99,32 @@ export function hasDocumentAccess(
 
   return loadState().permissions.some(
     (entry) =>
-      entry.documentId === documentId &&
+      entry.documentId === normalizedDocumentId &&
       entry.email.trim().toLowerCase() === normalizedEmail,
   );
 }
 
 export function upsertPermission(documentId: string, email: string, role: Role) {
-  const state = loadState();
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) {
+    return null;
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || hasControlChars(normalizedEmail)) {
+    return null;
+  }
+
+  const state = loadState();
   const index = state.permissions.findIndex(
     (entry) =>
-      entry.documentId === documentId &&
+      entry.documentId === normalizedDocumentId &&
       entry.email.trim().toLowerCase() === normalizedEmail,
   );
   if (index === -1) {
     const permission: PermissionEntry = {
       id: crypto.randomUUID(),
-      documentId,
+      documentId: normalizedDocumentId,
       email: normalizedEmail,
       role,
     };
