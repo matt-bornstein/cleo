@@ -27,6 +27,9 @@ function normalizeRouteDocumentId(value: unknown) {
 
 async function resolveParams(params: unknown) {
   if (!isThenable(params)) {
+    if (hasThenProperty(params)) {
+      return undefined;
+    }
     return params;
   }
 
@@ -37,11 +40,30 @@ async function resolveParams(params: unknown) {
   }
 }
 
+function hasThenProperty(value: unknown) {
+  if (!value || (typeof value !== "object" && typeof value !== "function")) {
+    return false;
+  }
+
+  try {
+    return "then" in value;
+  } catch {
+    return true;
+  }
+}
+
 function isThenable(value: unknown): value is Promise<unknown> {
-  return (
-    !!value &&
-    (typeof value === "object" || typeof value === "function") &&
-    "then" in value &&
-    typeof (value as { then?: unknown }).then === "function"
-  );
+  if (!value || (typeof value !== "object" && typeof value !== "function")) {
+    return false;
+  }
+
+  try {
+    if (!("then" in value)) {
+      return false;
+    }
+
+    return typeof (value as { then?: unknown }).then === "function";
+  } catch {
+    return false;
+  }
 }

@@ -57,4 +57,22 @@ describe("EditorDocumentPage", () => {
       expect.objectContaining({ documentId: undefined }),
     );
   });
+
+  it("handles params then-getter errors safely", async () => {
+    const malformedThenable = Object.create(null) as { then: unknown };
+    Object.defineProperty(malformedThenable, "then", {
+      get() {
+        throw new Error("then getter failed");
+      },
+    });
+
+    const view = await EditorDocumentPage({
+      params: malformedThenable,
+    });
+    render(view);
+
+    expect(editorShellMock).toHaveBeenCalledWith(
+      expect.objectContaining({ documentId: undefined }),
+    );
+  });
 });
