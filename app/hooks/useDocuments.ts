@@ -14,16 +14,20 @@ import {
 import { hasDocumentAccess } from "@/lib/permissions/store";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
-import { normalizeEmailOrFallback } from "@/lib/user/email";
+import { normalizeEmailOrUndefined } from "@/lib/user/email";
+import { isValidEmail } from "@/lib/validators/email";
 
 export function useDocuments(
   search?: string,
   currentUserEmail = DEFAULT_LOCAL_USER_EMAIL,
 ) {
-  const normalizedCurrentUserEmail = normalizeEmailOrFallback(
-    currentUserEmail,
-    DEFAULT_LOCAL_USER_EMAIL,
-  );
+  const normalizedCurrentUserEmailCandidate =
+    normalizeEmailOrUndefined(currentUserEmail);
+  const normalizedCurrentUserEmail =
+    normalizedCurrentUserEmailCandidate &&
+    isValidEmail(normalizedCurrentUserEmailCandidate)
+      ? normalizedCurrentUserEmailCandidate
+      : DEFAULT_LOCAL_USER_EMAIL;
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   const refresh = useCallback(() => {

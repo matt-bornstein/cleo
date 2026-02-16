@@ -78,7 +78,7 @@ describe("useDocuments", () => {
     expect(result.current.documents[0]?.id).toBe("doc-allowed");
   });
 
-  it("normalizes malformed current user email before access checks", () => {
+  it("falls back to default email for malformed current user identities", () => {
     listDocumentsMock.mockReturnValue([
       {
         id: "doc-allowed",
@@ -93,6 +93,14 @@ describe("useDocuments", () => {
 
     renderHook(() => useDocuments(undefined, "bad\nemail"));
 
+    expect(hasDocumentAccessMock).toHaveBeenCalledWith(
+      "doc-allowed",
+      "me@local.dev",
+      "owner@example.com",
+    );
+
+    hasDocumentAccessMock.mockClear();
+    renderHook(() => useDocuments(undefined, "not-an-email"));
     expect(hasDocumentAccessMock).toHaveBeenCalledWith(
       "doc-allowed",
       "me@local.dev",
