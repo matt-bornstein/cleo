@@ -13,6 +13,14 @@ describe("settings store", () => {
     expect(settings.userEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
 
+  it("returns a fresh defaults object when unset", () => {
+    const first = getSettings();
+    first.defaultModel = "mutated-model";
+
+    const second = getSettings();
+    expect(second.defaultModel).toBe("gpt-4o");
+  });
+
   it("persists and reloads settings", () => {
     saveSettings({
       theme: "dark",

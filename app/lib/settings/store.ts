@@ -56,13 +56,13 @@ function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettin
 }
 
 export function getSettings(): AppUserSettings {
-  if (!canUseStorage()) return defaultSettings;
+  if (!canUseStorage()) return { ...defaultSettings };
   const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return defaultSettings;
+  if (!raw) return { ...defaultSettings };
   try {
     return normalizeSettings(JSON.parse(raw) as AppUserSettings);
   } catch {
-    return defaultSettings;
+    return { ...defaultSettings };
   }
 }
 
