@@ -1,6 +1,7 @@
 import { diff_match_patch } from "diff-match-patch";
 
 import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
+import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import {
   getDocumentById,
@@ -47,7 +48,7 @@ function loadState(): DiffStoreState {
           !isValidDocumentId(normalizedDocumentId) ||
           !ALLOWED_SOURCES.has(diff.source) ||
           typeof diff.patch !== "string" ||
-          typeof diff.snapshotAfter !== "string" ||
+          !isValidDocumentContentJson(diff.snapshotAfter) ||
           typeof diff.createdAt !== "number" ||
           !Number.isFinite(diff.createdAt)
         ) {
@@ -120,7 +121,10 @@ export function createDiff(params: {
   aiModel?: string;
 }) {
   const normalizedDocumentId = normalizeDocumentId(params.documentId);
-  if (!isValidDocumentId(normalizedDocumentId)) {
+  if (
+    !isValidDocumentId(normalizedDocumentId) ||
+    !isValidDocumentContentJson(params.snapshotAfter)
+  ) {
     return null;
   }
 
@@ -184,6 +188,9 @@ export function restoreVersion(params: {
   if (!isValidDocumentId(normalizedDocumentId)) {
     return { restored: false as const, reason: "invalid_document_id" as const };
   }
+  if (!isValidDocumentContentJson(params.snapshot)) {
+    return { restored: false as const, reason: "invalid_snapshot" as const };
+  }
 
   const document = getDocumentById(normalizedDocumentId);
   if (!document) {
@@ -200,7 +207,7 @@ export function restoreVersion(params: {
     source: "manual",
   });
   if (!diff) {
-    return { restored: false as const, reason: "invalid_document_id" as const };
+    return { restored: false as const, reason: "invalid_snapshot" as const };
   }
 
   return { restored: true as const, diffId: diff.id };
@@ -214,6 +221,9 @@ export function triggerIdleSave(params: {
   const normalizedDocumentId = normalizeDocumentId(params.documentId);
   if (!isValidDocumentId(normalizedDocumentId)) {
     return { skipped: true, reason: "invalid_document_id" as const };
+  }
+  if (!isValidDocumentContentJson(params.snapshot)) {
+    return { skipped: true, reason: "invalid_snapshot" as const };
   }
 
   const dedupWindowMs = params.dedupWindowMs ?? 4000;
@@ -244,7 +254,7 @@ export function triggerIdleSave(params: {
     source: "manual",
   });
   if (!diff) {
-    return { skipped: true, reason: "invalid_document_id" as const };
+    return { skipped: true, reason: "invalid_snapshot" as const };
   }
 
   return { skipped: false, diffId: diff.id };

@@ -107,6 +107,36 @@ describe("diff store triggerIdleSave", () => {
     expect(listDiffsByDocument("doc-\ninvalid")).toEqual([]);
   });
 
+  it("rejects invalid snapshots for create/save/restore flows", () => {
+    const document = createDocument("Invalid snapshot doc");
+
+    const invalidCreate = createDiff({
+      documentId: document.id,
+      userId: "reviewer@example.com",
+      snapshotAfter: "not-json",
+      source: "manual",
+    });
+    expect(invalidCreate).toBeNull();
+
+    const saveResult = triggerIdleSave({
+      documentId: document.id,
+      snapshot: "not-json",
+    });
+    expect(saveResult).toEqual({
+      skipped: true,
+      reason: "invalid_snapshot",
+    });
+
+    const restoreResult = restoreVersion({
+      documentId: document.id,
+      snapshot: "not-json",
+    });
+    expect(restoreResult).toEqual({
+      restored: false,
+      reason: "invalid_snapshot",
+    });
+  });
+
   it("falls back to local user id for invalid diff user ids", () => {
     const document = createDocument("User fallback doc");
     const content = JSON.stringify({
@@ -163,6 +193,15 @@ describe("diff store triggerIdleSave", () => {
             patch: "@@ -0,0 +1 @@\n+text",
             snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
             source: "automerge",
+            createdAt: 4,
+          },
+          {
+            id: "bad-snapshot",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+text",
+            snapshotAfter: "not-json",
+            source: "manual",
             createdAt: 4,
           },
           {
