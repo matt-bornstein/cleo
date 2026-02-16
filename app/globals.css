@@ -257,3 +257,20 @@
   border-top: 1px solid var(--border);
   margin: 1.5rem 0;
 }
+
+/* Remote collaborator cursors */
+.remote-cursor {
+  position: relative;
+  display: inline;
+  pointer-events: none;
+}
+
+.remote-cursor-label {
+  user-select: none;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.remote-selection {
+  border-radius: 2px;
+}

@@ -1,14 +1,21 @@
 "use client";
 
 import { useTiptapSync } from "@convex-dev/prosemirror-sync/tiptap";
-import { EditorProvider, EditorContent, useCurrentEditor } from "@tiptap/react";
+import {
+  EditorProvider,
+  EditorContent,
+  useCurrentEditor,
+} from "@tiptap/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { editorExtensions } from "@/lib/editor/extensions";
+import { RemoteCursorsExtension, type RemoteCursor } from "@/lib/editor/remoteCursors";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { useIdleSave } from "@/hooks/useIdleSave";
-import { useEffect, useRef } from "react";
+import { usePresence } from "@/hooks/usePresence";
 import { useEditorContext } from "./EditorContext";
+import { useEffect, useRef, useMemo } from "react";
+import { useQuery } from "convex/react";
 
 interface CollaborativeEditorProps {
   documentId: Id<"documents">;
@@ -37,7 +44,7 @@ export function CollaborativeEditor({ documentId }: CollaborativeEditorProps) {
     );
   }
 
-  // Document doesn't exist in prosemirror-sync yet - create it
+  // Document doesn't exist in prosemirror-sync yet — create it
   return (
     <CreateSyncDoc
       documentId={documentId}
@@ -79,7 +86,34 @@ function SyncedEditor({
   syncExtension: any;
 }) {
   const { scheduleIdleSave } = useIdleSave(documentId);
-  const allExtensions = [...editorExtensions, syncExtension];
+  const me = useQuery(api.users.me);
+  const userName = me?.name ?? me?.email ?? "Anonymous";
+  const { othersPresence, updateMyPresence } = usePresence(documentId, userName);
+
+  // Build remote cursor data from presence
+  const remoteCursors: RemoteCursor[] = useMemo(() => {
+    return othersPresence.map((p) => ({
+      visitorId: p.visitorId,
+      userName: p.userName ?? "Anonymous",
+      color: (p.data as any)?.color ?? "#888",
+      cursor: (p.data as any)?.cursor,
+      selection: (p.data as any)?.selection,
+    }));
+  }, [othersPresence]);
+
+  // Create the remote cursors extension instance with current cursor data
+  const remoteCursorsExt = useMemo(
+    () =>
+      RemoteCursorsExtension.configure({
+        cursors: remoteCursors,
+      }),
+    [remoteCursors]
+  );
+
+  const allExtensions = useMemo(
+    () => [...editorExtensions, syncExtension, remoteCursorsExt],
+    [syncExtension, remoteCursorsExt]
+  );
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -89,6 +123,14 @@ function SyncedEditor({
         onUpdate={({ editor }) => {
           const json = JSON.stringify(editor.getJSON());
           scheduleIdleSave(json);
+        }}
+        onSelectionUpdate={({ editor }) => {
+          // Broadcast cursor/selection to other collaborators
+          const { from, to } = editor.state.selection;
+          updateMyPresence({
+            cursor: from,
+            selection: from !== to ? { from, to } : undefined,
+          });
         }}
         editorProps={{
           attributes: {
