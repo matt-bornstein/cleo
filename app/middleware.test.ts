@@ -23,4 +23,13 @@ describe("middleware auth guard", () => {
 
     expect(response.status).toBe(200);
   });
+
+  it("falls back to /editor for oversized next query redirect", () => {
+    const longQuery = "q=".concat("a".repeat(3000));
+    const request = new NextRequest(`http://localhost/editor/doc-1?${longQuery}`);
+    const response = middleware(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/sign-in?next=%2Feditor");
+  });
 });

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { shouldRedirectToSignIn } from "@/lib/auth/guards";
+import { sanitizeNextPath } from "@/lib/auth/nextPath";
 import { hasValidLocalAuthCookie, LOCAL_AUTH_COOKIE } from "@/lib/auth/session";
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const nextPath = sanitizeNextPath(
+    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+  );
   const authCookie = request.cookies.get(LOCAL_AUTH_COOKIE)?.value;
   const isAuthenticated = hasValidLocalAuthCookie(authCookie);
 
