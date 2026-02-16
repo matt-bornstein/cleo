@@ -27,7 +27,14 @@ export function VersionHistoryModal({
 }: VersionHistoryModalProps) {
   const normalizedOpen = open === true;
   const [selectedDiffId, setSelectedDiffId] = useState<string | null>(null);
-  const diffs = useMemo(() => safeListDiffsByDocument(documentId), [documentId]);
+  const diffs = useMemo(
+    () =>
+      safeListDiffsByDocument(documentId).flatMap((diff, index) => {
+        const normalizedDiff = normalizeDiffEntry(diff, index);
+        return normalizedDiff ? [normalizedDiff] : [];
+      }),
+    [documentId],
+  );
   const selectedDiff = diffs.find((diff) => diff.id === selectedDiffId) ?? diffs[0];
 
   return (
@@ -95,6 +102,48 @@ function safeListDiffsByDocument(documentId: unknown) {
     return listDiffsByDocument(documentId);
   } catch {
     return [];
+  }
+}
+
+function normalizeDiffEntry(diff: unknown, index: number) {
+  if (!diff || typeof diff !== "object") {
+    return undefined;
+  }
+
+  const id = readDiffField(diff, "id");
+  const source = readDiffField(diff, "source");
+  const createdAt = readDiffField(diff, "createdAt");
+  const snapshotAfter = readDiffField(diff, "snapshotAfter");
+
+  return {
+    id:
+      typeof id === "string" && id.trim().length > 0
+        ? id.trim()
+        : `diff-${index}`,
+    source:
+      typeof source === "string" && source.trim().length > 0
+        ? source.trim()
+        : "manual",
+    createdAt:
+      typeof createdAt === "number" && Number.isFinite(createdAt) && createdAt >= 0
+        ? createdAt
+        : 0,
+    snapshotAfter:
+      typeof snapshotAfter === "string"
+        ? snapshotAfter
+        : "No snapshot available",
+  };
+}
+
+function readDiffField(diff: unknown, key: "id" | "source" | "createdAt" | "snapshotAfter") {
+  if (!diff || typeof diff !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (diff as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
   }
 }
 

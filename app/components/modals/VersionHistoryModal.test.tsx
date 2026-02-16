@@ -110,4 +110,41 @@ describe("VersionHistoryModal", () => {
 
     expect(screen.getByText("No versions saved yet.")).toBeInTheDocument();
   });
+
+  it("does not throw when diff payload field getters throw", () => {
+    const diffWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(diffWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(diffWithThrowingGetters, "source", {
+      get() {
+        throw new Error("source getter failed");
+      },
+    });
+    Object.defineProperty(diffWithThrowingGetters, "createdAt", {
+      get() {
+        throw new Error("createdAt getter failed");
+      },
+    });
+    Object.defineProperty(diffWithThrowingGetters, "snapshotAfter", {
+      get() {
+        throw new Error("snapshotAfter getter failed");
+      },
+    });
+    listDiffsByDocumentMock.mockReturnValue([diffWithThrowingGetters]);
+
+    expect(() =>
+      render(
+        <VersionHistoryModal
+          open
+          onOpenChange={vi.fn()}
+          documentId="doc-1"
+          onRestoreSnapshot={vi.fn()}
+        />,
+      ),
+    ).not.toThrow();
+    expect(screen.getByText("No snapshot available")).toBeInTheDocument();
+  });
 });
