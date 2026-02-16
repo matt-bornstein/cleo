@@ -30,7 +30,7 @@ type EditorShellProps = {
 
 export function EditorShell({ documentId }: EditorShellProps) {
   const router = useRouter();
-  const { documents, create, getById, updateContent } = useDocuments();
+  const { documents, create, getById, updateContent, setChatClearedAt } = useDocuments();
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -167,6 +167,10 @@ export function EditorShell({ documentId }: EditorShellProps) {
             currentDocumentContent={content}
             defaultModel={settings.defaultModel}
             canEdit={canEdit}
+            chatClearedAt={currentDocument?.chatClearedAt}
+            onClearChat={(clearedAt) => {
+              setChatClearedAt(documentId, clearedAt);
+            }}
             onApplyContent={(nextContent) => {
               if (!canEdit) return;
               updateContent(documentId, nextContent);

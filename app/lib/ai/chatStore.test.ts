@@ -1,7 +1,4 @@
-import { vi } from "vitest";
-
 import {
-  clearMessagesForDocument,
   listMessagesByDocument,
   resetMessagesForTests,
   saveMessage,
@@ -35,9 +32,7 @@ describe("ai chat store", () => {
     expect(listMessagesByDocument("doc-1")[0].id).toBe("m-1");
   });
 
-  it("clears visible history for a document using cleared timestamp", () => {
-    const nowSpy = vi.spyOn(Date, "now");
-    nowSpy.mockReturnValue(1_000);
+  it("filters messages older than provided chatClearedAt", () => {
     saveMessage({
       id: "m-3",
       documentId: "doc-clear",
@@ -46,9 +41,6 @@ describe("ai chat store", () => {
       content: "Before clear",
       createdAt: 500,
     });
-    nowSpy.mockReturnValue(2_000);
-    clearMessagesForDocument("doc-clear");
-    nowSpy.mockReturnValue(2_100);
     saveMessage({
       id: "m-4",
       documentId: "doc-clear",
@@ -58,9 +50,8 @@ describe("ai chat store", () => {
       createdAt: 2_100,
     });
 
-    const visible = listMessagesByDocument("doc-clear");
+    const visible = listMessagesByDocument("doc-clear", 2_000);
     expect(visible).toHaveLength(1);
     expect(visible[0].id).toBe("m-4");
-    nowSpy.mockRestore();
   });
 });

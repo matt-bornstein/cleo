@@ -11,6 +11,8 @@ type AIPanelProps = {
   onApplyContent: (nextContent: string) => void;
   defaultModel?: string;
   canEdit?: boolean;
+  chatClearedAt?: number;
+  onClearChat?: (clearedAt: number) => void;
 };
 
 export function AIPanel({
@@ -19,6 +21,8 @@ export function AIPanel({
   onApplyContent,
   defaultModel,
   canEdit = true,
+  chatClearedAt,
+  onClearChat,
 }: AIPanelProps) {
   const {
     messages,
@@ -34,6 +38,8 @@ export function AIPanel({
     currentDocumentContent,
     onApplyContent,
     defaultModel,
+    chatClearedAt,
+    onClearChat,
   });
 
   return (

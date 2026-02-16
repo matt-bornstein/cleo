@@ -3,6 +3,7 @@ import {
   getDocumentById,
   listDocuments,
   resetDocumentsForTests,
+  setDocumentChatClearedAt,
 } from "@/lib/documents/store";
 
 describe("document store", () => {
@@ -37,5 +38,13 @@ describe("document store", () => {
 
     const fetched = getDocumentById(created.id);
     expect(fetched?.title).toBe("Roadmap");
+  });
+
+  it("updates document chatClearedAt timestamp", () => {
+    const created = createDocument("Chat doc");
+    const updated = setDocumentChatClearedAt(created.id, 1234);
+
+    expect(updated?.chatClearedAt).toBe(1234);
+    expect(getDocumentById(created.id)?.chatClearedAt).toBe(1234);
   });
 });

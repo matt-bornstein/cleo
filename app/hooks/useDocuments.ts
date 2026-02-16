@@ -6,6 +6,7 @@ import {
   createDocument,
   getDocumentById,
   listDocuments,
+  setDocumentChatClearedAt,
   updateDocumentContent,
 } from "@/lib/documents/store";
 import type { AppDocument } from "@/lib/types";
@@ -44,11 +45,21 @@ export function useDocuments(search?: string) {
     [refresh],
   );
 
+  const setChatClearedAt = useCallback(
+    (documentId: string, timestamp: number) => {
+      const updated = setDocumentChatClearedAt(documentId, timestamp);
+      refresh();
+      return updated;
+    },
+    [refresh],
+  );
+
   return {
     documents,
     create,
     getById,
     updateContent,
+    setChatClearedAt,
     refresh,
   };
 }

@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getModelConfig } from "@/lib/ai/models";
-import {
-  clearMessagesForDocument,
-  listMessagesByDocument,
-  saveMessage,
-} from "@/lib/ai/chatStore";
+import { listMessagesByDocument, saveMessage } from "@/lib/ai/chatStore";
 import { getRecentMessages } from "@/lib/ai/history";
 import { createDiff } from "@/lib/diffs/store";
 import type { AIMessage } from "@/lib/types";
@@ -19,6 +15,8 @@ type UseAIChatArgs = {
   currentDocumentContent: string;
   onApplyContent: (nextContent: string) => void;
   defaultModel?: string;
+  chatClearedAt?: number;
+  onClearChat?: (clearedAt: number) => void;
 };
 
 function createMessage(
@@ -49,6 +47,8 @@ export function useAIChat({
   currentDocumentContent,
   onApplyContent,
   defaultModel,
+  chatClearedAt,
+  onClearChat,
 }: UseAIChatArgs) {
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [selectedModel, setSelectedModel] = useState(defaultModel ?? DEFAULT_MODEL);
@@ -56,8 +56,8 @@ export function useAIChat({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMessages(listMessagesByDocument(documentId));
-  }, [documentId]);
+    setMessages(listMessagesByDocument(documentId, chatClearedAt));
+  }, [chatClearedAt, documentId]);
 
   useEffect(() => {
     if (defaultModel) {
@@ -83,7 +83,9 @@ export function useAIChat({
             prompt,
             model: selectedModel,
             documentContent: currentDocumentContent,
-            messages: getRecentMessages(listMessagesByDocument(documentId)),
+            messages: getRecentMessages(
+              listMessagesByDocument(documentId, chatClearedAt),
+            ),
           }),
         });
 
@@ -162,6 +164,7 @@ export function useAIChat({
     },
     [
       currentDocumentContent,
+      chatClearedAt,
       documentId,
       onApplyContent,
       selectedModel,
@@ -174,9 +177,10 @@ export function useAIChat({
   );
 
   const clearChat = useCallback(() => {
-    clearMessagesForDocument(documentId);
+    const clearedAt = Date.now();
+    onClearChat?.(clearedAt);
     setMessages([]);
-  }, [documentId]);
+  }, [onClearChat]);
 
   return {
     messages,

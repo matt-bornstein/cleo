@@ -115,6 +115,22 @@ export function setDocumentLastDiffAt(
   return updated;
 }
 
+export function setDocumentChatClearedAt(
+  documentId: string,
+  timestamp: number,
+): AppDocument | undefined {
+  const state = loadState();
+  const index = state.documents.findIndex((doc) => doc.id === documentId);
+  if (index === -1) return undefined;
+  const updated: AppDocument = {
+    ...state.documents[index],
+    chatClearedAt: timestamp,
+  };
+  state.documents[index] = updated;
+  persistState(state);
+  return updated;
+}
+
 export function resetDocumentsForTests() {
   persistState({ documents: [] });
 }
