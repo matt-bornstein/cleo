@@ -4,8 +4,9 @@ import { useCallback, useMemo, useState } from "react";
 
 import { addComment, listComments, resolveComment } from "@/lib/comments/store";
 
-export function useComments(documentId: string) {
+export function useComments(documentId: string, currentUserId?: string) {
   const [version, setVersion] = useState(0);
+  const normalizedCurrentUserId = currentUserId?.trim();
 
   const refresh = useCallback(() => {
     setVersion((current) => current + 1);
@@ -18,11 +19,17 @@ export function useComments(documentId: string) {
 
   const createComment = useCallback(
     (content: string, anchorText: string, parentCommentId?: string) => {
-      const comment = addComment({ documentId, content, anchorText, parentCommentId });
+      const comment = addComment({
+        documentId,
+        content,
+        anchorText,
+        parentCommentId,
+        userId: normalizedCurrentUserId,
+      });
       refresh();
       return comment;
     },
-    [documentId, refresh],
+    [documentId, normalizedCurrentUserId, refresh],
   );
 
   const markResolved = useCallback(
@@ -43,11 +50,12 @@ export function useComments(documentId: string) {
         content,
         anchorText,
         parentCommentId,
+        userId: normalizedCurrentUserId,
       });
       refresh();
       return reply;
     },
-    [comments, documentId, refresh],
+    [comments, documentId, normalizedCurrentUserId, refresh],
   );
 
   return {

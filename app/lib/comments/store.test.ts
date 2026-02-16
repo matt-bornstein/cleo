@@ -26,6 +26,7 @@ describe("comments store", () => {
     const comments = listComments("doc-1");
     expect(comments).toHaveLength(1);
     expect(comments[0].id).toBe(comment.id);
+    expect(comments[0].userId).toBe("local-dev-user");
   });
 
   it("marks comments as resolved", () => {
@@ -54,5 +55,29 @@ describe("comments store", () => {
     const comments = listComments("doc-1");
     const reply = comments.find((comment) => comment.parentCommentId === parent.id);
     expect(reply?.content).toBe("Reply");
+  });
+
+  it("uses provided comment user id when valid", () => {
+    addComment({
+      documentId: "doc-3",
+      content: "Authored by collaborator",
+      anchorText: "Line",
+      userId: "  collaborator@example.com  ",
+    });
+
+    const comments = listComments("doc-3");
+    expect(comments[0]?.userId).toBe("collaborator@example.com");
+  });
+
+  it("falls back to local user id for invalid provided user ids", () => {
+    addComment({
+      documentId: "doc-4",
+      content: "Bad id",
+      anchorText: "Line",
+      userId: "bad\nid",
+    });
+
+    const comments = listComments("doc-4");
+    expect(comments[0]?.userId).toBe("local-dev-user");
   });
 });

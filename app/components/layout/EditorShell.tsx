@@ -57,7 +57,10 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const [saveStateLabel, setSaveStateLabel] = useState("Saved");
   const isOnline = useOnlineStatus();
   const { others, updateMyPresence } = usePresence(documentId);
-  const { comments, createComment, createReply, markResolved } = useComments(documentId);
+  const { comments, createComment, createReply, markResolved } = useComments(
+    documentId,
+    currentUserEmail,
+  );
 
   const currentDocument = getById(documentId);
   const documentTitle = currentDocument?.title ?? "Untitled";

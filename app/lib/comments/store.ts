@@ -1,5 +1,6 @@
 import type { CommentRecord } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.comments.v1";
 
@@ -44,13 +45,18 @@ export function addComment(params: {
   content: string;
   anchorText: string;
   parentCommentId?: string;
+  userId?: string;
 }) {
   const state = loadState();
   const now = Date.now();
+  const normalizedUserId = params.userId?.trim();
   const comment: CommentRecord = {
     id: crypto.randomUUID(),
     documentId: params.documentId,
-    userId: DEFAULT_LOCAL_USER_ID,
+    userId:
+      normalizedUserId && !hasControlChars(normalizedUserId)
+        ? normalizedUserId
+        : DEFAULT_LOCAL_USER_ID,
     content: params.content,
     anchorFrom: 0,
     anchorTo: 0,
