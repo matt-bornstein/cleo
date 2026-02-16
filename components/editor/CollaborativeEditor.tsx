@@ -7,10 +7,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { editorExtensions } from "@/lib/editor/extensions";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { useIdleSave } from "@/hooks/useIdleSave";
-import { useCallback, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { useMutation } from "convex/react";
-import { api as convexApi } from "@/convex/_generated/api";
+import { useEffect, useRef } from "react";
+import { useEditorContext } from "./EditorContext";
 
 interface CollaborativeEditorProps {
   documentId: Id<"documents">;
@@ -108,6 +106,13 @@ function SyncedEditor({
 
 function EditorToolbar({ documentId }: { documentId: Id<"documents"> }) {
   const { editor } = useCurrentEditor();
+  const { setEditor } = useEditorContext();
+
+  useEffect(() => {
+    setEditor(editor);
+    return () => setEditor(null);
+  }, [editor, setEditor]);
+
   if (!editor) return null;
   return <FormattingToolbar editor={editor} documentId={documentId} />;
 }

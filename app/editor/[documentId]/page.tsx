@@ -7,11 +7,14 @@ import { useEffect } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Toolbar } from "@/components/layout/Toolbar";
-import { EditorLayout } from "@/components/layout/EditorLayout";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { AIPanel } from "@/components/ai/AIPanel";
 import { CommentsSidebar } from "@/components/comments/CommentsSidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  EditorContextProvider,
+  useEditorContext,
+} from "@/components/editor/EditorContext";
 
 export default function EditorPage({
   params,
@@ -21,7 +24,6 @@ export default function EditorPage({
   const { documentId } = use(params);
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const router = useRouter();
-  const [showComments, setShowComments] = useState(false);
 
   const document = useQuery(
     api.documents.get,
@@ -66,6 +68,31 @@ export default function EditorPage({
   }
 
   return (
+    <EditorContextProvider>
+      <EditorPageContent
+        document={document}
+        documentId={documentId as Id<"documents">}
+      />
+    </EditorContextProvider>
+  );
+}
+
+function EditorPageContent({
+  document,
+  documentId,
+}: {
+  document: {
+    _id: Id<"documents">;
+    title: string;
+    content: string;
+    myRole: string;
+  };
+  documentId: Id<"documents">;
+}) {
+  const [showComments, setShowComments] = useState(false);
+  const { getEditorHtml } = useEditorContext();
+
+  return (
     <div className="flex h-screen flex-col">
       <Toolbar
         documentId={document._id}
@@ -73,9 +100,10 @@ export default function EditorPage({
         documentContent={document.content}
         onToggleComments={() => setShowComments(!showComments)}
         showComments={showComments}
+        getEditorHtml={getEditorHtml}
       />
       <div className="flex flex-1 overflow-hidden">
-        {/* Editor panel - takes remaining space */}
+        {/* Editor panel */}
         <div className="flex flex-1 flex-col border-r">
           <EditorPanel
             documentId={document._id}

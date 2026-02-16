@@ -39,6 +39,7 @@ interface ToolbarProps {
   documentContent?: string;
   onToggleComments?: () => void;
   showComments?: boolean;
+  getEditorHtml?: () => string | null;
 }
 
 export function Toolbar({
@@ -47,6 +48,7 @@ export function Toolbar({
   documentContent,
   onToggleComments,
   showComments,
+  getEditorHtml,
 }: ToolbarProps) {
   const [showNewDoc, setShowNewDoc] = useState(false);
   const [showOpenDoc, setShowOpenDoc] = useState(false);
@@ -66,10 +68,35 @@ export function Toolbar({
   };
 
   const handleExportHtml = () => {
-    if (!documentContent) return;
-    const html = exportAsHtml(documentContent, documentTitle || "Document");
-    const blob = new Blob([html], { type: "text/html" });
-    downloadBlob(blob, `${documentTitle || "document"}.html`);
+    // Prefer live editor HTML if available, fall back to cached content
+    const liveHtml = getEditorHtml?.();
+    if (liveHtml) {
+      const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${documentTitle || "Document"}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; }
+    h1 { font-size: 2em; } h2 { font-size: 1.5em; } h3 { font-size: 1.25em; }
+    blockquote { border-left: 3px solid #ddd; padding-left: 1rem; color: #666; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; }
+    code { background: #f4f4f4; padding: 0.125rem 0.25rem; border-radius: 3px; }
+    table { border-collapse: collapse; width: 100%; } td, th { border: 1px solid #ddd; padding: 0.5rem; }
+    img { max-width: 100%; } hr { border: none; border-top: 1px solid #ddd; margin: 1.5rem 0; }
+  </style>
+</head>
+<body>
+${liveHtml}
+</body>
+</html>`;
+      const blob = new Blob([fullHtml], { type: "text/html" });
+      downloadBlob(blob, `${documentTitle || "document"}.html`);
+    } else if (documentContent) {
+      const html = exportAsHtml(documentContent, documentTitle || "Document");
+      const blob = new Blob([html], { type: "text/html" });
+      downloadBlob(blob, `${documentTitle || "document"}.html`);
+    }
   };
 
   const handleExportText = () => {

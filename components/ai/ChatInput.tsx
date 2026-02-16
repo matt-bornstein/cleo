@@ -27,7 +27,11 @@ export function ChatInput({
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    // Enter (without Shift) or Cmd/Ctrl+Enter to send
     if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSubmit();
     }
