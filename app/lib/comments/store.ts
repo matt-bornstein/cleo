@@ -224,7 +224,7 @@ export function addComment(
     )
       ? normalizedParentCommentId
       : undefined;
-  const now = Math.max(0, Date.now());
+  const now = safeNow();
   const normalizedUserId =
     typeof candidate.userId === "string" ? candidate.userId.trim() : undefined;
   const comment: CommentRecord = {
@@ -263,7 +263,7 @@ export function resolveComment(commentId: unknown) {
   state.comments[index] = {
     ...state.comments[index],
     resolved: true,
-    updatedAt: Math.max(Math.max(0, Date.now()), state.comments[index].updatedAt),
+    updatedAt: Math.max(safeNow(), state.comments[index].updatedAt),
   };
   persistState(state);
   return state.comments[index];
@@ -337,5 +337,13 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
   }
 }

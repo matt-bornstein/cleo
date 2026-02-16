@@ -54,6 +54,23 @@ describe("comments store", () => {
     nowSpy.mockRestore();
   });
 
+  it("falls back to zero timestamps when Date.now throws during comment creation", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+    const comment = addComment({
+      documentId: "doc-clock-throw-create",
+      content: "Clock throw",
+      anchorText: "Line",
+    });
+
+    expect(comment).not.toBeNull();
+    expect(comment?.createdAt).toBe(0);
+    expect(comment?.updatedAt).toBe(0);
+
+    nowSpy.mockRestore();
+  });
+
   it("marks comments as resolved", () => {
     const comment = addComment({
       documentId: "doc-1",
@@ -91,6 +108,24 @@ describe("comments store", () => {
     expect(comment).not.toBeNull();
 
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue((comment?.updatedAt ?? 0) - 5000);
+    const resolved = resolveComment(comment!.id);
+
+    expect(resolved?.resolved).toBe(true);
+    expect(resolved?.updatedAt).toBe(comment?.updatedAt);
+    nowSpy.mockRestore();
+  });
+
+  it("keeps updatedAt monotonic when Date.now throws during resolve", () => {
+    const comment = addComment({
+      documentId: "doc-resolve-clock-throw",
+      content: "Resolve me",
+      anchorText: "Anchor",
+    });
+    expect(comment).not.toBeNull();
+
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
     const resolved = resolveComment(comment!.id);
 
     expect(resolved?.resolved).toBe(true);
