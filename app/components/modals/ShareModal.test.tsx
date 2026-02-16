@@ -59,6 +59,29 @@ describe("ShareModal", () => {
     expect(await screen.findByRole("button", { name: "Copy failed" })).toBeInTheDocument();
   });
 
+  it("resets copy failure label after timeout", async () => {
+    vi.useFakeTimers();
+    const rejectingWriteText = vi.fn().mockRejectedValue(new Error("permission denied"));
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: rejectingWriteText,
+      },
+    });
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-copy-failed-timeout" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("button", { name: "Copy failed" })).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+  });
+
   it("resets copy button label after copied timeout", async () => {
     vi.useFakeTimers();
     render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-copy-timeout" />);
