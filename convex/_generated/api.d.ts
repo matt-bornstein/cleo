@@ -10,10 +10,13 @@
 
 import type * as ai from "../ai.js";
 import type * as auth from "../auth.js";
+import type * as comments from "../comments.js";
+import type * as crons from "../crons.js";
 import type * as diffs from "../diffs.js";
 import type * as documents from "../documents.js";
 import type * as http from "../http.js";
 import type * as permissions from "../permissions.js";
+import type * as presence from "../presence.js";
 import type * as prosemirrorSync from "../prosemirrorSync.js";
 
 import type {
@@ -25,10 +28,13 @@ import type {
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   auth: typeof auth;
+  comments: typeof comments;
+  crons: typeof crons;
   diffs: typeof diffs;
   documents: typeof documents;
   http: typeof http;
   permissions: typeof permissions;
+  presence: typeof presence;
   prosemirrorSync: typeof prosemirrorSync;
 }>;
 

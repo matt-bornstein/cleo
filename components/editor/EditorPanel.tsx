@@ -1,31 +1,17 @@
 "use client";
 
 import { Id } from "@/convex/_generated/dataModel";
-import { RichTextEditor } from "./RichTextEditor";
-import { useIdleSave } from "@/hooks/useIdleSave";
-import { useCallback } from "react";
+import { CollaborativeEditor } from "./CollaborativeEditor";
 
 interface EditorPanelProps {
   documentId: Id<"documents">;
   initialContent: string;
 }
 
-export function EditorPanel({ documentId, initialContent }: EditorPanelProps) {
-  const { scheduleIdleSave } = useIdleSave(documentId);
-
-  const handleUpdate = useCallback(
-    (json: string) => {
-      scheduleIdleSave(json);
-    },
-    [scheduleIdleSave]
-  );
-
+export function EditorPanel({ documentId }: EditorPanelProps) {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <RichTextEditor
-        initialContent={initialContent}
-        onUpdate={handleUpdate}
-      />
+      <CollaborativeEditor documentId={documentId} />
     </div>
   );
 }
