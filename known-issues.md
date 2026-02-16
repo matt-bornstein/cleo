@@ -23,5 +23,7 @@
 7. `CONVEX_DEPLOYMENT=local npx convex codegen --typecheck disable` failed with `401 MissingAccessToken`, confirming access token is still mandatory even for codegen against deployment identifiers.
 8. `npx convex login status` now reports `Status: Not logged in` (and references `/home/ubuntu/.convex/config.json`), but no usable authenticated session is present.
 9. `npx convex dev --once` still immediately fails in non-interactive mode with the login prompt (`Would you like to login to your account?`).
+10. Re-ran `npx convex login status`; still reports `Convex account token found in: /home/ubuntu/.convex/config.json` plus `Status: Not logged in`.
+11. Re-ran `npx convex dev --once`; still fails instantly in non-interactive mode with `Cannot prompt for input in non-interactive terminals. (Welcome to Convex! Would you like to login to your account?)`.
 
 **Revisit result:** Still unresolved in this environment. Convex CLI setup cannot complete without an interactive token entry mechanism or pre-provisioned machine token.
