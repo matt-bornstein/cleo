@@ -47,7 +47,11 @@ describe("usePresence", () => {
   });
 
   it("does not heartbeat when document id is blank or whitespace", () => {
-    renderHook(() => usePresence("   "));
+    const { result } = renderHook(() => usePresence("   "));
+
+    act(() => {
+      result.current.updateMyPresence({ name: "Me", color: "#000" });
+    });
 
     act(() => {
       vi.advanceTimersByTime(15_000);

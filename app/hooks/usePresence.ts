@@ -82,6 +82,7 @@ export function usePresence(documentId: string) {
 
   const updateMyPresence = useCallback(
     (data: PresenceData) => {
+      if (!normalizedDocumentId) return;
       updatePresence({
         documentId: normalizedDocumentId,
         visitorId,
