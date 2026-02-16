@@ -86,6 +86,25 @@ describe("AIPanel", () => {
     expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
   });
 
+  it("treats whitespace-padded lock owner id as same current user", () => {
+    useAILockStatusMock.mockReturnValue({
+      locked: true,
+      lockedBy: "  bob@example.com  ",
+    });
+
+    render(
+      <AIPanel
+        documentId="doc-1"
+        currentDocumentContent="{}"
+        currentUserId="bob@example.com"
+        onApplyContent={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/AI \(.*\) is working/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
+  });
+
   it("disables clear chat action while ai request is loading", () => {
     useAILockStatusMock.mockReturnValue({
       locked: false,

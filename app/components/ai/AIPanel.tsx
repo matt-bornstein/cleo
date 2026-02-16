@@ -30,10 +30,13 @@ export function AIPanel({
 }: AIPanelProps) {
   const lockStatus = useAILockStatus(documentId);
   const normalizedCurrentUserId = normalizeAIUserId(currentUserId);
+  const normalizedLockOwner = lockStatus.lockedBy
+    ? normalizeAIUserId(lockStatus.lockedBy)
+    : undefined;
   const isLockedByOther =
     lockStatus.locked &&
-    lockStatus.lockedBy &&
-    lockStatus.lockedBy !== normalizedCurrentUserId;
+    normalizedLockOwner &&
+    normalizedLockOwner !== normalizedCurrentUserId;
 
   const {
     messages,
@@ -70,7 +73,7 @@ export function AIPanel({
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {isLockedByOther ? (
           <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
-            AI ({lockStatus.lockedBy}) is working...
+            AI ({normalizedLockOwner}) is working...
           </div>
         ) : null}
         {error ? (
