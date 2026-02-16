@@ -134,6 +134,22 @@ describe("useComments", () => {
     );
   });
 
+  it("handles malformed non-string parent ids for replies", () => {
+    const { result } = renderHook(() => useComments("doc-2", "reviewer@example.com"));
+
+    act(() => {
+      result.current.createReply(123 as unknown as string, "Reply body");
+    });
+
+    expect(addCommentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-2",
+        parentCommentId: undefined,
+        anchorText: "Reply",
+      }),
+    );
+  });
+
   it("short-circuits comment operations for invalid document ids", () => {
     const { result } = renderHook(() => useComments("   ", "reviewer@example.com"));
 

@@ -460,6 +460,32 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects malformed non-string prompts without sending requests", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-bad-prompt-type",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt(123 as unknown as string);
+    });
+
+    expect(result.current.error).toBe("Prompt is required.");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).not.toHaveBeenCalled();
+    expect(result.current.messages).toEqual([]);
+
+    vi.unstubAllGlobals();
+  });
+
   it("rejects prompts when document id is blank after trimming", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi.fn();

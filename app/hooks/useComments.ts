@@ -62,7 +62,8 @@ export function useComments(documentId: string, currentUserId?: string) {
       if (!hasValidDocumentId) {
         return null;
       }
-      const normalizedParentCommentId = parentCommentId.trim();
+      const normalizedParentCommentId =
+        typeof parentCommentId === "string" ? parentCommentId.trim() : "";
       const parent = comments.find((comment) => comment.id === normalizedParentCommentId);
       const anchorText = parent?.anchorText ?? "Reply";
       const parentIdForReply =

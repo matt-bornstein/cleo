@@ -109,6 +109,10 @@ export function useAIChat({
         setError("Document is unavailable.");
         return;
       }
+      if (typeof prompt !== "string") {
+        setError("Prompt is required.");
+        return;
+      }
       const normalizedPrompt = prompt.trim();
       if (!normalizedPrompt) {
         setError("Prompt is required.");
