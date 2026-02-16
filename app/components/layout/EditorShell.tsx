@@ -229,7 +229,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
             </div>
             <CommentsSidebar
               comments={comments}
-              onCreateComment={(commentText) =>
+              onCreateComment={(commentText: string) =>
                 createComment(commentText, "Document selection")
               }
               onReplyComment={createReply}
