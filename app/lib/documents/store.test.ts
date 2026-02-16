@@ -201,10 +201,12 @@ describe("document store", () => {
     const firstDiffAt = setDocumentLastDiffAt(created.id, 1234);
     expect(firstDiffAt?.lastDiffAt).toBe(1234);
     expect(setDocumentLastDiffAt(created.id, 1234)).toBeUndefined();
+    expect(setDocumentLastDiffAt(created.id, 1233)).toBeUndefined();
 
     const firstClearedAt = setDocumentChatClearedAt(created.id, 5678);
     expect(firstClearedAt?.chatClearedAt).toBe(5678);
     expect(setDocumentChatClearedAt(created.id, 5678)).toBeUndefined();
+    expect(setDocumentChatClearedAt(created.id, 5677)).toBeUndefined();
   });
 
   it("deletes document by id", () => {

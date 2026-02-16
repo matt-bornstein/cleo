@@ -249,7 +249,10 @@ export function setDocumentLastDiffAt(
   const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
   const existing = state.documents[index];
-  if (existing.lastDiffAt === timestamp) {
+  if (
+    existing.lastDiffAt === timestamp ||
+    (typeof existing.lastDiffAt === "number" && timestamp < existing.lastDiffAt)
+  ) {
     return undefined;
   }
   const updated: AppDocument = {
@@ -277,7 +280,10 @@ export function setDocumentChatClearedAt(
   const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
   const existing = state.documents[index];
-  if (existing.chatClearedAt === timestamp) {
+  if (
+    existing.chatClearedAt === timestamp ||
+    (typeof existing.chatClearedAt === "number" && timestamp < existing.chatClearedAt)
+  ) {
     return undefined;
   }
   const updated: AppDocument = {
