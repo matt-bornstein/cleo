@@ -33,6 +33,48 @@ describe("useAILockStatus", () => {
     vi.unstubAllGlobals();
   });
 
+  it("normalizes malformed lock payloads from the API", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({ locked: true, lockedBy: "bad\nuser", lockedAt: -1 }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("doc-hook"));
+
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        locked: true,
+        lockedBy: undefined,
+        lockedAt: undefined,
+      });
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back to unlocked status for malformed non-object payloads", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        json: async () => "bad-payload",
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("doc-hook"));
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ locked: false });
+    });
+
+    vi.unstubAllGlobals();
+  });
+
   it("resets status when lock status request fails", async () => {
     const fetchMock = vi
       .fn()

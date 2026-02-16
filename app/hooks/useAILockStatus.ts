@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 type LockStatus = {
   locked: boolean;
@@ -12,7 +13,7 @@ type LockStatus = {
 
 export function useAILockStatus(documentId: string) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
-  const hasValidDocumentId = isValidDocumentId(documentId);
+  const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
   const [state, setState] = useState<{
     documentId: string;
     status: LockStatus;
@@ -40,7 +41,7 @@ export function useAILockStatus(documentId: string) {
           }
           return;
         }
-        const payload = (await response.json()) as LockStatus;
+        const payload = normalizeLockStatus(await response.json());
         if (isMounted) {
           setState({ documentId: normalizedDocumentId, status: payload });
         }
@@ -75,4 +76,38 @@ export function useAILockStatus(documentId: string) {
   }
 
   return state.status;
+}
+
+function normalizeLockStatus(value: unknown): LockStatus {
+  if (!value || typeof value !== "object") {
+    return { locked: false };
+  }
+
+  const candidate = value as {
+    locked?: unknown;
+    lockedBy?: unknown;
+    lockedAt?: unknown;
+  };
+  if (candidate.locked !== true) {
+    return { locked: false };
+  }
+
+  const normalizedLockedBy =
+    typeof candidate.lockedBy === "string" &&
+    candidate.lockedBy.trim().length > 0 &&
+    !hasControlChars(candidate.lockedBy.trim())
+      ? candidate.lockedBy.trim()
+      : undefined;
+  const normalizedLockedAt =
+    typeof candidate.lockedAt === "number" &&
+    Number.isFinite(candidate.lockedAt) &&
+    candidate.lockedAt >= 0
+      ? candidate.lockedAt
+      : undefined;
+
+  return {
+    locked: true,
+    lockedBy: normalizedLockedBy,
+    lockedAt: normalizedLockedAt,
+  };
 }
