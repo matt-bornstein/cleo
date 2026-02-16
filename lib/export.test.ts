@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { exportAsHtml, exportAsText } from "./export";
+import { exportAsHtml, exportAsText, exportAsMarkdown, htmlToMarkdown } from "./export";
 
 describe("exportAsHtml", () => {
   it("exports a simple document", () => {
@@ -132,5 +132,96 @@ describe("exportAsText", () => {
     const text = exportAsText(content);
     expect(text).toContain("bold text");
     expect(text).not.toContain("<strong>");
+  });
+});
+
+describe("exportAsMarkdown", () => {
+  it("converts headings to ATX style", () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 1 },
+          content: [{ type: "text", text: "Title" }],
+        },
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "Subtitle" }],
+        },
+      ],
+    });
+
+    const md = exportAsMarkdown(content);
+    expect(md).toContain("# Title");
+    expect(md).toContain("## Subtitle");
+  });
+
+  it("converts bold and italic", () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "bold", marks: [{ type: "bold" }] },
+            { type: "text", text: " and " },
+            { type: "text", text: "italic", marks: [{ type: "italic" }] },
+          ],
+        },
+      ],
+    });
+
+    const md = exportAsMarkdown(content);
+    expect(md).toContain("**bold**");
+    expect(md).toContain("_italic_");
+  });
+
+  it("converts lists to markdown", () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Item one" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const md = exportAsMarkdown(content);
+    expect(md).toContain("Item one");
+    expect(md).toMatch(/-\s+Item one/);
+  });
+
+  it("handles empty content gracefully", () => {
+    const content = JSON.stringify({ type: "doc", content: [] });
+    const md = exportAsMarkdown(content);
+    expect(typeof md).toBe("string");
+  });
+});
+
+describe("htmlToMarkdown", () => {
+  it("converts HTML to markdown", () => {
+    const html = "<h1>Title</h1><p>Hello <strong>world</strong></p>";
+    const md = htmlToMarkdown(html);
+    expect(md).toContain("# Title");
+    expect(md).toContain("**world**");
+  });
+
+  it("converts links", () => {
+    const html = '<p><a href="https://example.com">Click here</a></p>';
+    const md = htmlToMarkdown(html);
+    expect(md).toContain("[Click here](https://example.com)");
   });
 });
