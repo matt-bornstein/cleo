@@ -45,6 +45,19 @@ describe("EditorIndexPage", () => {
     expect(pushMock).toHaveBeenCalledWith("/editor/doc-1");
   });
 
+  it("trims existing latest document id before navigation", async () => {
+    const user = userEvent.setup();
+    useDocumentsMock.mockReturnValue({
+      documents: [{ id: "  doc-1  " }],
+      create: vi.fn(),
+    });
+
+    render(<EditorIndexPage />);
+    await user.click(screen.getByRole("button", { name: "Open editor" }));
+
+    expect(pushMock).toHaveBeenCalledWith("/editor/doc-1");
+  });
+
   it("creates a new document when latest list is malformed", async () => {
     const user = userEvent.setup();
     const create = vi.fn().mockReturnValue({ id: "doc-created" });

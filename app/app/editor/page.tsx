@@ -15,33 +15,26 @@ export default function EditorIndexPage() {
   const currentUserEmail =
     normalizeEmailOrUndefined(settings.userEmail) ?? DEFAULT_LOCAL_USER_EMAIL;
   const { documents, create } = useDocuments(undefined, currentUserEmail);
-  const normalizedDocuments = Array.isArray(documents)
-    ? documents.filter((document) => {
-        const normalizedId =
-          typeof document?.id === "string" ? document.id.trim() : undefined;
-        return !!normalizedId && !hasControlChars(normalizedId);
-      })
-    : [];
+  const existingDocumentId = Array.isArray(documents)
+    ? documents
+        .map((document) => normalizeDocumentId(document?.id))
+        .find((documentId) => !!documentId)
+    : undefined;
 
   const handleContinue = () => {
-    const existingDocumentId = normalizedDocuments[0]?.id;
-    if (
-      typeof existingDocumentId === "string" &&
-      existingDocumentId.trim().length > 0
-    ) {
+    if (existingDocumentId) {
       router.push(`/editor/${existingDocumentId}`);
       return;
     }
 
     const document = create("Untitled", currentUserEmail);
-    const nextDocumentId =
+    const nextDocumentId = normalizeDocumentId(
       document &&
-      typeof document === "object" &&
-      typeof (document as { id?: unknown }).id === "string" &&
-      (document as { id: string }).id.trim().length > 0 &&
-      !hasControlChars((document as { id: string }).id.trim())
-        ? (document as { id: string }).id.trim()
-        : undefined;
+        typeof document === "object" &&
+        "id" in document
+        ? (document as { id?: unknown }).id
+        : undefined,
+    );
     router.push(nextDocumentId ? `/editor/${nextDocumentId}` : "/editor");
   };
 
@@ -60,4 +53,17 @@ export default function EditorIndexPage() {
       </section>
     </main>
   );
+}
+
+function normalizeDocumentId(value: unknown) {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  if (!normalized || hasControlChars(normalized)) {
+    return undefined;
+  }
+
+  return normalized;
 }
