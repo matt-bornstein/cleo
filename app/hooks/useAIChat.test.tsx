@@ -228,4 +228,47 @@ describe("useAIChat", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("surfaces final buffered error event without trailing newline", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse(
+          [
+            {
+              type: "error",
+              error: "Model failed",
+            },
+          ],
+          { trailingNewline: false },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-error",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger error");
+    });
+
+    expect(result.current.error).toBe("Model failed");
+    expect(result.current.messages.at(-1)).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "Error: Model failed",
+      }),
+    );
+    expect(createDiffMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).toHaveBeenCalledTimes(1);
+
+    vi.unstubAllGlobals();
+  });
 });
