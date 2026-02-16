@@ -73,4 +73,22 @@ describe("EditorIndexPage", () => {
 
     expect(pushMock).toHaveBeenCalledWith("/editor");
   });
+
+  it("falls back to default local email when settings email is malformed", async () => {
+    const user = userEvent.setup();
+    const create = vi.fn().mockReturnValue({ id: "doc-created" });
+    useSettingsMock.mockReturnValue({
+      settings: { userEmail: 123 },
+    });
+    useDocumentsMock.mockReturnValue({
+      documents: [],
+      create,
+    });
+
+    render(<EditorIndexPage />);
+    await user.click(screen.getByRole("button", { name: "Open editor" }));
+
+    expect(create).toHaveBeenCalledWith("Untitled", "me@local.dev");
+    expect(pushMock).toHaveBeenCalledWith("/editor/doc-created");
+  });
 });

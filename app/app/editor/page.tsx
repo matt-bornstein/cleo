@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useSettings } from "@/hooks/useSettings";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
+import { normalizeEmailOrUndefined } from "@/lib/user/email";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 export default function EditorIndexPage() {
   const router = useRouter();
   const { settings } = useSettings();
-  const currentUserEmail = settings.userEmail ?? DEFAULT_LOCAL_USER_EMAIL;
+  const currentUserEmail =
+    normalizeEmailOrUndefined(settings.userEmail) ?? DEFAULT_LOCAL_USER_EMAIL;
   const { documents, create } = useDocuments(undefined, currentUserEmail);
   const normalizedDocuments = Array.isArray(documents)
     ? documents.filter((document) => {
