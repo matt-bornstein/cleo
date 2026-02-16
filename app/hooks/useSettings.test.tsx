@@ -1,0 +1,69 @@
+import { act, renderHook } from "@testing-library/react";
+import { vi } from "vitest";
+
+import { useSettings } from "@/hooks/useSettings";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
+
+const getSettingsMock = vi.fn();
+vi.mock("@/lib/settings/store", () => ({
+  getSettings: () => getSettingsMock(),
+}));
+
+describe("useSettings", () => {
+  beforeEach(() => {
+    getSettingsMock.mockReset();
+  });
+
+  it("returns settings from store and refreshes on demand", () => {
+    getSettingsMock
+      .mockReturnValueOnce({
+        theme: "dark",
+        defaultModel: "gpt-4o",
+        editorFontSize: 16,
+        editorLineSpacing: 1.6,
+        userEmail: "owner@example.com",
+      })
+      .mockReturnValueOnce({
+        theme: "light",
+        defaultModel: "gpt-4.1",
+        editorFontSize: 18,
+        editorLineSpacing: 1.8,
+        userEmail: "owner@example.com",
+      });
+
+    const { result } = renderHook(() => useSettings());
+    expect(result.current.settings).toEqual(
+      expect.objectContaining({
+        theme: "dark",
+        defaultModel: "gpt-4o",
+      }),
+    );
+
+    act(() => {
+      result.current.refreshSettings();
+    });
+
+    expect(result.current.settings).toEqual(
+      expect.objectContaining({
+        theme: "light",
+        defaultModel: "gpt-4.1",
+      }),
+    );
+  });
+
+  it("falls back safely when settings store throws", () => {
+    getSettingsMock.mockImplementation(() => {
+      throw new Error("settings unavailable");
+    });
+
+    const { result } = renderHook(() => useSettings());
+
+    expect(result.current.settings).toEqual({
+      theme: "system",
+      defaultModel: "gpt-4o",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: DEFAULT_LOCAL_USER_EMAIL,
+    });
+  });
+});
