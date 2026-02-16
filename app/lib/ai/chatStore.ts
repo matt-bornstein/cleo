@@ -39,7 +39,15 @@ function loadState(): AIMessageState {
 
     const dedupedByMessageId = new Map<string, AIMessage>();
     for (const message of sanitizedMessages) {
-      dedupedByMessageId.set(message.id, message);
+      const existing = dedupedByMessageId.get(message.id);
+      if (!existing) {
+        dedupedByMessageId.set(message.id, message);
+        continue;
+      }
+
+      if (message.createdAt > existing.createdAt) {
+        dedupedByMessageId.set(message.id, message);
+      }
     }
 
     return {

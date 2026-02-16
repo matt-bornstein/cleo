@@ -51,45 +51,65 @@ function loadState(): DocumentStoreState {
             ? doc.title.trim()
             : "Untitled";
         const now = Date.now();
+        const hasValidCreatedAt =
+          typeof doc.createdAt === "number" && Number.isFinite(doc.createdAt);
+        const hasValidUpdatedAt =
+          typeof doc.updatedAt === "number" && Number.isFinite(doc.updatedAt);
         const normalizedCreatedAt =
-          typeof doc.createdAt === "number" && Number.isFinite(doc.createdAt)
-            ? doc.createdAt
-            : now;
+          hasValidCreatedAt ? doc.createdAt : now;
         const normalizedUpdatedAt =
-          typeof doc.updatedAt === "number" && Number.isFinite(doc.updatedAt)
+          hasValidUpdatedAt
             ? Math.max(doc.updatedAt, normalizedCreatedAt)
             : normalizedCreatedAt;
 
         return [
           {
-            ...doc,
-            id: normalizedDocumentId,
-            title: normalizedTitle,
-            content: isValidDocumentContentJson(doc.content)
-              ? doc.content
-              : EMPTY_EDITOR_DOC,
-            ownerEmail: normalizeOwnerEmail(doc.ownerEmail),
-            createdAt: normalizedCreatedAt,
-            updatedAt: normalizedUpdatedAt,
-            lastDiffAt:
-              typeof doc.lastDiffAt === "number" && Number.isFinite(doc.lastDiffAt)
-                ? doc.lastDiffAt
-                : undefined,
-            chatClearedAt:
-              typeof doc.chatClearedAt === "number" && Number.isFinite(doc.chatClearedAt)
-                ? doc.chatClearedAt
-                : undefined,
+            document: {
+              ...doc,
+              id: normalizedDocumentId,
+              title: normalizedTitle,
+              content: isValidDocumentContentJson(doc.content)
+                ? doc.content
+                : EMPTY_EDITOR_DOC,
+              ownerEmail: normalizeOwnerEmail(doc.ownerEmail),
+              createdAt: normalizedCreatedAt,
+              updatedAt: normalizedUpdatedAt,
+              lastDiffAt:
+                typeof doc.lastDiffAt === "number" && Number.isFinite(doc.lastDiffAt)
+                  ? doc.lastDiffAt
+                  : undefined,
+              chatClearedAt:
+                typeof doc.chatClearedAt === "number" && Number.isFinite(doc.chatClearedAt)
+                  ? doc.chatClearedAt
+                  : undefined,
+            },
+            dedupeUpdatedAt: hasValidUpdatedAt
+              ? doc.updatedAt
+              : hasValidCreatedAt
+                ? doc.createdAt
+                : Number.NEGATIVE_INFINITY,
           },
         ];
       });
 
-    const dedupedByDocumentId = new Map<string, AppDocument>();
-    for (const document of sanitizedDocuments) {
-      dedupedByDocumentId.set(document.id, document);
+    const dedupedByDocumentId = new Map<
+      string,
+      (typeof sanitizedDocuments)[number]
+    >();
+    for (const entry of sanitizedDocuments) {
+      const existing = dedupedByDocumentId.get(entry.document.id);
+      if (!existing) {
+        dedupedByDocumentId.set(entry.document.id, entry);
+        continue;
+      }
+
+      if (entry.dedupeUpdatedAt > existing.dedupeUpdatedAt) {
+        dedupedByDocumentId.set(entry.document.id, entry);
+      }
     }
 
     return {
-      documents: Array.from(dedupedByDocumentId.values()),
+      documents: Array.from(dedupedByDocumentId.values()).map((entry) => entry.document),
     };
   } catch {
     return { documents: [] };

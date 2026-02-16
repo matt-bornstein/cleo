@@ -80,7 +80,20 @@ function loadState(): CommentState {
 
     const dedupedByCommentId = new Map<string, CommentRecord>();
     for (const comment of sanitizedComments) {
-      dedupedByCommentId.set(comment.id, comment);
+      const existing = dedupedByCommentId.get(comment.id);
+      if (!existing) {
+        dedupedByCommentId.set(comment.id, comment);
+        continue;
+      }
+
+      if (comment.updatedAt > existing.updatedAt) {
+        dedupedByCommentId.set(comment.id, comment);
+        continue;
+      }
+
+      if (comment.updatedAt === existing.updatedAt && comment.createdAt > existing.createdAt) {
+        dedupedByCommentId.set(comment.id, comment);
+      }
     }
 
     return {

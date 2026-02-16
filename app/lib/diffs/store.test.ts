@@ -303,6 +303,15 @@ describe("diff store triggerIdleSave", () => {
             source: "manual",
             createdAt: 5,
           },
+          {
+            id: "valid-diff",
+            documentId: "doc-legacy",
+            userId: "u-3",
+            patch: "@@ -0,0 +1 @@\n+stale",
+            snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            source: "manual",
+            createdAt: 1,
+          },
         ],
       }),
     );

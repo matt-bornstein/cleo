@@ -212,6 +212,14 @@ describe("ai chat store", () => {
             content: "Latest",
             createdAt: 5,
           },
+          {
+            id: "valid",
+            documentId: "doc-legacy",
+            userId: "u-3",
+            role: "assistant",
+            content: "Stale but later in array",
+            createdAt: 0,
+          },
         ],
       }),
     );

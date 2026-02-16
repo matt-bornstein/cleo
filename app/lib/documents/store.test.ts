@@ -128,6 +128,14 @@ describe("document store", () => {
             createdAt: 20,
             updatedAt: 30,
           },
+          {
+            id: "doc-legacy",
+            title: "Stale but later in array",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "stale@example.com",
+            createdAt: 1,
+            updatedAt: 1,
+          },
         ],
       }),
     );

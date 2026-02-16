@@ -73,7 +73,15 @@ function loadState(): DiffStoreState {
 
     const dedupedByDiffId = new Map<string, DiffRecord>();
     for (const diff of sanitizedDiffs) {
-      dedupedByDiffId.set(diff.id, diff);
+      const existing = dedupedByDiffId.get(diff.id);
+      if (!existing) {
+        dedupedByDiffId.set(diff.id, diff);
+        continue;
+      }
+
+      if (diff.createdAt > existing.createdAt) {
+        dedupedByDiffId.set(diff.id, diff);
+      }
     }
 
     return {
