@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
@@ -95,6 +96,7 @@ function normalizeLockStatus(value: unknown): LockStatus {
   const normalizedLockedBy =
     typeof candidate.lockedBy === "string" &&
     candidate.lockedBy.trim().length > 0 &&
+    candidate.lockedBy.trim().length <= MAX_USER_ID_LENGTH &&
     !hasControlChars(candidate.lockedBy.trim())
       ? candidate.lockedBy.trim()
       : undefined;

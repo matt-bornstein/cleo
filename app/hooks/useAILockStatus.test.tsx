@@ -56,6 +56,33 @@ describe("useAILockStatus", () => {
     vi.unstubAllGlobals();
   });
 
+  it("drops oversized lock owner values from lock payloads", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          locked: true,
+          lockedBy: "u".repeat(257),
+          lockedAt: 100,
+        }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("doc-hook"));
+
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        locked: true,
+        lockedBy: undefined,
+        lockedAt: 100,
+      });
+    });
+
+    vi.unstubAllGlobals();
+  });
+
   it("falls back to unlocked status for malformed non-object payloads", async () => {
     const fetchMock = vi
       .fn()
