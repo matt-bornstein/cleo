@@ -83,9 +83,9 @@ export function listPermissions(documentId: string) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) return [];
 
-  return loadState().permissions.filter(
-    (entry) => entry.documentId === normalizedDocumentId,
-  );
+  return loadState()
+    .permissions.filter((entry) => entry.documentId === normalizedDocumentId)
+    .sort((a, b) => a.email.localeCompare(b.email));
 }
 
 export function getRoleForUser(

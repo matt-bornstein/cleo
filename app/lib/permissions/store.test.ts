@@ -24,6 +24,16 @@ describe("permissions store", () => {
     expect(updated!.role).toBe("editor");
   });
 
+  it("lists collaborators sorted by normalized email", () => {
+    upsertPermission("doc-order", "zeta@example.com", "viewer");
+    upsertPermission("doc-order", "alpha@example.com", "viewer");
+
+    expect(listPermissions("doc-order").map((entry) => entry.email)).toEqual([
+      "alpha@example.com",
+      "zeta@example.com",
+    ]);
+  });
+
   it("removes collaborator permission", () => {
     const created = upsertPermission("doc-1", "user@example.com", "commenter");
     expect(created).not.toBeNull();
