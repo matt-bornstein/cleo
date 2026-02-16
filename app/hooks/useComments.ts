@@ -61,14 +61,18 @@ export function useComments(documentId: string, currentUserId?: string) {
       if (!hasValidDocumentId) {
         return null;
       }
-      const parent = comments.find((comment) => comment.id === parentCommentId);
+      const normalizedParentCommentId = parentCommentId.trim();
+      const parent = comments.find((comment) => comment.id === normalizedParentCommentId);
       const anchorText = parent?.anchorText ?? "Reply";
-      const normalizedParentCommentId = parent ? parentCommentId : undefined;
+      const parentIdForReply =
+        parent && normalizedParentCommentId.length > 0
+          ? normalizedParentCommentId
+          : undefined;
       const reply = addComment({
         documentId: normalizedDocumentId,
         content,
         anchorText,
-        parentCommentId: normalizedParentCommentId,
+        parentCommentId: parentIdForReply,
         userId: normalizedCurrentUserId,
       });
       if (reply) {

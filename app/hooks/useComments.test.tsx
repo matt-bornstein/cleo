@@ -72,6 +72,36 @@ describe("useComments", () => {
     );
   });
 
+  it("trims reply parent ids before lookup and forwarding", () => {
+    listCommentsMock.mockReturnValue([
+      {
+        id: "parent-1",
+        documentId: "doc-1",
+        userId: "owner@example.com",
+        content: "Parent note",
+        anchorFrom: 0,
+        anchorTo: 0,
+        anchorText: "Paragraph 1",
+        resolved: false,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]);
+
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+
+    act(() => {
+      result.current.createReply("  parent-1  ", "Thanks!");
+    });
+
+    expect(addCommentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parentCommentId: "parent-1",
+        anchorText: "Paragraph 1",
+      }),
+    );
+  });
+
   it("falls back to default reply anchor when parent is missing", () => {
     const { result } = renderHook(() => useComments("doc-2", "reviewer@example.com"));
 
