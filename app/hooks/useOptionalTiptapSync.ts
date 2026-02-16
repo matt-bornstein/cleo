@@ -15,13 +15,22 @@ export function normalizeSyncDocumentId(documentId: unknown) {
 }
 
 export function useOptionalTiptapSync(documentId: unknown) {
-  const sync = useTiptapSync(
-    api.prosemirrorSync as never,
-    normalizeSyncDocumentId(documentId),
-    {
-    snapshotDebounceMs: 1000,
-    },
-  );
+  const normalizedDocumentId = normalizeSyncDocumentId(documentId);
+  const sync = useTiptapSyncSafely(normalizedDocumentId);
 
   return sync;
+}
+
+function useTiptapSyncSafely(documentId: string) {
+  try {
+    return useTiptapSync(api.prosemirrorSync as never, documentId, {
+      snapshotDebounceMs: 1000,
+    });
+  } catch {
+    return {
+      extension: null,
+      initialContent: undefined,
+      isLoading: false,
+    };
+  }
 }

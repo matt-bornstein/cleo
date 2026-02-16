@@ -55,4 +55,18 @@ describe("useOptionalTiptapSync", () => {
     expect(normalizeSyncDocumentId("doc-\nbad")).toBe("__invalid-document-id__");
     expect(normalizeSyncDocumentId(42)).toBe("__invalid-document-id__");
   });
+
+  it("falls back to inert sync state when underlying sync hook throws", () => {
+    useTiptapSyncMock.mockImplementation(() => {
+      throw new Error("sync unavailable");
+    });
+
+    const { result } = renderHook(() => useOptionalTiptapSync("doc-123"));
+
+    expect(result.current).toEqual({
+      extension: null,
+      initialContent: undefined,
+      isLoading: false,
+    });
+  });
 });
