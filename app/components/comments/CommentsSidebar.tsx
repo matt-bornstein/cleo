@@ -33,22 +33,24 @@ export function CommentsSidebar({
       }
 
       const candidate = comment as Partial<CommentRecord>;
+      const id = readCommentField(candidate, "id");
       const normalizedCommentId =
-        typeof candidate.id === "string" &&
-        candidate.id.trim().length > 0 &&
-        !hasControlChars(candidate.id.trim())
-          ? candidate.id.trim()
+        typeof id === "string" &&
+        id.trim().length > 0 &&
+        !hasControlChars(id.trim())
+          ? id.trim()
           : undefined;
       if (!normalizedCommentId) {
         return [];
       }
 
+      const parentCommentId = readCommentField(candidate, "parentCommentId");
       const normalizedParentCommentId =
-        typeof candidate.parentCommentId === "string" &&
-        candidate.parentCommentId.trim().length > 0 &&
-        !hasControlChars(candidate.parentCommentId.trim()) &&
-        candidate.parentCommentId.trim() !== normalizedCommentId
-          ? candidate.parentCommentId.trim()
+        typeof parentCommentId === "string" &&
+        parentCommentId.trim().length > 0 &&
+        !hasControlChars(parentCommentId.trim()) &&
+        parentCommentId.trim() !== normalizedCommentId
+          ? parentCommentId.trim()
           : undefined;
 
       return [
@@ -154,5 +156,16 @@ function safeOnReplyComment(
     onReplyComment(parentCommentId, content);
   } catch {
     return;
+  }
+}
+
+function readCommentField(
+  comment: Partial<CommentRecord>,
+  key: "id" | "parentCommentId",
+) {
+  try {
+    return comment[key];
+  } catch {
+    return undefined;
   }
 }

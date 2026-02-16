@@ -99,4 +99,34 @@ describe("CommentsSidebar", () => {
       user.click(addButtons[1]),
     ).resolves.toBeUndefined();
   });
+
+  it("does not throw when comment payload getters throw", () => {
+    const commentWithThrowingGetters = Object.create(null) as {
+      id: unknown;
+      parentCommentId: unknown;
+    };
+    Object.defineProperty(commentWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "parentCommentId", {
+      get() {
+        throw new Error("parentCommentId getter failed");
+      },
+    });
+
+    expect(() =>
+      render(
+        <CommentsSidebar
+          comments={[commentWithThrowingGetters]}
+          onCreateComment={vi.fn()}
+          onReplyComment={vi.fn()}
+          onResolveComment={vi.fn()}
+          canComment
+        />,
+      ),
+    ).not.toThrow();
+    expect(screen.getByText("No comments yet.")).toBeInTheDocument();
+  });
 });
