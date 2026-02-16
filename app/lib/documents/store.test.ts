@@ -25,6 +25,9 @@ describe("document store", () => {
     expect(document.content).toContain('"type":"doc"');
     expect(document.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
     expect(document.id).toBeTruthy();
+
+    const controlCharTitle = createDocument("Bad\ntitle");
+    expect(controlCharTitle.title).toBe("Untitled");
   });
 
   it("falls back to default owner email for invalid owner input", () => {
@@ -98,6 +101,26 @@ describe("document store", () => {
 
     const documents = listDocuments();
     expect(documents[0]?.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
+  });
+
+  it("falls back to Untitled for malformed persisted document titles", () => {
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({
+        documents: [
+          {
+            id: "legacy-title",
+            title: "bad\ntitle",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "owner@example.com",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      }),
+    );
+
+    expect(listDocuments()[0]?.title).toBe("Untitled");
   });
 
   it("filters malformed persisted documents and normalizes legacy fields", () => {
@@ -242,5 +265,9 @@ describe("document store", () => {
 
     const untitled = updateDocumentTitle(created.id, "   ");
     expect(untitled?.title).toBe("Untitled");
+
+    const controlCharDoc = createDocument("Control");
+    const controlCharTitle = updateDocumentTitle(controlCharDoc.id, "bad\ntitle");
+    expect(controlCharTitle?.title).toBe("Untitled");
   });
 });

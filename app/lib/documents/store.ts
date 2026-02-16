@@ -3,6 +3,7 @@ import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
+import { hasControlChars } from "@/lib/validators/controlChars";
 import { isValidEmail } from "@/lib/validators/email";
 
 const STORAGE_KEY = "plan00.documents.v1";
@@ -47,10 +48,7 @@ function loadState(): DocumentStoreState {
           return [];
         }
 
-        const normalizedTitle =
-          typeof doc.title === "string" && doc.title.trim().length > 0
-            ? doc.title.trim()
-            : "Untitled";
+        const normalizedTitle = normalizeDocumentTitle(doc.title);
         const now = Date.now();
         const hasValidCreatedAt =
           typeof doc.createdAt === "number" &&
@@ -145,7 +143,7 @@ function normalizeOwnerEmail(ownerEmail: string | undefined) {
 
 export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL): AppDocument {
   const now = Date.now();
-  const normalizedTitle = title.trim() || "Untitled";
+  const normalizedTitle = normalizeDocumentTitle(title);
   const state = loadState();
   const document: AppDocument = {
     id: crypto.randomUUID(),
@@ -226,7 +224,7 @@ export function updateDocumentTitle(
   const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
 
-  const normalizedTitle = title.trim() || "Untitled";
+  const normalizedTitle = normalizeDocumentTitle(title);
   const existing = state.documents[index];
   if (existing.title === normalizedTitle) {
     return undefined;
@@ -322,5 +320,14 @@ export function deleteDocument(documentId: string) {
 
 export function resetDocumentsForTests() {
   persistState({ documents: [] });
+}
+
+function normalizeDocumentTitle(value: string | undefined) {
+  const normalizedValue = value?.trim();
+  if (!normalizedValue || hasControlChars(normalizedValue)) {
+    return "Untitled";
+  }
+
+  return normalizedValue;
 }
 
