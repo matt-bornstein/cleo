@@ -1,11 +1,12 @@
 import { prosemirrorJsonToHtml } from "@/lib/editor/serialization";
 
-export function exportHtml(content: string) {
-  return prosemirrorJsonToHtml(content);
+export function exportHtml(content: unknown) {
+  const normalizedContent = typeof content === "string" ? content : "";
+  return prosemirrorJsonToHtml(normalizedContent);
 }
 
-export function exportMarkdown(content: string) {
-  const html = prosemirrorJsonToHtml(content);
+export function exportMarkdown(content: unknown) {
+  const html = exportHtml(content);
   return html
     .replace(/<h1>(.*?)<\/h1>/gi, "# $1\n\n")
     .replace(/<h2>(.*?)<\/h2>/gi, "## $1\n\n")
@@ -16,12 +17,22 @@ export function exportMarkdown(content: string) {
     .trim();
 }
 
-export function downloadFile(content: string, filename: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType });
+export function downloadFile(content: unknown, filename: unknown, mimeType: unknown) {
+  const normalizedContent = typeof content === "string" ? content : "";
+  const normalizedFilename =
+    typeof filename === "string" && filename.trim().length > 0
+      ? filename.trim()
+      : "download.txt";
+  const normalizedMimeType =
+    typeof mimeType === "string" && mimeType.trim().length > 0
+      ? mimeType.trim()
+      : "text/plain;charset=utf-8";
+
+  const blob = new Blob([normalizedContent], { type: normalizedMimeType });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = filename;
+  anchor.download = normalizedFilename;
   anchor.click();
   URL.revokeObjectURL(url);
 }
