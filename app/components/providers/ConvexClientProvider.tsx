@@ -3,18 +3,29 @@
 import { useMemo } from "react";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProvider } from "convex/react";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 type ConvexClientProviderProps = {
-  children: React.ReactNode;
+  children: unknown;
 };
 
 export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
   const deploymentUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  const normalizedDeploymentUrl =
+    typeof deploymentUrl === "string" &&
+    deploymentUrl.trim().length > 0 &&
+    !hasControlChars(deploymentUrl.trim())
+      ? deploymentUrl.trim()
+      : undefined;
 
   const client = useMemo(() => {
-    if (!deploymentUrl) return null;
-    return new ConvexReactClient(deploymentUrl);
-  }, [deploymentUrl]);
+    if (!normalizedDeploymentUrl) return null;
+    try {
+      return new ConvexReactClient(normalizedDeploymentUrl);
+    } catch {
+      return null;
+    }
+  }, [normalizedDeploymentUrl]);
 
   if (!client) {
     return (
@@ -23,10 +34,25 @@ export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
           Convex is not connected (missing NEXT_PUBLIC_CONVEX_URL). Running with
           local scaffolding data.
         </div>
-        {children}
+        {toRenderableChildren(children)}
       </>
     );
   }
 
-  return <ConvexProvider client={client}>{children}</ConvexProvider>;
+  return <ConvexProvider client={client}>{toRenderableChildren(children)}</ConvexProvider>;
+}
+
+function toRenderableChildren(value: unknown) {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "boolean" ||
+    typeof value === "function" ||
+    typeof value === "symbol" ||
+    typeof value === "bigint"
+  ) {
+    return null;
+  }
+
+  return value as React.ReactNode;
 }
