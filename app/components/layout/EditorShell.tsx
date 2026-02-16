@@ -212,7 +212,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
                 fontSize={settings.editorFontSize}
                 lineSpacing={settings.editorLineSpacing}
                 readOnly={!canEdit}
-                onContentChange={(nextContent) => {
+                onContentChange={(nextContent: string) => {
                   if (!canEdit) return;
                   updateContent(documentId, nextContent);
                 }}
