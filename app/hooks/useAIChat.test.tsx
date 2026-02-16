@@ -921,6 +921,28 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("does not throw when onClearChat callback is malformed non-function", () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-clear-non-function",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+        onClearChat: 123 as unknown as (clearedAt: number) => void,
+      }),
+    );
+
+    expect(() => {
+      act(() => {
+        result.current.clearChat();
+      });
+    }).not.toThrow();
+    expect(result.current.error).toBeNull();
+    expect(result.current.messages).toEqual([]);
+  });
+
   it("floors generated chat timestamps at zero when clock is negative", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     createDiffMock.mockReturnValue({ id: "diff-negative-clock" });

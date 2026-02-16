@@ -322,7 +322,9 @@ export function useAIChat({
 
   const clearChat = useCallback(() => {
     const clearedAt = Math.max(0, Date.now());
-    onClearChat?.(clearedAt);
+    if (typeof onClearChat === "function") {
+      onClearChat(clearedAt);
+    }
     setMessages([]);
     setError(null);
   }, [onClearChat]);
