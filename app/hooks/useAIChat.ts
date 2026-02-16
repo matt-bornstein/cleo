@@ -21,7 +21,7 @@ type UseAIChatArgs = {
   documentId: string;
   currentDocumentContent: string;
   onApplyContent: (nextContent: string) => void;
-  currentUserId: string;
+  currentUserId: unknown;
   defaultModel?: unknown;
   chatClearedAt?: number;
   onClearChat?: (clearedAt: number) => void;

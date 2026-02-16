@@ -501,6 +501,58 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("falls back to default identity for malformed non-string current user ids", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-user-default" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied fallback identity edit.",
+            nextContent: "<p>Changed</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-user-default",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: 123,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Normalize identity fallback");
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/ai/stream",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "x-user-id": "local-dev-user",
+        }),
+      }),
+    );
+    expect(saveMessageMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        role: "user",
+        userId: "local-dev-user",
+      }),
+    );
+    expect(createDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "local-dev-user",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("trims document id before chat history lookup and request payload", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     createDiffMock.mockReturnValue({ id: "diff-doc-trim" });
