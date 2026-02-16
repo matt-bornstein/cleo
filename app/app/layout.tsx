@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { isValidElement } from "react";
+import type { ReactNode } from "react";
 
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 import "./globals.css";
@@ -36,7 +37,7 @@ export default function RootLayout({
   );
 }
 
-function toRenderableChildren(value: unknown) {
+function toRenderableChildren(value: unknown): ReactNode {
   if (value === null || value === undefined || typeof value === "boolean") {
     return null;
   }
@@ -50,9 +51,9 @@ function toRenderableChildren(value: unknown) {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item, index) => (
-      <span key={`layout-child-${index}`}>{toRenderableChildren(item)}</span>
-    ));
+    return value
+      .map((item) => toRenderableChildren(item))
+      .filter((item): item is Exclude<ReactNode, null> => item !== null);
   }
 
   return null;

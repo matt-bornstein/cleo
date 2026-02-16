@@ -72,4 +72,16 @@ describe("ConvexClientProvider", () => {
     expect(screen.getByText("123")).toBeInTheDocument();
     expect(convexReactClientMock).not.toHaveBeenCalled();
   });
+
+  it("renders only valid entries from mixed children arrays", () => {
+    render(
+      <ConvexClientProvider>
+        {[<span key="ok">OK</span>, { bad: true }, "Tail"] as unknown as ReactNode}
+      </ConvexClientProvider>,
+    );
+
+    expect(screen.getByText("OK")).toBeInTheDocument();
+    expect(screen.getByText("Tail")).toBeInTheDocument();
+    expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+  });
 });

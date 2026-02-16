@@ -31,4 +31,16 @@ describe("RootLayout", () => {
     expect(markup).toContain("convex-provider");
     expect(markup).not.toContain("bad");
   });
+
+  it("keeps renderable entries from mixed child arrays", () => {
+    const markup = renderToStaticMarkup(
+      RootLayout({
+        children: [<span key="ok">OK</span>, { bad: true }, "Tail"] as unknown,
+      }),
+    );
+
+    expect(markup).toContain("OK");
+    expect(markup).toContain("Tail");
+    expect(markup).not.toContain("[object Object]");
+  });
 });

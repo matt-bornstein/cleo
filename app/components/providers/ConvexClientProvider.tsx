@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { isValidElement } from "react";
+import type { ReactNode } from "react";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProvider } from "convex/react";
 import { hasControlChars } from "@/lib/validators/controlChars";
@@ -43,7 +44,7 @@ export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
   return <ConvexProvider client={client}>{toRenderableChildren(children)}</ConvexProvider>;
 }
 
-function toRenderableChildren(value: unknown) {
+function toRenderableChildren(value: unknown): ReactNode {
   if (value === null || value === undefined || typeof value === "boolean") {
     return null;
   }
@@ -57,9 +58,9 @@ function toRenderableChildren(value: unknown) {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item, index) => (
-      <span key={`convex-child-${index}`}>{toRenderableChildren(item)}</span>
-    ));
+    return value
+      .map((item) => toRenderableChildren(item))
+      .filter((item): item is Exclude<ReactNode, null> => item !== null);
   }
 
   return null;
