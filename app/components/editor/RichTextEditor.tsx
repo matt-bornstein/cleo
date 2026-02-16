@@ -11,7 +11,7 @@ import { useOptionalTiptapSync } from "@/hooks/useOptionalTiptapSync";
 type RichTextEditorProps = {
   documentId: unknown;
   content: unknown;
-  onContentChange: (content: string) => void;
+  onContentChange: unknown;
   onLocalUpdate?: unknown;
   fontSize?: number;
   lineSpacing?: number;
@@ -104,7 +104,9 @@ function LocalRichTextEditor({
     },
     editable,
     onUpdate: ({ editor: nextEditor }) => {
-      onContentChange(JSON.stringify(nextEditor.getJSON()));
+      if (typeof onContentChange === "function") {
+        onContentChange(JSON.stringify(nextEditor.getJSON()));
+      }
       if (typeof onLocalUpdate === "function") {
         onLocalUpdate();
       }
@@ -155,7 +157,9 @@ function SyncedRichTextEditor({
     },
     editable,
     onUpdate: ({ editor: nextEditor }) => {
-      onContentChange(JSON.stringify(nextEditor.getJSON()));
+      if (typeof onContentChange === "function") {
+        onContentChange(JSON.stringify(nextEditor.getJSON()));
+      }
       if (typeof onLocalUpdate === "function") {
         onLocalUpdate();
       }

@@ -135,4 +135,19 @@ describe("RichTextEditor", () => {
     await user.click(screen.getByRole("button", { name: "Trigger update" }));
     expect(onContentChange).toHaveBeenCalledTimes(1);
   });
+
+  it("does not throw when onContentChange callback is malformed non-function", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <RichTextEditor
+        documentId="doc-1"
+        content='{"type":"doc","content":[]}'
+        onContentChange={123}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Trigger update" }));
+    expect(useOptionalTiptapSyncMock).not.toHaveBeenCalled();
+  });
 });

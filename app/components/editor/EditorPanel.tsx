@@ -65,7 +65,7 @@ export function EditorPanel({
         <RichTextEditor
           documentId={documentId}
           content={content}
-          onContentChange={(nextContent) => {
+          onContentChange={(nextContent: string) => {
             if (typeof onContentChange === "function") {
               onContentChange(nextContent);
             }
