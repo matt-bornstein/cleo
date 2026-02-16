@@ -144,6 +144,14 @@ http.route({
                   content: newContent,
                 });
 
+                // Save AI diff record for version history
+                await ctx.runMutation(api.diffs.createAiDiff, {
+                  documentId,
+                  content: newContent,
+                  aiPrompt: prompt,
+                  aiModel: model,
+                });
+
                 // Notify client that changes were applied
                 await writer.write(
                   encoder.encode(

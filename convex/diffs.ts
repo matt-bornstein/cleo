@@ -68,6 +68,33 @@ export const triggerIdleSave = mutation({
   },
 });
 
+export const createAiDiff = mutation({
+  args: {
+    documentId: v.id("documents"),
+    content: v.string(), // New ProseMirror JSON
+    aiPrompt: v.optional(v.string()),
+    aiModel: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const now = Date.now();
+    const diffId = await ctx.db.insert("diffs", {
+      documentId: args.documentId,
+      userId,
+      patch: "ai_edit",
+      snapshotAfter: args.content,
+      source: "ai",
+      aiPrompt: args.aiPrompt,
+      aiModel: args.aiModel,
+      createdAt: now,
+    });
+
+    return diffId;
+  },
+});
+
 export const listByDocument = query({
   args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {
