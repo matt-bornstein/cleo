@@ -1,7 +1,12 @@
 const DEFAULT_AI_USER_ID = "local-dev-user";
+const MAX_AI_USER_ID_LENGTH = 256;
 
 export function normalizeAIUserId(userId?: string | null) {
   const normalized = userId?.trim();
-  return normalized ? normalized : DEFAULT_AI_USER_ID;
+  if (!normalized || normalized.length > MAX_AI_USER_ID_LENGTH) {
+    return DEFAULT_AI_USER_ID;
+  }
+
+  return normalized;
 }
 

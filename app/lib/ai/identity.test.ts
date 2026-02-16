@@ -10,5 +10,9 @@ describe("normalizeAIUserId", () => {
     expect(normalizeAIUserId(undefined)).toBe("local-dev-user");
     expect(normalizeAIUserId(null)).toBe("local-dev-user");
   });
+
+  it("falls back to local default for oversized identities", () => {
+    expect(normalizeAIUserId("u".repeat(257))).toBe("local-dev-user");
+  });
 });
 

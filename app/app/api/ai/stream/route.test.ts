@@ -404,6 +404,24 @@ describe("POST /api/ai/stream", () => {
     await readStream(response);
     expect(aiLockManager.getStatus("doc-user-normalize")).toEqual({ locked: false });
   });
+
+  it("normalizes oversized user header to default lock identity", async () => {
+    aiLockManager.acquire("doc-user-long", "local-dev-user");
+
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": "u".repeat(257),
+      },
+      body: JSON.stringify(createRequestBody({ documentId: "doc-user-long" })),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    await readStream(response);
+    expect(aiLockManager.getStatus("doc-user-long")).toEqual({ locked: false });
+  });
 });
 
 describe("GET /api/ai/stream", () => {
