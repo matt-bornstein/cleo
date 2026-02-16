@@ -1,5 +1,6 @@
 import { createDocument, getDocumentById, resetDocumentsForTests } from "@/lib/documents/store";
 import {
+  createDiff,
   ensureCreatedDiff,
   listDiffsByDocument,
   resetDiffsForTests,
@@ -82,5 +83,26 @@ describe("diff store triggerIdleSave", () => {
     const diffs = listDiffsByDocument(document.id);
     expect(diffs.map((diff) => diff.source)).toContain("created");
     expect(getDocumentById(document.id)?.content).toBe(document.content);
+  });
+
+  it("rejects invalid document ids for diff creation and idle saves", () => {
+    const invalidCreate = createDiff({
+      documentId: "   ",
+      userId: "reviewer@example.com",
+      snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+      source: "manual",
+    });
+    expect(invalidCreate).toBeNull();
+
+    const saveResult = triggerIdleSave({
+      documentId: "doc-\ninvalid",
+      snapshot: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+    });
+    expect(saveResult).toEqual({
+      skipped: true,
+      reason: "invalid_document_id",
+    });
+
+    expect(listDiffsByDocument("doc-\ninvalid")).toEqual([]);
   });
 });
