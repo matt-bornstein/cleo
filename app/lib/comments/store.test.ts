@@ -416,4 +416,51 @@ describe("comments store", () => {
       }),
     ]);
   });
+
+  it("drops persisted cyclic parent references", () => {
+    window.localStorage.setItem(
+      "plan00.comments.v1",
+      JSON.stringify({
+        comments: [
+          {
+            id: "comment-a",
+            documentId: "doc-cycles",
+            userId: "user-1",
+            content: "A",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            parentCommentId: "comment-b",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          {
+            id: "comment-b",
+            documentId: "doc-cycles",
+            userId: "user-1",
+            content: "B",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            parentCommentId: "comment-a",
+            createdAt: 2,
+            updatedAt: 2,
+          },
+        ],
+      }),
+    );
+
+    expect(listComments("doc-cycles")).toEqual([
+      expect.objectContaining({
+        id: "comment-a",
+        parentCommentId: undefined,
+      }),
+      expect.objectContaining({
+        id: "comment-b",
+        parentCommentId: undefined,
+      }),
+    ]);
+  });
 });

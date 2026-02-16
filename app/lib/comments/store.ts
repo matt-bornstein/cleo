@@ -108,21 +108,19 @@ function loadState(): CommentState {
     }
 
     const dedupedComments = Array.from(dedupedByCommentId.values());
-    const commentIdsByDocument = new Map<string, Set<string>>();
+    const commentsByDocumentAndId = new Map<string, Map<string, CommentRecord>>();
     for (const comment of dedupedComments) {
-      const documentCommentIds =
-        commentIdsByDocument.get(comment.documentId) ?? new Set<string>();
-      documentCommentIds.add(comment.id);
-      commentIdsByDocument.set(comment.documentId, documentCommentIds);
+      const commentsById = commentsByDocumentAndId.get(comment.documentId) ?? new Map();
+      commentsById.set(comment.id, comment);
+      commentsByDocumentAndId.set(comment.documentId, commentsById);
     }
 
     return {
       comments: dedupedComments.map((comment) => {
-        const documentCommentIds = commentIdsByDocument.get(comment.documentId);
+        const commentsById = commentsByDocumentAndId.get(comment.documentId);
         const normalizedParentCommentId =
           comment.parentCommentId &&
-          comment.parentCommentId !== comment.id &&
-          documentCommentIds?.has(comment.parentCommentId)
+          isValidParentCommentReference(comment.id, comment.parentCommentId, commentsById)
             ? comment.parentCommentId
             : undefined;
 
@@ -249,4 +247,32 @@ function normalizeCommentReferenceId(value: string | undefined) {
   }
 
   return normalizedValue;
+}
+
+function isValidParentCommentReference(
+  commentId: string,
+  parentCommentId: string,
+  commentsById: Map<string, CommentRecord> | undefined,
+) {
+  if (!commentsById) {
+    return false;
+  }
+
+  let currentParentId: string | undefined = parentCommentId;
+  const visited = new Set<string>([commentId]);
+  while (currentParentId) {
+    if (visited.has(currentParentId)) {
+      return false;
+    }
+
+    visited.add(currentParentId);
+    const parentComment = commentsById.get(currentParentId);
+    if (!parentComment) {
+      return false;
+    }
+
+    currentParentId = parentComment.parentCommentId;
+  }
+
+  return true;
 }
