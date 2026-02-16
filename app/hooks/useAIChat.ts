@@ -76,29 +76,34 @@ function parseAIStreamPayload(raw: string): AIStreamPayload | null {
   }
 
   const candidate = parsed as Record<string, unknown>;
-  if (candidate.type === "token" && typeof candidate.text === "string") {
+  const type = readAIStreamField(candidate, "type");
+  const text = readAIStreamField(candidate, "text");
+  if (type === "token" && typeof text === "string") {
     return {
       type: "token",
-      text: candidate.text,
+      text,
     };
   }
 
+  const assistantMessage = readAIStreamField(candidate, "assistantMessage");
+  const nextContent = readAIStreamField(candidate, "nextContent");
   if (
-    candidate.type === "done" &&
-    typeof candidate.assistantMessage === "string" &&
-    typeof candidate.nextContent === "string"
+    type === "done" &&
+    typeof assistantMessage === "string" &&
+    typeof nextContent === "string"
   ) {
     return {
       type: "done",
-      assistantMessage: candidate.assistantMessage,
-      nextContent: candidate.nextContent,
+      assistantMessage,
+      nextContent,
     };
   }
 
-  if (candidate.type === "error" && typeof candidate.error === "string") {
+  const error = readAIStreamField(candidate, "error");
+  if (type === "error" && typeof error === "string") {
     return {
       type: "error",
-      error: candidate.error,
+      error,
     };
   }
 
@@ -201,6 +206,17 @@ function readPayloadError(payload: unknown) {
 
   try {
     return (payload as { error?: unknown }).error;
+  } catch {
+    return undefined;
+  }
+}
+
+function readAIStreamField(
+  payload: Record<string, unknown>,
+  key: "type" | "text" | "assistantMessage" | "nextContent" | "error",
+) {
+  try {
+    return payload[key];
   } catch {
     return undefined;
   }

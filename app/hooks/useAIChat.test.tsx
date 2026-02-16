@@ -500,6 +500,51 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("surfaces malformed stream payload errors when payload getters throw", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(createRawStreamResponse(["{\"type\":\"token\"}\n"]));
+    vi.stubGlobal("fetch", fetchMock);
+    const parsedWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(parsedWithThrowingGetters, "type", {
+      get() {
+        throw new Error("type getter failed");
+      },
+    });
+    Object.defineProperty(parsedWithThrowingGetters, "text", {
+      get() {
+        throw new Error("text getter failed");
+      },
+    });
+    vi.spyOn(JSON, "parse").mockImplementationOnce(() => parsedWithThrowingGetters);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-stream-getter-throws",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger stream getter trap");
+    });
+
+    expect(result.current.error).toBe("Malformed AI stream event.");
+    expect(result.current.messages.at(-1)).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "Error: Malformed AI stream event.",
+      }),
+    );
+    expect(createDiffMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).toHaveBeenCalledTimes(2);
+
+    vi.unstubAllGlobals();
+  });
+
   it("surfaces malformed done events with non-string nextContent payload", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi
