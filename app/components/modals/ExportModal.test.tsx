@@ -175,4 +175,19 @@ describe("ExportModal", () => {
     await user.click(screen.getByRole("button", { name: "PDF" }));
     expect(openSpy).toHaveBeenCalled();
   });
+
+  it("does not throw when onOpenChange callback is malformed non-function", async () => {
+    const user = userEvent.setup();
+    render(
+      <ExportModal
+        open
+        onOpenChange={123 as unknown as (open: boolean) => void}
+        documentTitle="Malformed callback"
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Markdown" }));
+    await user.click(screen.getByRole("button", { name: "HTML" }));
+  });
 });

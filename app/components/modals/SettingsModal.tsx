@@ -16,10 +16,10 @@ import { getSettings, saveSettings } from "@/lib/settings/store";
 import type { AppUserSettings, ThemeSetting } from "@/lib/types";
 
 type SettingsModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSaved?: () => void;
-  onSignOut?: () => Promise<void> | void;
+  open: unknown;
+  onOpenChange: unknown;
+  onSaved?: unknown;
+  onSignOut?: unknown;
 };
 
 export function SettingsModal({
@@ -28,17 +28,20 @@ export function SettingsModal({
   onSaved,
   onSignOut,
 }: SettingsModalProps) {
+  const normalizedOpen = open === true;
   const [settings, setSettings] = useState<AppUserSettings>(getSettings());
   const hasSignOutHandler = typeof onSignOut === "function";
 
   return (
     <Dialog
-      open={open}
+      open={normalizedOpen}
       onOpenChange={(nextOpen) => {
         if (nextOpen) {
           setSettings(getSettings());
         }
-        onOpenChange(nextOpen);
+        if (typeof onOpenChange === "function") {
+          onOpenChange(nextOpen);
+        }
       }}
     >
       <DialogContent>
@@ -137,7 +140,14 @@ export function SettingsModal({
                 Sign out
               </Button>
             ) : null}
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (typeof onOpenChange === "function") {
+                  onOpenChange(false);
+                }
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -146,7 +156,9 @@ export function SettingsModal({
                 if (typeof onSaved === "function") {
                   onSaved();
                 }
-                onOpenChange(false);
+                if (typeof onOpenChange === "function") {
+                  onOpenChange(false);
+                }
               }}
             >
               Save

@@ -11,10 +11,10 @@ import {
 import { downloadFile, exportHtml, exportMarkdown } from "@/lib/export";
 
 type ExportModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  documentTitle: string;
-  content: string;
+  open: unknown;
+  onOpenChange: unknown;
+  documentTitle: unknown;
+  content: unknown;
 };
 
 function toSafeTitle(documentTitle: unknown) {
@@ -36,9 +36,17 @@ export function ExportModal({
   content,
 }: ExportModalProps) {
   const safeTitle = toSafeTitle(documentTitle);
+  const normalizedOpen = open === true;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={normalizedOpen}
+      onOpenChange={(nextOpen) => {
+        if (typeof onOpenChange === "function") {
+          onOpenChange(nextOpen);
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Export document</DialogTitle>

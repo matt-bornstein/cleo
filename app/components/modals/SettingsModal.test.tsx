@@ -72,4 +72,24 @@ describe("SettingsModal", () => {
     expect(getSettings().userEmail).toBe("owner@example.com");
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("does not throw when onOpenChange callback is malformed non-function", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SettingsModal
+        open
+        onOpenChange={123 as unknown as (open: boolean) => void}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    const emailInput = screen.getByDisplayValue(DEFAULT_LOCAL_USER_EMAIL);
+    await user.clear(emailInput);
+    await user.type(emailInput, "owner@example.com");
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(getSettings().userEmail).toBe("owner@example.com");
+  });
 });
