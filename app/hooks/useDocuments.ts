@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import {
   createDocument,
+  deleteDocument,
   getDocumentById,
   listDocuments,
   setDocumentChatClearedAt,
@@ -54,12 +55,22 @@ export function useDocuments(search?: string) {
     [refresh],
   );
 
+  const remove = useCallback(
+    (documentId: string) => {
+      const removed = deleteDocument(documentId);
+      refresh();
+      return removed;
+    },
+    [refresh],
+  );
+
   return {
     documents,
     create,
     getById,
     updateContent,
     setChatClearedAt,
+    remove,
     refresh,
   };
 }

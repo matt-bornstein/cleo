@@ -30,7 +30,8 @@ type EditorShellProps = {
 
 export function EditorShell({ documentId }: EditorShellProps) {
   const router = useRouter();
-  const { documents, create, getById, updateContent, setChatClearedAt } = useDocuments();
+  const { documents, create, getById, updateContent, setChatClearedAt, remove } =
+    useDocuments();
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -197,6 +198,13 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenChange={setOpenModalOpen}
         documents={documents}
         onOpenDocument={(nextDocumentId) => router.push(`/editor/${nextDocumentId}`)}
+        onDeleteDocument={(targetDocumentId) => {
+          const removed = remove(targetDocumentId);
+          if (!removed) return;
+          if (targetDocumentId === documentId) {
+            router.push("/editor");
+          }
+        }}
       />
       <VersionHistoryModal
         open={historyModalOpen}

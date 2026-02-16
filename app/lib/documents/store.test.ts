@@ -1,5 +1,6 @@
 import {
   createDocument,
+  deleteDocument,
   getDocumentById,
   listDocuments,
   resetDocumentsForTests,
@@ -46,5 +47,12 @@ describe("document store", () => {
 
     expect(updated?.chatClearedAt).toBe(1234);
     expect(getDocumentById(created.id)?.chatClearedAt).toBe(1234);
+  });
+
+  it("deletes document by id", () => {
+    const created = createDocument("Delete me");
+    const removed = deleteDocument(created.id);
+    expect(removed).toBe(true);
+    expect(getDocumentById(created.id)).toBeUndefined();
   });
 });

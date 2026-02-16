@@ -131,6 +131,14 @@ export function setDocumentChatClearedAt(
   return updated;
 }
 
+export function deleteDocument(documentId: string) {
+  const state = loadState();
+  const beforeCount = state.documents.length;
+  state.documents = state.documents.filter((doc) => doc.id !== documentId);
+  persistState(state);
+  return state.documents.length !== beforeCount;
+}
+
 export function resetDocumentsForTests() {
   persistState({ documents: [] });
 }
