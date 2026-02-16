@@ -171,43 +171,50 @@ export function createDiff(params: unknown) {
     return null;
   }
 
-  const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+  const documentId = safeReadCreateDiffField(candidate, "documentId");
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  const source = safeReadCreateDiffField(candidate, "source");
+  const snapshotAfter = safeReadCreateDiffField(candidate, "snapshotAfter");
   const normalizedSource =
-    candidate.source === "manual" ||
-    candidate.source === "created" ||
-    candidate.source === "ai"
-      ? candidate.source
+    source === "manual" ||
+    source === "created" ||
+    source === "ai"
+      ? source
       : undefined;
   if (
     !isValidDocumentId(normalizedDocumentId) ||
-    !isValidDocumentContentJson(candidate.snapshotAfter) ||
+    !isValidDocumentContentJson(snapshotAfter) ||
     !normalizedSource ||
     !ALLOWED_SOURCES.has(normalizedSource)
   ) {
     return null;
   }
-  const normalizedMetadata = normalizeDiffMetadata(candidate.aiPrompt, candidate.aiModel);
+  const aiPrompt = safeReadCreateDiffField(candidate, "aiPrompt");
+  const aiModel = safeReadCreateDiffField(candidate, "aiModel");
+  const normalizedMetadata = normalizeDiffMetadata(aiPrompt, aiModel);
   if (!normalizedMetadata) {
     return null;
   }
 
   const state = loadState();
+  const previousSnapshotValue = safeReadCreateDiffField(candidate, "previousSnapshot");
   const previousSnapshot = resolvePreviousSnapshot({
     state,
     documentId: normalizedDocumentId,
     previousSnapshot:
-      typeof candidate.previousSnapshot === "string"
-        ? candidate.previousSnapshot
+      typeof previousSnapshotValue === "string"
+        ? previousSnapshotValue
         : undefined,
   });
 
-  const patch = createDiffPatch(previousSnapshot, candidate.snapshotAfter);
+  const patch = createDiffPatch(previousSnapshot, snapshotAfter);
+  const userId = safeReadCreateDiffField(candidate, "userId");
   const diffRecord: DiffRecord = {
     id: generateLocalId(),
     documentId: normalizedDocumentId,
-    userId: normalizeDiffUserId(candidate.userId),
+    userId: normalizeDiffUserId(userId),
     patch,
-    snapshotAfter: candidate.snapshotAfter,
+    snapshotAfter,
     source: normalizedSource,
     aiPrompt: normalizedMetadata.aiPrompt,
     aiModel: normalizedMetadata.aiModel,
@@ -434,6 +441,32 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeReadCreateDiffField(
+  params: {
+    documentId?: unknown;
+    userId?: unknown;
+    snapshotAfter?: unknown;
+    source?: unknown;
+    aiPrompt?: unknown;
+    aiModel?: unknown;
+    previousSnapshot?: unknown;
+  },
+  key:
+    | "documentId"
+    | "userId"
+    | "snapshotAfter"
+    | "source"
+    | "aiPrompt"
+    | "aiModel"
+    | "previousSnapshot",
+) {
+  try {
+    return params[key];
+  } catch {
+    return undefined;
   }
 }
 

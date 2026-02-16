@@ -327,6 +327,67 @@ describe("diff store triggerIdleSave", () => {
     expect(diff).toBeNull();
   });
 
+  it("handles createDiff payload getter traps safely", () => {
+    const payloadWithThrowingRequiredField = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingRequiredField, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingRequiredField, "snapshotAfter", {
+      value: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+    });
+    Object.defineProperty(payloadWithThrowingRequiredField, "source", {
+      value: "manual",
+    });
+
+    expect(
+      createDiff(
+        payloadWithThrowingRequiredField as unknown as Parameters<typeof createDiff>[0],
+      ),
+    ).toBeNull();
+
+    const document = createDocument("Getter-safe diff payload");
+    const payloadWithThrowingOptionalFields = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingOptionalFields, "documentId", {
+      value: document.id,
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "snapshotAfter", {
+      value: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "source", {
+      value: "manual",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "userId", {
+      get() {
+        throw new Error("userId getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "aiPrompt", {
+      get() {
+        throw new Error("aiPrompt getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "aiModel", {
+      get() {
+        throw new Error("aiModel getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "previousSnapshot", {
+      get() {
+        throw new Error("previousSnapshot getter failed");
+      },
+    });
+
+    const diff = createDiff(
+      payloadWithThrowingOptionalFields as unknown as Parameters<typeof createDiff>[0],
+    );
+    expect(diff).not.toBeNull();
+    expect(diff?.userId).toBe(DEFAULT_LOCAL_USER_ID);
+    expect(diff?.aiPrompt).toBeUndefined();
+    expect(diff?.aiModel).toBeUndefined();
+  });
+
   it("rejects invalid snapshots for create/save/restore flows", () => {
     const document = createDocument("Invalid snapshot doc");
 
