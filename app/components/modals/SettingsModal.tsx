@@ -40,9 +40,7 @@ export function SettingsModal({
         if (nextOpen) {
           setSettings(readSettingsSafely());
         }
-        if (typeof onOpenChange === "function") {
-          onOpenChange(nextOpen);
-        }
+        safeOnOpenChange(onOpenChange, nextOpen);
       }}
     >
       <DialogContent>
@@ -133,9 +131,7 @@ export function SettingsModal({
               <Button
                 variant="outline"
                 onClick={() => {
-                  if (typeof onSignOut === "function") {
-                    void onSignOut();
-                  }
+                  safeOnSignOut(onSignOut);
                 }}
               >
                 Sign out
@@ -144,9 +140,7 @@ export function SettingsModal({
             <Button
               variant="secondary"
               onClick={() => {
-                if (typeof onOpenChange === "function") {
-                  onOpenChange(false);
-                }
+                safeOnOpenChange(onOpenChange, false);
               }}
             >
               Cancel
@@ -154,12 +148,8 @@ export function SettingsModal({
             <Button
               onClick={() => {
                 saveSettingsSafely(settings);
-                if (typeof onSaved === "function") {
-                  onSaved();
-                }
-                if (typeof onOpenChange === "function") {
-                  onOpenChange(false);
-                }
+                safeOnSaved(onSaved);
+                safeOnOpenChange(onOpenChange, false);
               }}
             >
               Save
@@ -195,4 +185,42 @@ function createFallbackSettings(): AppUserSettings {
     editorLineSpacing: 1.6,
     userEmail: DEFAULT_LOCAL_USER_EMAIL,
   };
+}
+
+function safeOnOpenChange(onOpenChange: unknown, nextOpen: boolean) {
+  if (typeof onOpenChange !== "function") {
+    return;
+  }
+
+  try {
+    onOpenChange(nextOpen);
+  } catch {
+    return;
+  }
+}
+
+function safeOnSaved(onSaved: unknown) {
+  if (typeof onSaved !== "function") {
+    return;
+  }
+
+  try {
+    onSaved();
+  } catch {
+    return;
+  }
+}
+
+function safeOnSignOut(onSignOut: unknown) {
+  if (typeof onSignOut !== "function") {
+    return;
+  }
+
+  try {
+    void Promise.resolve(onSignOut()).catch(() => {
+      return;
+    });
+  } catch {
+    return;
+  }
 }

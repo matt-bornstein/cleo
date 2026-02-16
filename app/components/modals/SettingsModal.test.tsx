@@ -125,4 +125,41 @@ describe("SettingsModal", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("does not throw when callbacks throw", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SettingsModal
+        open
+        onOpenChange={() => {
+          throw new Error("onOpenChange failed");
+        }}
+        onSaved={() => {
+          throw new Error("onSaved failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Save" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Cancel" })),
+    ).resolves.toBeUndefined();
+  });
+
+  it("does not throw when sign out handler rejects", async () => {
+    const user = userEvent.setup();
+    const onSignOut = vi.fn().mockRejectedValue(new Error("sign out failed"));
+
+    render(
+      <SettingsModal open onOpenChange={vi.fn()} onSignOut={onSignOut} />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Sign out" })),
+    ).resolves.toBeUndefined();
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+  });
 });
