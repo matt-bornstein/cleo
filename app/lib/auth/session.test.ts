@@ -11,5 +11,7 @@ describe("local auth cookie helper", () => {
   it("rejects missing or invalid auth cookie", () => {
     expect(hasValidLocalAuthCookie(undefined)).toBe(false);
     expect(hasValidLocalAuthCookie("0")).toBe(false);
+    expect(hasValidLocalAuthCookie(1)).toBe(false);
+    expect(hasValidLocalAuthCookie("1", 1)).toBe(false);
   });
 });

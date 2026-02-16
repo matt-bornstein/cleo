@@ -2,8 +2,12 @@ export const LOCAL_AUTH_COOKIE = "plan00_local_auth";
 export const LOCAL_AUTH_COOKIE_VALUE = "1";
 
 export function hasValidLocalAuthCookie(
-  cookieValue: string | undefined,
-  expectedValue = LOCAL_AUTH_COOKIE_VALUE,
+  cookieValue: unknown,
+  expectedValue: unknown = LOCAL_AUTH_COOKIE_VALUE,
 ) {
-  return cookieValue === expectedValue;
+  return (
+    typeof cookieValue === "string" &&
+    typeof expectedValue === "string" &&
+    cookieValue === expectedValue
+  );
 }
