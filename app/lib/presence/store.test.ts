@@ -4,7 +4,6 @@ import {
   resetPresenceForTests,
   updatePresence,
 } from "@/lib/presence/store";
-import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 
 describe("presence store", () => {
   beforeEach(() => {
@@ -80,6 +79,14 @@ describe("presence store", () => {
             data: {},
             updatedAt: 3,
           },
+          {
+            id: "duplicate-visitor",
+            documentId: "doc-valid",
+            visitorId: "visitor-1",
+            userId: "user-2",
+            data: { name: "Latest" },
+            updatedAt: 4,
+          },
         ],
       }),
     );
@@ -88,10 +95,10 @@ describe("presence store", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]).toEqual(
       expect.objectContaining({
-        id: "valid-presence",
+        id: "duplicate-visitor",
         documentId: "doc-valid",
         visitorId: "visitor-1",
-        userId: DEFAULT_LOCAL_USER_ID,
+        userId: "user-2",
       }),
     );
   });

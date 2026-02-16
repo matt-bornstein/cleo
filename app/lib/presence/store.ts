@@ -26,8 +26,7 @@ function loadState(): PresenceState {
       return { presence: [] };
     }
 
-    return {
-      presence: parsed.presence.flatMap((entry) => {
+    const sanitizedPresence = parsed.presence.flatMap((entry) => {
         const normalizedDocumentId = normalizeDocumentId(entry.documentId);
         const normalizedPresenceId = entry.id?.trim();
         const normalizedVisitorId = normalizePresenceVisitorId(entry.visitorId);
@@ -50,7 +49,15 @@ function loadState(): PresenceState {
             userId: normalizePresenceUserId(entry.userId),
           },
         ];
-      }),
+      });
+
+    const dedupedByVisitorId = new Map<string, PresenceRecord>();
+    for (const entry of sanitizedPresence) {
+      dedupedByVisitorId.set(entry.visitorId, entry);
+    }
+
+    return {
+      presence: Array.from(dedupedByVisitorId.values()),
     };
   } catch {
     return { presence: [] };
