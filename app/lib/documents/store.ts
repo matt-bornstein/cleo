@@ -24,16 +24,25 @@ const inMemoryState: DocumentStoreState = {
   documents: [],
 };
 
-function canUseStorage() {
-  return typeof window !== "undefined" && !!window.localStorage;
+function getStorage() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function loadState(): DocumentStoreState {
-  if (!canUseStorage()) {
+  const storage = getStorage();
+  if (!storage) {
     return inMemoryState;
   }
 
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const raw = safeGetItem(storage, STORAGE_KEY);
   if (!raw) {
     return { documents: [] };
   }
@@ -152,12 +161,13 @@ function loadState(): DocumentStoreState {
 }
 
 function persistState(state: DocumentStoreState) {
-  if (!canUseStorage()) {
-    inMemoryState.documents = state.documents;
+  inMemoryState.documents = [...state.documents];
+  const storage = getStorage();
+  if (!storage) {
     return;
   }
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  safeSetItem(storage, STORAGE_KEY, JSON.stringify(state));
 }
 
 function normalizeOwnerEmail(ownerEmail: unknown) {
@@ -363,6 +373,7 @@ export function deleteDocument(documentId: unknown) {
 }
 
 export function resetDocumentsForTests() {
+  inMemoryState.documents = [];
   persistState({ documents: [] });
 }
 
@@ -373,5 +384,21 @@ function normalizeDocumentTitle(value: unknown) {
   }
 
   return normalizedValue;
+}
+
+function safeGetItem(storage: Storage, key: string) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
 }
 

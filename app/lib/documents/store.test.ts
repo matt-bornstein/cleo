@@ -13,7 +13,16 @@ import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
 describe("document store", () => {
+  const localStorageDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    "localStorage",
+  );
+
   beforeEach(() => {
+    vi.restoreAllMocks();
+    if (localStorageDescriptor) {
+      Object.defineProperty(window, "localStorage", localStorageDescriptor);
+    }
     resetDocumentsForTests();
     window.localStorage.clear();
   });
@@ -454,6 +463,38 @@ describe("document store", () => {
       setDocumentChatClearedAt("doc-valid", "123" as unknown as number),
     ).toBeUndefined();
     expect(deleteDocument(123 as unknown as string)).toBe(false);
+  });
+
+  it("falls back to in-memory state when localStorage getter throws", () => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("localStorage getter failed");
+      },
+    });
+
+    const created = createDocument("Memory only");
+    expect(created.title).toBe("Memory only");
+    expect(listDocuments().map((document) => document.id)).toContain(created.id);
+  });
+
+  it("returns empty list when localStorage getItem throws", () => {
+    createDocument("Persisted");
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("getItem failed");
+    });
+
+    expect(listDocuments()).toEqual([]);
+  });
+
+  it("returns normalized writes even when localStorage setItem throws", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("setItem failed");
+    });
+
+    const created = createDocument("SetItem fails");
+    expect(created.title).toBe("SetItem fails");
+    expect(created.content).toContain('"type":"doc"');
   });
 
   it("updates document title and normalizes empty title", () => {
