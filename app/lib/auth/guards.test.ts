@@ -9,6 +9,7 @@ describe("auth guards", () => {
     expect(isProtectedPath("/editor-archive")).toBe(false);
     expect(isProtectedPath("/sign-in")).toBe(false);
     expect(isProtectedPath(123)).toBe(false);
+    expect(isProtectedPath("/editor/\nmalformed")).toBe(false);
   });
 
   it("redirects only when path is protected and user is unauthenticated", () => {

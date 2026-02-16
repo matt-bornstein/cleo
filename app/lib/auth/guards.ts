@@ -1,5 +1,10 @@
+import { hasControlChars } from "@/lib/validators/controlChars";
+
 export function isProtectedPath(pathname: unknown) {
   const normalizedPathname = normalizePathname(pathname);
+  if (!normalizedPathname || hasControlChars(normalizedPathname)) {
+    return false;
+  }
   return (
     normalizedPathname === "/editor" ||
     normalizedPathname.startsWith("/editor/")
