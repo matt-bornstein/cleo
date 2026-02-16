@@ -69,31 +69,28 @@ A real-time collaborative rich text editor built with **Next.js 16**, **Convex**
    npm install
    ```
 
-3. Start Convex development server:
+3. Push Convex schema and functions:
    ```bash
-   npx convex dev
+   npm run convex:push
    ```
 
-4. Start Next.js development server:
+4. Set up authentication:
+   ```bash
+   npm run setup:auth
+   npx convex env set SITE_URL http://localhost:3000
+   ```
+
+5. Start Convex development server (in one terminal):
+   ```bash
+   npm run convex:dev
+   ```
+
+6. Start Next.js development server (in another terminal):
    ```bash
    npm run dev
    ```
 
-5. Open http://localhost:3000
-
-### Authentication Setup
-
-Generate JWT keys (required for auth to work):
-
-```bash
-node scripts/setup-auth-keys.mjs
-```
-
-Set the site URL for OAuth redirects:
-
-```bash
-npx convex env set SITE_URL http://localhost:3000
-```
+7. Open http://localhost:3000
 
 The app supports two auth methods:
 - **Email/Password** — works immediately, no external setup needed
@@ -148,10 +145,24 @@ npx convex env set GEMINI_API_KEY <your-key>
 └── known-issues.md         # Known limitations
 ```
 
+## Development Scripts
+
+```bash
+npm run dev           # Start Next.js dev server
+npm run convex:dev    # Start Convex dev server (local anonymous backend)
+npm run convex:push   # Push Convex functions once
+npm run setup:auth    # Generate and set JWT keys for auth
+npm run test          # Run tests
+npm run test:watch    # Run tests in watch mode
+npm run typecheck     # TypeScript type checking
+npm run build         # Production build
+npm run lint          # ESLint
+```
+
 ## Testing
 
 ```bash
-npx vitest run
+npm test
 ```
 
 ## License
