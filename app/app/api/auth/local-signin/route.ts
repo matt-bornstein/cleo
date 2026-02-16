@@ -5,11 +5,7 @@ import { LOCAL_AUTH_COOKIE, LOCAL_AUTH_COOKIE_VALUE } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   const payload = await parseJsonBody(request);
-  const nextPath = sanitizeNextPath(
-    typeof payload === "object" && payload !== null && "next" in payload
-      ? (payload as { next?: unknown }).next
-      : undefined,
-  );
+  const nextPath = sanitizeNextPath(readNextPathFromPayload(payload));
 
   const response = NextResponse.json({ ok: true, next: nextPath });
   response.cookies.set(LOCAL_AUTH_COOKIE, LOCAL_AUTH_COOKIE_VALUE, {
@@ -53,6 +49,18 @@ function readJsonFunction(request: unknown) {
 
     const owner = request as { json: () => Promise<unknown> };
     return () => Reflect.apply(candidate, owner, []);
+  } catch {
+    return undefined;
+  }
+}
+
+function readNextPathFromPayload(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (payload as { next?: unknown }).next;
   } catch {
     return undefined;
   }

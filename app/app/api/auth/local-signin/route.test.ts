@@ -30,6 +30,25 @@ describe("POST /api/auth/local-signin", () => {
     expect(payload.next).toBe("/editor");
   });
 
+  it("falls back to /editor when payload next getter throws", async () => {
+    const payloadWithThrowingNext = Object.create(null) as { next: unknown };
+    Object.defineProperty(payloadWithThrowingNext, "next", {
+      get() {
+        throw new Error("next getter failed");
+      },
+    });
+
+    const malformedRequest = {
+      json: async () => payloadWithThrowingNext,
+    } as unknown as Request;
+    const response = await POST(malformedRequest);
+    const payload = (await response.json()) as { ok: boolean; next: string };
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.next).toBe("/editor");
+  });
+
   it("sets local auth cookie and returns next path", async () => {
     const request = new Request("http://localhost/api/auth/local-signin", {
       method: "POST",
