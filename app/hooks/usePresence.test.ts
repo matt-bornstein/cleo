@@ -72,6 +72,30 @@ describe("filterStalePresence", () => {
 
     expect(active).toEqual([{ id: "valid", updatedAt: 9_000 }]);
   });
+
+  it("ignores entries when updatedAt getter throws", () => {
+    const entryWithThrowingUpdatedAt = Object.create(null) as { updatedAt: unknown };
+    Object.defineProperty(entryWithThrowingUpdatedAt, "updatedAt", {
+      get() {
+        throw new Error("updatedAt getter failed");
+      },
+    });
+
+    expect(() =>
+      filterStalePresence(
+        [entryWithThrowingUpdatedAt] as unknown as Array<{ updatedAt: number }>,
+        10_000,
+        10_000,
+      ),
+    ).not.toThrow();
+    expect(
+      filterStalePresence(
+        [entryWithThrowingUpdatedAt] as unknown as Array<{ updatedAt: number }>,
+        10_000,
+        10_000,
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("usePresence", () => {
@@ -214,5 +238,29 @@ describe("usePresence", () => {
       });
       unmount();
     }).not.toThrow();
+  });
+
+  it("does not throw when listed presence entries expose getter traps", () => {
+    const entryWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(entryWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(entryWithThrowingGetters, "visitorId", {
+      get() {
+        throw new Error("visitorId getter failed");
+      },
+    });
+    Object.defineProperty(entryWithThrowingGetters, "updatedAt", {
+      get() {
+        throw new Error("updatedAt getter failed");
+      },
+    });
+    listPresenceMock.mockReturnValue([entryWithThrowingGetters]);
+
+    const { result } = renderHook(() => usePresence("doc-presence"));
+    expect(result.current.others).toEqual([]);
+    expect(result.current.me).toBeUndefined();
   });
 });

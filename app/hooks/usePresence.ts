@@ -8,8 +8,10 @@ import {
   removePresence,
   updatePresence,
 } from "@/lib/presence/store";
+import type { PresenceRecord } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { generateLocalId } from "@/lib/utils/id";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 type PresenceData = {
   name: string;
@@ -52,17 +54,18 @@ export function filterStalePresence<
     Number.isFinite(maxAgeMs) && maxAgeMs >= 0 ? maxAgeMs : 10_000;
   return entries.filter(
     (entry) => {
+      const updatedAt = readEntryUpdatedAt(entry);
       if (
         !entry ||
         typeof entry !== "object" ||
-        typeof entry.updatedAt !== "number" ||
-        !Number.isFinite(entry.updatedAt)
+        typeof updatedAt !== "number" ||
+        !Number.isFinite(updatedAt)
       ) {
         return false;
       }
-      const ageMs = safeNow - entry.updatedAt;
+      const ageMs = safeNow - updatedAt;
       return (
-        entry.updatedAt >= 0 &&
+        updatedAt >= 0 &&
         ageMs < safeMaxAge &&
         ageMs >= -safeMaxAge
       );
@@ -114,7 +117,10 @@ export function usePresence(documentId: unknown) {
     void version;
     if (!hasValidDocumentId) return [];
     return filterStalePresence(
-      safeListPresence(normalizedDocumentId),
+      safeNormalizePresenceEntries(
+        safeListPresence(normalizedDocumentId),
+        normalizedDocumentId,
+      ),
       currentTime,
     );
   }, [currentTime, hasValidDocumentId, normalizedDocumentId, version]);
@@ -189,5 +195,94 @@ function safeRemovePresence(visitorId: string) {
     removePresence(visitorId);
   } catch {
     return;
+  }
+}
+
+function readEntryUpdatedAt(entry: unknown) {
+  if (!entry || typeof entry !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (entry as { updatedAt?: unknown }).updatedAt;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeNormalizePresenceEntries(entries: unknown, fallbackDocumentId: string) {
+  if (!Array.isArray(entries)) {
+    return [] as PresenceRecord[];
+  }
+
+  return entries.flatMap((entry, index) => {
+    const normalizedEntry = safeNormalizePresenceEntry(entry, fallbackDocumentId, index);
+    return normalizedEntry ? [normalizedEntry] : [];
+  });
+}
+
+function safeNormalizePresenceEntry(
+  entry: unknown,
+  fallbackDocumentId: string,
+  fallbackIndex: number,
+) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const visitorId = safeReadPresenceField(entry, "visitorId");
+  const normalizedVisitorId =
+    typeof visitorId === "string" &&
+    visitorId.trim().length > 0 &&
+    !hasControlChars(visitorId.trim())
+      ? visitorId.trim()
+      : undefined;
+  if (!normalizedVisitorId) {
+    return null;
+  }
+  const id = safeReadPresenceField(entry, "id");
+  const documentId = safeReadPresenceField(entry, "documentId");
+  const userId = safeReadPresenceField(entry, "userId");
+  const data = safeReadPresenceField(entry, "data");
+  const updatedAt = safeReadPresenceField(entry, "updatedAt");
+
+  return {
+    id:
+      typeof id === "string" && id.trim().length > 0 && !hasControlChars(id.trim())
+        ? id.trim()
+        : `presence-${fallbackIndex}`,
+    documentId:
+      typeof documentId === "string" &&
+      documentId.trim().length > 0 &&
+      !hasControlChars(documentId.trim())
+        ? documentId.trim()
+        : fallbackDocumentId,
+    visitorId: normalizedVisitorId,
+    userId:
+      typeof userId === "string" &&
+      userId.trim().length > 0 &&
+      !hasControlChars(userId.trim())
+        ? userId.trim()
+        : DEFAULT_LOCAL_USER_ID,
+    data: normalizePresenceData(data),
+    updatedAt:
+      typeof updatedAt === "number" && Number.isFinite(updatedAt) && updatedAt >= 0
+        ? updatedAt
+        : 0,
+  } satisfies PresenceRecord;
+}
+
+function safeReadPresenceField(
+  entry: unknown,
+  key: keyof PresenceRecord,
+) {
+  if (!entry || typeof entry !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (entry as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
   }
 }
