@@ -31,11 +31,18 @@ function loadState(): AIMessageState {
       return { messages: [] };
     }
 
-    return {
-      messages: parsed.messages.flatMap((message) => {
+    const sanitizedMessages = parsed.messages.flatMap((message) => {
         const normalized = normalizeMessage(message);
         return normalized ? [normalized] : [];
-      }),
+      });
+
+    const dedupedByMessageId = new Map<string, AIMessage>();
+    for (const message of sanitizedMessages) {
+      dedupedByMessageId.set(message.id, message);
+    }
+
+    return {
+      messages: Array.from(dedupedByMessageId.values()),
     };
   } catch {
     return { messages: [] };

@@ -163,6 +163,14 @@ describe("ai chat store", () => {
             content: "Bad role",
             createdAt: 4,
           },
+          {
+            id: "valid",
+            documentId: "doc-legacy",
+            userId: "u-2",
+            role: "assistant",
+            content: "Latest",
+            createdAt: 5,
+          },
         ],
       }),
     );
@@ -173,7 +181,8 @@ describe("ai chat store", () => {
       expect.objectContaining({
         id: "valid",
         documentId: "doc-legacy",
-        userId: "USER@example.com",
+        userId: "u-2",
+        content: "Latest",
       }),
     );
   });

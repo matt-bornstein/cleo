@@ -165,6 +165,23 @@ describe("diff store triggerIdleSave", () => {
             source: "automerge",
             createdAt: 4,
           },
+          {
+            id: "valid-diff",
+            documentId: "doc-legacy",
+            userId: "u-2",
+            patch: "@@ -0,0 +1 @@\n+latest",
+            snapshotAfter: JSON.stringify({
+              type: "doc",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "latest" }],
+                },
+              ],
+            }),
+            source: "manual",
+            createdAt: 5,
+          },
         ],
       }),
     );
@@ -175,10 +192,10 @@ describe("diff store triggerIdleSave", () => {
       expect.objectContaining({
         id: "valid-diff",
         documentId: "doc-legacy",
-        userId: DEFAULT_LOCAL_USER_ID,
+        userId: "u-2",
         source: "manual",
         aiPrompt: undefined,
-        aiModel: "gpt-test",
+        aiModel: undefined,
       }),
     );
   });

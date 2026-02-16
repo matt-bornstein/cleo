@@ -39,8 +39,7 @@ function loadState(): DiffStoreState {
       return { diffs: [] };
     }
 
-    return {
-      diffs: parsed.diffs.flatMap((diff) => {
+    const sanitizedDiffs = parsed.diffs.flatMap((diff) => {
         const normalizedDocumentId = normalizeDocumentId(diff.documentId);
         const normalizedDiffId = diff.id?.trim();
         if (
@@ -71,7 +70,15 @@ function loadState(): DiffStoreState {
                 : undefined,
           },
         ];
-      }),
+      });
+
+    const dedupedByDiffId = new Map<string, DiffRecord>();
+    for (const diff of sanitizedDiffs) {
+      dedupedByDiffId.set(diff.id, diff);
+    }
+
+    return {
+      diffs: Array.from(dedupedByDiffId.values()),
     };
   } catch {
     return { diffs: [] };
