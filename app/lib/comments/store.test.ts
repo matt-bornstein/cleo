@@ -94,4 +94,24 @@ describe("comments store", () => {
     expect(created).toBeNull();
     expect(listComments("doc-5")).toEqual([]);
   });
+
+  it("rejects blank comment content and normalizes anchor metadata", () => {
+    const blank = addComment({
+      documentId: "doc-6",
+      content: "   ",
+      anchorText: "Line",
+    });
+    expect(blank).toBeNull();
+
+    const comment = addComment({
+      documentId: "doc-6",
+      content: "  Keep this  ",
+      anchorText: "   ",
+      parentCommentId: "  parent-1  ",
+    });
+    expect(comment).not.toBeNull();
+    expect(comment?.content).toBe("Keep this");
+    expect(comment?.anchorText).toBe("Comment");
+    expect(comment?.parentCommentId).toBe("parent-1");
+  });
 });

@@ -55,6 +55,12 @@ export function addComment(params: {
   if (!isValidDocumentId(normalizedDocumentId)) {
     return null;
   }
+  const normalizedContent = params.content.trim();
+  if (!normalizedContent) {
+    return null;
+  }
+  const normalizedAnchorText = params.anchorText.trim() || "Comment";
+  const normalizedParentCommentId = params.parentCommentId?.trim() || undefined;
 
   const state = loadState();
   const now = Date.now();
@@ -66,12 +72,12 @@ export function addComment(params: {
       normalizedUserId && !hasControlChars(normalizedUserId)
         ? normalizedUserId
         : DEFAULT_LOCAL_USER_ID,
-    content: params.content,
+    content: normalizedContent,
     anchorFrom: 0,
     anchorTo: 0,
-    anchorText: params.anchorText,
+    anchorText: normalizedAnchorText,
     resolved: false,
-    parentCommentId: params.parentCommentId,
+    parentCommentId: normalizedParentCommentId,
     createdAt: now,
     updatedAt: now,
   };
