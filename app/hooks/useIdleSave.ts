@@ -19,9 +19,7 @@ export function useIdleSave({ delayMs = 5000, onIdle }: UseIdleSaveArgs) {
       safeClearTimeout(timeoutRef.current);
     }
     timeoutRef.current = safeSetTimeout(() => {
-      if (typeof onIdle === "function") {
-        onIdle();
-      }
+      safeOnIdle(onIdle);
     }, normalizedDelayMs);
   }, [normalizedDelayMs, onIdle]);
 
@@ -47,6 +45,18 @@ function safeSetTimeout(callback: () => void, delayMs: number) {
 function safeClearTimeout(timer: ReturnType<typeof setTimeout>) {
   try {
     clearTimeout(timer);
+  } catch {
+    return;
+  }
+}
+
+function safeOnIdle(onIdle: unknown) {
+  if (typeof onIdle !== "function") {
+    return;
+  }
+
+  try {
+    onIdle();
   } catch {
     return;
   }

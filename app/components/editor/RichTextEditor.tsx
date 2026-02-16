@@ -44,6 +44,53 @@ function parseContent(content: unknown): JSONContent {
   }
 }
 
+function readEditorJsonString(editor: unknown) {
+  if (!editor || typeof editor !== "object") {
+    return undefined;
+  }
+
+  let getJSON: unknown;
+  try {
+    getJSON = (editor as { getJSON?: unknown }).getJSON;
+  } catch {
+    return undefined;
+  }
+
+  if (typeof getJSON !== "function") {
+    return undefined;
+  }
+
+  try {
+    return JSON.stringify(Reflect.apply(getJSON, editor, []));
+  } catch {
+    return undefined;
+  }
+}
+
+function safeOnContentChange(onContentChange: unknown, nextContent: string) {
+  if (typeof onContentChange !== "function") {
+    return;
+  }
+
+  try {
+    onContentChange(nextContent);
+  } catch {
+    return;
+  }
+}
+
+function safeOnLocalUpdate(onLocalUpdate: unknown) {
+  if (typeof onLocalUpdate !== "function") {
+    return;
+  }
+
+  try {
+    onLocalUpdate();
+  } catch {
+    return;
+  }
+}
+
 export function RichTextEditor({
   documentId,
   content,
@@ -104,12 +151,11 @@ function LocalRichTextEditor({
     },
     editable,
     onUpdate: ({ editor: nextEditor }) => {
-      if (typeof onContentChange === "function") {
-        onContentChange(JSON.stringify(nextEditor.getJSON()));
+      const nextContent = readEditorJsonString(nextEditor);
+      if (typeof nextContent === "string") {
+        safeOnContentChange(onContentChange, nextContent);
       }
-      if (typeof onLocalUpdate === "function") {
-        onLocalUpdate();
-      }
+      safeOnLocalUpdate(onLocalUpdate);
     },
   });
 
@@ -157,12 +203,11 @@ function SyncedRichTextEditor({
     },
     editable,
     onUpdate: ({ editor: nextEditor }) => {
-      if (typeof onContentChange === "function") {
-        onContentChange(JSON.stringify(nextEditor.getJSON()));
+      const nextContent = readEditorJsonString(nextEditor);
+      if (typeof nextContent === "string") {
+        safeOnContentChange(onContentChange, nextContent);
       }
-      if (typeof onLocalUpdate === "function") {
-        onLocalUpdate();
-      }
+      safeOnLocalUpdate(onLocalUpdate);
     },
   });
 

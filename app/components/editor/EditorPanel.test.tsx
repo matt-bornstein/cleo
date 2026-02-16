@@ -92,4 +92,22 @@ describe("EditorPanel", () => {
     expect(screen.getByTestId("rich-editor-editable")).toHaveTextContent("true");
     await user.click(screen.getByRole("button", { name: "Emit content change" }));
   });
+
+  it("does not throw when content change callback throws", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EditorPanel
+        documentId="doc-throw"
+        content='{"type":"doc","content":[]}'
+        onContentChange={() => {
+          throw new Error("onContentChange failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Emit content change" })),
+    ).resolves.toBeUndefined();
+  });
 });

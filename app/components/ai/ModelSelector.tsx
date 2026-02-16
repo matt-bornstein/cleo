@@ -9,7 +9,7 @@ type ModelSelectorProps = {
 };
 
 export function ModelSelector({ value, onValueChange }: ModelSelectorProps) {
-  const normalizedValue = getModelConfig(value).id;
+  const normalizedValue = safeGetModelId(value);
 
   return (
     <label className="flex items-center gap-2 text-xs text-slate-600">
@@ -18,9 +18,7 @@ export function ModelSelector({ value, onValueChange }: ModelSelectorProps) {
         className="h-8 rounded-md border border-slate-300 bg-white px-2 text-sm"
         value={normalizedValue}
         onChange={(event) => {
-          if (typeof onValueChange === "function") {
-            onValueChange(event.target.value);
-          }
+          safeOnValueChange(onValueChange, event.target.value);
         }}
       >
         {AI_MODELS.map((model) => (
@@ -31,4 +29,24 @@ export function ModelSelector({ value, onValueChange }: ModelSelectorProps) {
       </select>
     </label>
   );
+}
+
+function safeGetModelId(value: unknown) {
+  try {
+    return getModelConfig(value).id;
+  } catch {
+    return "gpt-4o";
+  }
+}
+
+function safeOnValueChange(onValueChange: unknown, nextValue: string) {
+  if (typeof onValueChange !== "function") {
+    return;
+  }
+
+  try {
+    onValueChange(nextValue);
+  } catch {
+    return;
+  }
 }

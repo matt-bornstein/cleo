@@ -150,4 +150,43 @@ describe("RichTextEditor", () => {
     await user.click(screen.getByRole("button", { name: "Trigger update" }));
     expect(useOptionalTiptapSyncMock).not.toHaveBeenCalled();
   });
+
+  it("does not throw when onContentChange callback throws", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <RichTextEditor
+        documentId="doc-throw-content"
+        content='{"type":"doc","content":[]}'
+        onContentChange={() => {
+          throw new Error("onContentChange failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Trigger update" })),
+    ).resolves.toBeUndefined();
+  });
+
+  it("does not throw when onLocalUpdate callback throws", async () => {
+    const user = userEvent.setup();
+    const onContentChange = vi.fn();
+
+    render(
+      <RichTextEditor
+        documentId="doc-throw-local-update"
+        content='{"type":"doc","content":[]}'
+        onContentChange={onContentChange}
+        onLocalUpdate={() => {
+          throw new Error("onLocalUpdate failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Trigger update" })),
+    ).resolves.toBeUndefined();
+    expect(onContentChange).toHaveBeenCalledTimes(1);
+  });
 });

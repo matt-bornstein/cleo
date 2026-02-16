@@ -3,8 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 import { ModelSelector } from "@/components/ai/ModelSelector";
+import * as aiModels from "@/lib/ai/models";
 
 describe("ModelSelector", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders normalized selected model value", () => {
     render(<ModelSelector value="unknown-model" onValueChange={vi.fn()} />);
 
@@ -30,6 +35,35 @@ describe("ModelSelector", () => {
     render(<ModelSelector value="gpt-4o" onValueChange={123} />);
     await user.selectOptions(screen.getByRole("combobox"), "gemini-2.5-pro");
 
+    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe(
+      "gpt-4o",
+    );
+  });
+
+  it("falls back to default model when config lookup throws", () => {
+    vi.spyOn(aiModels, "getModelConfig").mockImplementation(() => {
+      throw new Error("model lookup failed");
+    });
+
+    render(<ModelSelector value="gpt-4o" onValueChange={vi.fn()} />);
+    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("gpt-4o");
+  });
+
+  it("does not throw when change callback throws", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ModelSelector
+        value="gpt-4o"
+        onValueChange={() => {
+          throw new Error("change failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.selectOptions(screen.getByRole("combobox"), "gemini-2.5-pro"),
+    ).resolves.toBeUndefined();
     expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe(
       "gpt-4o",
     );

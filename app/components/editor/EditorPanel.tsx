@@ -66,9 +66,7 @@ export function EditorPanel({
           documentId={documentId}
           content={content}
           onContentChange={(nextContent: string) => {
-            if (typeof onContentChange === "function") {
-              onContentChange(nextContent);
-            }
+            safeOnContentChange(onContentChange, nextContent);
           }}
           onLocalUpdate={onLocalUpdate}
           fontSize={normalizedFontSize}
@@ -78,4 +76,16 @@ export function EditorPanel({
       </div>
     </div>
   );
+}
+
+function safeOnContentChange(onContentChange: unknown, nextContent: string) {
+  if (typeof onContentChange !== "function") {
+    return;
+  }
+
+  try {
+    onContentChange(nextContent);
+  } catch {
+    return;
+  }
 }

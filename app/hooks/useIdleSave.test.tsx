@@ -54,6 +54,25 @@ describe("useIdleSave", () => {
     vi.useRealTimers();
   });
 
+  it("does not throw when onIdle callback throws", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() =>
+      useIdleSave({
+        delayMs: 10,
+        onIdle: () => {
+          throw new Error("onIdle failed");
+        },
+      }),
+    );
+
+    expect(() => {
+      result.current.scheduleIdleSave();
+      vi.advanceTimersByTime(10);
+    }).not.toThrow();
+
+    vi.useRealTimers();
+  });
+
   it("does not throw when setTimeout throws at runtime", () => {
     vi.spyOn(globalThis, "setTimeout").mockImplementation(() => {
       throw new Error("setTimeout failed");
