@@ -30,8 +30,12 @@ import {
   Redo,
 } from "lucide-react";
 
+import { CommentButton } from "./CommentButton";
+import { Id } from "@/convex/_generated/dataModel";
+
 interface FormattingToolbarProps {
   editor: Editor;
+  documentId?: Id<"documents">;
 }
 
 interface ToolbarButtonProps {
@@ -75,7 +79,7 @@ function ToolbarButton({
   );
 }
 
-export function FormattingToolbar({ editor }: FormattingToolbarProps) {
+export function FormattingToolbar({ editor, documentId }: FormattingToolbarProps) {
   const addLink = () => {
     const url = window.prompt("Enter URL:");
     if (url) {
@@ -235,6 +239,14 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
         icon={<Table className="h-4 w-4" />}
         tooltip="Insert Table"
       />
+
+      {/* Comment */}
+      {documentId && (
+        <>
+          <Separator orientation="vertical" className="mx-1 h-6" />
+          <CommentButton editor={editor} documentId={documentId} />
+        </>
+      )}
     </div>
   );
 }

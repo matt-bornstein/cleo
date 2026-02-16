@@ -99,15 +99,15 @@ function SyncedEditor({
           },
         }}
       >
-        <EditorToolbar />
+        <EditorToolbar documentId={documentId} />
         <EditorContent editor={null} />
       </EditorProvider>
     </div>
   );
 }
 
-function EditorToolbar() {
+function EditorToolbar({ documentId }: { documentId: Id<"documents"> }) {
   const { editor } = useCurrentEditor();
   if (!editor) return null;
-  return <FormattingToolbar editor={editor} />;
+  return <FormattingToolbar editor={editor} documentId={documentId} />;
 }
