@@ -10,10 +10,12 @@ describe("ShareModal", () => {
   const writeTextMock = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     resetPermissionsForTests();
     window.localStorage.clear();
     writeTextMock.mockReset();
     writeTextMock.mockResolvedValue(undefined);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: {
@@ -239,5 +241,30 @@ describe("ShareModal", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
     expect(screen.queryByText("Enter a valid email address.")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("user@example.com")).toHaveValue("");
+  });
+
+  it("removes collaborator only after confirmation", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-remove" />);
+
+    await user.type(screen.getByPlaceholderText("user@example.com"), "person@example.com");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.queryByText("person@example.com · editor")).not.toBeInTheDocument();
+  });
+
+  it("keeps collaborator when remove confirmation is cancelled", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-remove-cancel" />);
+
+    await user.type(screen.getByPlaceholderText("user@example.com"), "person@example.com");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
   });
 });

@@ -217,6 +217,10 @@ export function ShareModal({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
+                    const confirmed = window.confirm(
+                      `Remove ${permission.email} from this document?`,
+                    );
+                    if (!confirmed) return;
                     removePermission(permission.id);
                     setVersion((value) => value + 1);
                   }}
