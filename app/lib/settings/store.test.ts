@@ -31,16 +31,36 @@ describe("settings store", () => {
   it("normalizes settings values before persisting", () => {
     const saved = saveSettings({
       theme: "dark",
-      defaultModel: "  gpt-4o-mini  ",
+      defaultModel: "  gpt-4.1  ",
       editorFontSize: Number.NaN,
       editorLineSpacing: 0,
       userEmail: "  TEST@EXAMPLE.COM  ",
     });
 
-    expect(saved.defaultModel).toBe("gpt-4o-mini");
+    expect(saved.defaultModel).toBe("gpt-4.1");
     expect(saved.editorFontSize).toBe(16);
     expect(saved.editorLineSpacing).toBe(1.6);
     expect(saved.userEmail).toBe("test@example.com");
+  });
+
+  it("falls back to default model for unknown model ids", () => {
+    const saved = saveSettings({
+      theme: "dark",
+      defaultModel: "unknown-model-id",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: "test@example.com",
+    });
+
+    expect(saved.defaultModel).toBe("gpt-4o");
+
+    window.localStorage.setItem(
+      "plan00.settings.v1",
+      JSON.stringify({
+        defaultModel: "unknown-model-id",
+      }),
+    );
+    expect(getSettings().defaultModel).toBe("gpt-4o");
   });
 
   it("falls back to defaults for malformed persisted settings", () => {

@@ -1,3 +1,4 @@
+import { getModelConfig } from "@/lib/ai/models";
 import type { AppUserSettings } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { normalizeEmailOrFallback } from "@/lib/user/email";
@@ -46,7 +47,7 @@ function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettin
     theme: normalizedTheme,
     defaultModel:
       normalizedModel && !hasControlChars(normalizedModel)
-        ? normalizedModel
+        ? getModelConfig(normalizedModel).id
         : defaultSettings.defaultModel,
     editorFontSize: normalizedFontSize,
     editorLineSpacing: normalizedLineSpacing,
