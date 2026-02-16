@@ -19,7 +19,7 @@ import { isValidEmail } from "@/lib/validators/email";
 
 export function useDocuments(
   search?: string,
-  currentUserEmail = DEFAULT_LOCAL_USER_EMAIL,
+  currentUserEmail: unknown = DEFAULT_LOCAL_USER_EMAIL,
 ) {
   const normalizedCurrentUserEmailCandidate =
     normalizeEmailOrUndefined(currentUserEmail);

@@ -106,6 +106,14 @@ describe("useDocuments", () => {
       "me@local.dev",
       "owner@example.com",
     );
+
+    hasDocumentAccessMock.mockClear();
+    renderHook(() => useDocuments(undefined, 123 as unknown as string));
+    expect(hasDocumentAccessMock).toHaveBeenCalledWith(
+      "doc-allowed",
+      "me@local.dev",
+      "owner@example.com",
+    );
   });
 
   it("refreshes list only when updates or removals succeed", () => {
