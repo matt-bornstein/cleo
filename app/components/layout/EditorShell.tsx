@@ -69,12 +69,12 @@ export function EditorShell({ documentId }: EditorShellProps) {
 
   const currentDocument = getById(normalizedDocumentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
-  const myRole = getRoleForUser(
+  const myRole = safeGetRoleForUser(
     normalizedDocumentId,
     currentUserEmail,
     currentDocument?.ownerEmail,
   );
-  const hasAccess = hasDocumentAccess(
+  const hasAccess = safeHasDocumentAccess(
     normalizedDocumentId,
     currentUserEmail,
     currentDocument?.ownerEmail,
@@ -116,8 +116,14 @@ export function EditorShell({ documentId }: EditorShellProps) {
     if (!requestedShareRole) return;
     if (myRole === "owner" || myRole === requestedShareRole) return;
 
-    upsertPermission(normalizedDocumentId, currentUserEmail, requestedShareRole);
-    refreshDocuments();
+    const upserted = safeUpsertPermission(
+      normalizedDocumentId,
+      currentUserEmail,
+      requestedShareRole,
+    );
+    if (upserted) {
+      refreshDocuments();
+    }
   }, [
     normalizedDocumentId,
     currentUserEmail,
@@ -424,6 +430,42 @@ function safeRouterRefresh(router: unknown) {
     typeof (router as { refresh?: unknown }).refresh === "function"
   ) {
     (router as { refresh: () => void }).refresh();
+  }
+}
+
+function safeGetRoleForUser(
+  documentId: string,
+  userEmail: string,
+  ownerEmail?: string,
+) {
+  try {
+    return getRoleForUser(documentId, userEmail, ownerEmail);
+  } catch {
+    return "viewer";
+  }
+}
+
+function safeHasDocumentAccess(
+  documentId: string,
+  userEmail: string,
+  ownerEmail?: string,
+) {
+  try {
+    return hasDocumentAccess(documentId, userEmail, ownerEmail);
+  } catch {
+    return false;
+  }
+}
+
+function safeUpsertPermission(
+  documentId: string,
+  email: string,
+  role: Parameters<typeof upsertPermission>[2],
+) {
+  try {
+    return upsertPermission(documentId, email, role);
+  } catch {
+    return null;
   }
 }
 

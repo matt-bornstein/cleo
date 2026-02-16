@@ -6,6 +6,7 @@ import { EditorShell } from "@/components/layout/EditorShell";
 import { createDocument, resetDocumentsForTests } from "@/lib/documents/store";
 import { triggerIdleSave } from "@/lib/diffs/store";
 import { upsertPermission } from "@/lib/permissions/store";
+import * as permissionsStore from "@/lib/permissions/store";
 import { saveSettings } from "@/lib/settings/store";
 
 const pushMock = vi.fn();
@@ -196,6 +197,33 @@ describe("EditorShell", () => {
 
     expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
     expect(screen.getAllByText("Malformed runtime payloads").length).toBeGreaterThan(0);
+  });
+
+  it("does not throw when permission lookups throw", () => {
+    const document = createDocument("Permission lookup failures");
+    vi.spyOn(permissionsStore, "getRoleForUser").mockImplementation(() => {
+      throw new Error("role lookup failed");
+    });
+    vi.spyOn(permissionsStore, "hasDocumentAccess").mockImplementation(() => {
+      throw new Error("access lookup failed");
+    });
+
+    expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
+    expect(screen.getByText("Access required")).toBeInTheDocument();
+  });
+
+  it("does not throw when share-link permission upsert throws", () => {
+    mockedSearchParams = new URLSearchParams("share=commenter");
+    saveSettings({
+      userEmail: "invitee@example.com",
+    });
+    const document = createDocument("Share upsert failures");
+    vi.spyOn(permissionsStore, "upsertPermission").mockImplementation(() => {
+      throw new Error("upsert failed");
+    });
+
+    expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
+    expect(screen.getByText("Applying shared access permissions...")).toBeInTheDocument();
   });
 
 });
