@@ -14,9 +14,9 @@ import {
 import { Input } from "@/components/ui/input";
 
 type NewDocModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCreateDocument: (title: string) => void;
+  open: unknown;
+  onOpenChange: unknown;
+  onCreateDocument: unknown;
 };
 
 export function NewDocModal({
@@ -24,17 +24,29 @@ export function NewDocModal({
   onOpenChange,
   onCreateDocument,
 }: NewDocModalProps) {
+  const normalizedOpen = open === true;
   const [title, setTitle] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onCreateDocument(title);
+    if (typeof onCreateDocument === "function") {
+      onCreateDocument(title);
+    }
     setTitle("");
-    onOpenChange(false);
+    if (typeof onOpenChange === "function") {
+      onOpenChange(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={normalizedOpen}
+      onOpenChange={(nextOpen) => {
+        if (typeof onOpenChange === "function") {
+          onOpenChange(nextOpen);
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create a new document</DialogTitle>
@@ -50,7 +62,15 @@ export function NewDocModal({
             onChange={(event) => setTitle(event.target.value)}
           />
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                if (typeof onOpenChange === "function") {
+                  onOpenChange(false);
+                }
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit">Create</Button>

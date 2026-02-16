@@ -260,7 +260,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
       <NewDocModal
         open={newModalOpen}
         onOpenChange={setNewModalOpen}
-        onCreateDocument={(title) => {
+        onCreateDocument={(title: string) => {
           const newDocument = create(title, currentUserEmail);
           ensureCreatedDiff({
             documentId: newDocument.id,
