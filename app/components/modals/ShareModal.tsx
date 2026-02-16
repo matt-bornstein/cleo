@@ -96,7 +96,12 @@ export function ShareModal({
             <Input
               placeholder="user@example.com"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                if (addError) {
+                  setAddError(null);
+                }
+              }}
             />
             <select
               className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"

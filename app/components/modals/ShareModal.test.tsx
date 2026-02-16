@@ -90,6 +90,19 @@ describe("ShareModal", () => {
     expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
   });
 
+  it("clears validation error while user edits collaborator email", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-invalid-clear" />);
+
+    const input = screen.getByPlaceholderText("user@example.com");
+    await user.type(input, "not-an-email");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+
+    await user.type(input, "@example.com");
+    expect(screen.queryByText("Enter a valid email address.")).not.toBeInTheDocument();
+  });
+
   it("blocks adding the owner email as collaborator", async () => {
     const user = userEvent.setup();
     render(
