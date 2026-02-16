@@ -2,10 +2,12 @@ import type { CommentRecord } from "@/lib/types";
 import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
-import { hasControlChars } from "@/lib/validators/controlChars";
+import {
+  hasControlChars,
+  hasDisallowedTextControlChars,
+} from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.comments.v1";
-const DISALLOWED_COMMENT_CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 type CommentState = {
   comments: CommentRecord[];
@@ -55,7 +57,7 @@ function loadState(): CommentState {
         !normalizedCommentId ||
         !isValidDocumentId(normalizedDocumentId) ||
         !normalizedContent ||
-        DISALLOWED_COMMENT_CONTROL_CHARS_REGEX.test(normalizedContent) ||
+        hasDisallowedTextControlChars(normalizedContent) ||
         typeof comment.createdAt !== "number" ||
         !Number.isFinite(comment.createdAt) ||
         comment.createdAt < 0 ||
@@ -176,7 +178,7 @@ export function addComment(params: {
   const normalizedContent = params.content.trim();
   if (
     !normalizedContent ||
-    DISALLOWED_COMMENT_CONTROL_CHARS_REGEX.test(normalizedContent)
+    hasDisallowedTextControlChars(normalizedContent)
   ) {
     return null;
   }

@@ -12,9 +12,9 @@ import { getRecentMessages } from "@/lib/ai/history";
 import { normalizeAIUserId } from "@/lib/ai/identity";
 import { createDiff } from "@/lib/diffs/store";
 import type { AIMessage } from "@/lib/types";
+import { hasDisallowedTextControlChars } from "@/lib/validators/controlChars";
 
 const DEFAULT_MODEL = "gpt-4o";
-const DISALLOWED_PROMPT_CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 type UseAIChatArgs = {
   documentId: string;
@@ -118,7 +118,7 @@ export function useAIChat({
         setError("Prompt must be 4,000 characters or less.");
         return;
       }
-      if (DISALLOWED_PROMPT_CONTROL_CHARS_REGEX.test(normalizedPrompt)) {
+      if (hasDisallowedTextControlChars(normalizedPrompt)) {
         setError("Prompt contains unsupported control characters.");
         return;
       }

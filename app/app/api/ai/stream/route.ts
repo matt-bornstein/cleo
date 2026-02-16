@@ -19,10 +19,12 @@ import {
   htmlToProsemirrorJson,
   prosemirrorJsonToHtml,
 } from "@/lib/editor/serialization";
-import { hasControlChars } from "@/lib/validators/controlChars";
+import {
+  hasControlChars,
+  hasDisallowedTextControlChars,
+} from "@/lib/validators/controlChars";
 
 export const runtime = "nodejs";
-const DISALLOWED_TEXT_CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 type StreamRequestPayload = {
   documentId: string;
@@ -62,7 +64,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
   const prompt = candidate.prompt.trim();
   if (
     prompt.length > MAX_PROMPT_LENGTH ||
-    DISALLOWED_TEXT_CONTROL_CHARS_REGEX.test(prompt)
+    hasDisallowedTextControlChars(prompt)
   ) {
     return null;
   }
@@ -89,7 +91,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     if (role !== "user" && role !== "assistant" && role !== "system") return null;
     if (!hasText(item.content)) return null;
     if (item.content.length > MAX_MESSAGE_CONTENT_LENGTH) return null;
-    if (DISALLOWED_TEXT_CONTROL_CHARS_REGEX.test(item.content)) return null;
+    if (hasDisallowedTextControlChars(item.content)) return null;
     if (item.userId !== undefined && !hasText(item.userId)) return null;
     if (
       typeof item.userId === "string" &&
