@@ -24,6 +24,19 @@ describe("AILockManager", () => {
     }
   });
 
+  it("does not release a lock for different user id", () => {
+    const manager = new AILockManager();
+    manager.acquire("doc-2b", "alice");
+
+    manager.release("doc-2b", "bob");
+
+    const stillLocked = manager.acquire("doc-2b", "carol");
+    expect(stillLocked.acquired).toBe(false);
+    if (!stillLocked.acquired) {
+      expect(stillLocked.reason).toContain("alice");
+    }
+  });
+
   it("returns lock status and clears stale locks", () => {
     const nowSpy = vi.spyOn(Date, "now");
     nowSpy.mockReturnValue(1_000);
