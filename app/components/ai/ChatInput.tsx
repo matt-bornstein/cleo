@@ -1,22 +1,24 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
 type ChatInputProps = {
   disabled?: boolean;
-  onSubmit: (prompt: string) => Promise<void>;
+  onSubmit: unknown;
 };
 
 export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
   const [prompt, setPrompt] = useState("");
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitPrompt = useCallback(async () => {
     if (disabled) return;
     const normalizedPrompt = prompt.trim();
     if (!normalizedPrompt) return;
+    if (typeof onSubmit !== "function") {
+      return;
+    }
     const previousPrompt = prompt;
     setPrompt("");
     try {
@@ -26,7 +28,15 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
         currentPrompt.length === 0 ? previousPrompt : currentPrompt,
       );
     }
-  };
+  }, [disabled, onSubmit, prompt]);
+
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      void submitPrompt();
+    },
+    [submitPrompt],
+  );
 
   return (
     <form className="space-y-2" onSubmit={handleSubmit}>
@@ -39,7 +49,7 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
-            void handleSubmit(event as unknown as FormEvent<HTMLFormElement>);
+            void submitPrompt();
           }
         }}
       />

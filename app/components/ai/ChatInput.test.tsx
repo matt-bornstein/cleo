@@ -93,4 +93,16 @@ describe("ChatInput", () => {
       expect((textarea as HTMLTextAreaElement).value).toBe("new draft");
     });
   });
+
+  it("does not throw when submit handler is malformed non-function", async () => {
+    const user = userEvent.setup();
+
+    render(<ChatInput onSubmit={123} />);
+    const textarea = screen.getByPlaceholderText("Ask AI to edit this document...");
+
+    await user.type(textarea, "keep draft");
+    await user.keyboard("{Enter}");
+
+    expect((textarea as HTMLTextAreaElement).value).toBe("keep draft");
+  });
 });
