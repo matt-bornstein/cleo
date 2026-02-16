@@ -102,6 +102,25 @@ describe("ExportModal", () => {
     );
   });
 
+  it("sanitizes non-filename characters in export title", async () => {
+    const user = userEvent.setup();
+    render(
+      <ExportModal
+        open
+        onOpenChange={vi.fn()}
+        documentTitle="Quarterly / Roadmap: Q1 2026!"
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "HTML" }));
+    expect(downloadFileMock).toHaveBeenCalledWith(
+      "<p>html</p>",
+      "quarterly-roadmap-q1-2026.html",
+      "text/html;charset=utf-8",
+    );
+  });
+
   it("no-ops pdf export when print window cannot open", async () => {
     const user = userEvent.setup();
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);

@@ -17,13 +17,23 @@ type ExportModalProps = {
   content: string;
 };
 
+function toSafeTitle(documentTitle: string) {
+  const normalized = documentTitle
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || "untitled";
+}
+
 export function ExportModal({
   open,
   onOpenChange,
   documentTitle,
   content,
 }: ExportModalProps) {
-  const safeTitle = documentTitle.replace(/\s+/g, "-").toLowerCase() || "untitled";
+  const safeTitle = toSafeTitle(documentTitle);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
