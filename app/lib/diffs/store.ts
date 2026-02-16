@@ -21,6 +21,7 @@ type DiffStoreState = {
 const inMemoryState: DiffStoreState = {
   diffs: [],
 };
+const ALLOWED_SOURCES = new Set<DiffSource>(["manual", "created", "ai"]);
 
 function canUseStorage() {
   return typeof window !== "undefined" && !!window.localStorage;
@@ -34,7 +35,44 @@ function loadState(): DiffStoreState {
   if (!raw) return { diffs: [] };
   try {
     const parsed = JSON.parse(raw) as DiffStoreState;
-    return parsed.diffs ? parsed : { diffs: [] };
+    if (!parsed.diffs) {
+      return { diffs: [] };
+    }
+
+    return {
+      diffs: parsed.diffs.flatMap((diff) => {
+        const normalizedDocumentId = normalizeDocumentId(diff.documentId);
+        const normalizedDiffId = diff.id?.trim();
+        if (
+          !normalizedDiffId ||
+          !isValidDocumentId(normalizedDocumentId) ||
+          !ALLOWED_SOURCES.has(diff.source) ||
+          typeof diff.patch !== "string" ||
+          typeof diff.snapshotAfter !== "string" ||
+          typeof diff.createdAt !== "number" ||
+          !Number.isFinite(diff.createdAt)
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            ...diff,
+            id: normalizedDiffId,
+            documentId: normalizedDocumentId,
+            userId: normalizeDiffUserId(diff.userId),
+            aiPrompt:
+              typeof diff.aiPrompt === "string" && diff.aiPrompt.trim().length > 0
+                ? diff.aiPrompt.trim()
+                : undefined,
+            aiModel:
+              typeof diff.aiModel === "string" && diff.aiModel.trim().length > 0
+                ? diff.aiModel.trim()
+                : undefined,
+          },
+        ];
+      }),
+    };
   } catch {
     return { diffs: [] };
   }

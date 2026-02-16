@@ -130,4 +130,56 @@ describe("diff store triggerIdleSave", () => {
     expect(controlCharDiff?.userId).toBe(DEFAULT_LOCAL_USER_ID);
     expect(longUserDiff?.userId).toBe(DEFAULT_LOCAL_USER_ID);
   });
+
+  it("filters malformed persisted diffs and normalizes legacy entries", () => {
+    window.localStorage.setItem(
+      "plan00.diffs.v1",
+      JSON.stringify({
+        diffs: [
+          {
+            id: "  valid-diff  ",
+            documentId: "  doc-legacy  ",
+            userId: "bad\nuser",
+            patch: "@@ -0,0 +1 @@\n+text",
+            snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            source: "manual",
+            aiPrompt: "   ",
+            aiModel: " gpt-test ",
+            createdAt: 2,
+          },
+          {
+            id: "",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+text",
+            snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            source: "manual",
+            createdAt: 3,
+          },
+          {
+            id: "bad-source",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+text",
+            snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            source: "automerge",
+            createdAt: 4,
+          },
+        ],
+      }),
+    );
+
+    const diffs = listDiffsByDocument("doc-legacy");
+    expect(diffs).toHaveLength(1);
+    expect(diffs[0]).toEqual(
+      expect.objectContaining({
+        id: "valid-diff",
+        documentId: "doc-legacy",
+        userId: DEFAULT_LOCAL_USER_ID,
+        source: "manual",
+        aiPrompt: undefined,
+        aiModel: "gpt-test",
+      }),
+    );
+  });
 });
