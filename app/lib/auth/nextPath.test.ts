@@ -2,6 +2,7 @@ import { sanitizeNextPath } from "@/lib/auth/nextPath";
 
 describe("sanitizeNextPath", () => {
   it("returns /editor fallback for invalid values", () => {
+    const oversizedPath = `/editor/${"a".repeat(2050)}`;
     expect(sanitizeNextPath(undefined)).toBe("/editor");
     expect(sanitizeNextPath(null)).toBe("/editor");
     expect(sanitizeNextPath("editor/doc")).toBe("/editor");
@@ -11,6 +12,8 @@ describe("sanitizeNextPath", () => {
     expect(sanitizeNextPath("   ")).toBe("/editor");
     expect(sanitizeNextPath(123)).toBe("/editor");
     expect(sanitizeNextPath({ next: "/editor/doc-1" })).toBe("/editor");
+    expect(sanitizeNextPath("/editor/doc-1\nx")).toBe("/editor");
+    expect(sanitizeNextPath(oversizedPath)).toBe("/editor");
   });
 
   it("preserves valid relative app paths", () => {
