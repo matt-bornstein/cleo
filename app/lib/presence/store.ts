@@ -53,7 +53,20 @@ function loadState(): PresenceState {
 
     const dedupedByVisitorId = new Map<string, PresenceRecord>();
     for (const entry of sanitizedPresence) {
-      dedupedByVisitorId.set(entry.visitorId, entry);
+      const existing = dedupedByVisitorId.get(entry.visitorId);
+      if (!existing) {
+        dedupedByVisitorId.set(entry.visitorId, entry);
+        continue;
+      }
+
+      if (entry.updatedAt > existing.updatedAt) {
+        dedupedByVisitorId.set(entry.visitorId, entry);
+        continue;
+      }
+
+      if (entry.updatedAt === existing.updatedAt && entry.id.localeCompare(existing.id) < 0) {
+        dedupedByVisitorId.set(entry.visitorId, entry);
+      }
     }
 
     return {

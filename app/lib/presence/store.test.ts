@@ -96,6 +96,14 @@ describe("presence store", () => {
             data: { name: "Latest" },
             updatedAt: 4,
           },
+          {
+            id: "stale-late-entry",
+            documentId: "doc-valid",
+            visitorId: "visitor-1",
+            userId: "user-3",
+            data: { name: "Stale but later in array" },
+            updatedAt: 1,
+          },
         ],
       }),
     );
@@ -140,6 +148,40 @@ describe("presence store", () => {
     expect(listPresence("doc-order").map((entry) => entry.id)).toEqual([
       "second",
       "first",
+    ]);
+  });
+
+  it("dedupes same visitor by newest timestamp then stable id tie-breaker", () => {
+    window.localStorage.setItem(
+      "plan00.presence.v1",
+      JSON.stringify({
+        presence: [
+          {
+            id: "visitor-record-b",
+            documentId: "doc-dedupe",
+            visitorId: "visitor-1",
+            userId: "user-1",
+            data: {},
+            updatedAt: 5,
+          },
+          {
+            id: "visitor-record-a",
+            documentId: "doc-dedupe",
+            visitorId: "visitor-1",
+            userId: "user-2",
+            data: {},
+            updatedAt: 5,
+          },
+        ],
+      }),
+    );
+
+    expect(listPresence("doc-dedupe")).toEqual([
+      expect.objectContaining({
+        id: "visitor-record-a",
+        visitorId: "visitor-1",
+        userId: "user-2",
+      }),
     ]);
   });
 
