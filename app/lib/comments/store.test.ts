@@ -59,6 +59,22 @@ describe("comments store", () => {
     expect(setItemSpy.mock.calls.length).toBe(baselineCalls);
   });
 
+  it("keeps updatedAt monotonic when resolving with skewed clock values", () => {
+    const comment = addComment({
+      documentId: "doc-resolve-time",
+      content: "Resolve me",
+      anchorText: "Anchor",
+    });
+    expect(comment).not.toBeNull();
+
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue((comment?.updatedAt ?? 0) - 5000);
+    const resolved = resolveComment(comment!.id);
+
+    expect(resolved?.resolved).toBe(true);
+    expect(resolved?.updatedAt).toBe(comment?.updatedAt);
+    nowSpy.mockRestore();
+  });
+
   it("stores replies with parent comment id", () => {
     const parent = addComment({
       documentId: "doc-1",

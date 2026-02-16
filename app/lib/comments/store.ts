@@ -228,7 +228,7 @@ export function resolveComment(commentId: string) {
   state.comments[index] = {
     ...state.comments[index],
     resolved: true,
-    updatedAt: Date.now(),
+    updatedAt: Math.max(Date.now(), state.comments[index].updatedAt),
   };
   persistState(state);
   return state.comments[index];
