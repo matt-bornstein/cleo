@@ -24,51 +24,72 @@ export const config = {
 };
 
 function normalizePathname(request: unknown) {
-  if (
-    request &&
-    typeof request === "object" &&
-    "nextUrl" in request &&
-    request.nextUrl &&
-    typeof request.nextUrl === "object" &&
-    "pathname" in request.nextUrl &&
-    typeof request.nextUrl.pathname === "string"
-  ) {
-    return request.nextUrl.pathname;
+  const nextUrl = readNextUrl(request);
+  if (!nextUrl || typeof nextUrl !== "object") {
+    return "/";
+  }
+
+  try {
+    if (
+      "pathname" in nextUrl &&
+      typeof nextUrl.pathname === "string"
+    ) {
+      return nextUrl.pathname;
+    }
+  } catch {
+    return "/";
   }
 
   return "/";
 }
 
 function normalizeSearch(request: unknown) {
-  if (
-    request &&
-    typeof request === "object" &&
-    "nextUrl" in request &&
-    request.nextUrl &&
-    typeof request.nextUrl === "object" &&
-    "search" in request.nextUrl &&
-    typeof request.nextUrl.search === "string"
-  ) {
-    return request.nextUrl.search;
+  const nextUrl = readNextUrl(request);
+  if (!nextUrl || typeof nextUrl !== "object") {
+    return "";
+  }
+
+  try {
+    if (
+      "search" in nextUrl &&
+      typeof nextUrl.search === "string"
+    ) {
+      return nextUrl.search;
+    }
+  } catch {
+    return "";
   }
 
   return "";
 }
 
 function getCookieValue(request: unknown, cookieName: string) {
+  if (!request || typeof request !== "object" || !("cookies" in request)) {
+    return undefined;
+  }
+
+  let cookies: unknown;
+  try {
+    cookies = (request as { cookies?: unknown }).cookies;
+  } catch {
+    return undefined;
+  }
+
   if (
-    !request ||
-    typeof request !== "object" ||
-    !("cookies" in request) ||
-    !request.cookies ||
-    typeof request.cookies !== "object" ||
-    !("get" in request.cookies) ||
-    typeof request.cookies.get !== "function"
+    !cookies ||
+    typeof cookies !== "object" ||
+    !("get" in cookies) ||
+    typeof cookies.get !== "function"
   ) {
     return undefined;
   }
 
-  const value = request.cookies.get(cookieName);
+  let value: unknown;
+  try {
+    value = cookies.get(cookieName);
+  } catch {
+    return undefined;
+  }
   if (!value || typeof value !== "object" || !("value" in value)) {
     return undefined;
   }
@@ -77,18 +98,39 @@ function getCookieValue(request: unknown, cookieName: string) {
 }
 
 function createSignInUrl(request: unknown) {
+  const requestedUrl = readRequestUrl(request);
   const baseUrl =
-    request &&
-    typeof request === "object" &&
-    "url" in request &&
-    typeof request.url === "string" &&
-    request.url.length > 0
-      ? request.url
+    typeof requestedUrl === "string" && requestedUrl.length > 0
+      ? requestedUrl
       : "http://localhost/";
 
   try {
     return new URL("/sign-in", baseUrl);
   } catch {
     return new URL("/sign-in", "http://localhost/");
+  }
+}
+
+function readNextUrl(request: unknown) {
+  if (!request || typeof request !== "object" || !("nextUrl" in request)) {
+    return undefined;
+  }
+
+  try {
+    return (request as { nextUrl?: unknown }).nextUrl;
+  } catch {
+    return undefined;
+  }
+}
+
+function readRequestUrl(request: unknown) {
+  if (!request || typeof request !== "object" || !("url" in request)) {
+    return undefined;
+  }
+
+  try {
+    return (request as { url?: unknown }).url;
+  } catch {
+    return undefined;
   }
 }
