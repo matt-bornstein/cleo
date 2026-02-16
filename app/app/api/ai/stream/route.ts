@@ -25,6 +25,57 @@ type StreamRequestPayload = {
   }>;
 };
 
+function parsePayload(value: unknown): StreamRequestPayload | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+
+  if (
+    typeof candidate.documentId !== "string" ||
+    typeof candidate.model !== "string" ||
+    typeof candidate.prompt !== "string" ||
+    typeof candidate.documentContent !== "string"
+  ) {
+    return null;
+  }
+
+  const rawMessages = candidate.messages;
+  if (rawMessages === undefined) {
+    return {
+      documentId: candidate.documentId,
+      model: candidate.model,
+      prompt: candidate.prompt,
+      documentContent: candidate.documentContent,
+      messages: [],
+    };
+  }
+
+  if (!Array.isArray(rawMessages)) return null;
+  const messages = rawMessages.map((message) => {
+    if (!message || typeof message !== "object") return null;
+    const item = message as Record<string, unknown>;
+    const role = item.role;
+    if (role !== "user" && role !== "assistant" && role !== "system") return null;
+    if (typeof item.content !== "string") return null;
+    if (item.userId !== undefined && typeof item.userId !== "string") return null;
+
+    return {
+      role,
+      content: item.content,
+      userId: item.userId,
+    };
+  });
+
+  if (messages.some((message) => message === null)) return null;
+
+  return {
+    documentId: candidate.documentId,
+    model: candidate.model,
+    prompt: candidate.prompt,
+    documentContent: candidate.documentContent,
+    messages: messages as StreamRequestPayload["messages"],
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const documentId = searchParams.get("documentId");
@@ -117,7 +168,13 @@ async function callModel(
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as StreamRequestPayload;
+  const rawPayload = await request.json().catch(() => null);
+  const payload = parsePayload(rawPayload);
+
+  if (!payload) {
+    return Response.json({ error: "Invalid request payload" }, { status: 400 });
+  }
+
   const userId = request.headers.get("x-user-id") ?? "local-dev-user";
   const lockResult = aiLockManager.acquire(payload.documentId, userId);
 

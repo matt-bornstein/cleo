@@ -65,6 +65,41 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toContain("alice");
     aiLockManager.release("doc-lock", "alice");
   });
+
+  it("returns bad request for invalid payload", async () => {
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        prompt: "missing documentId",
+        documentContent: "{}",
+        messages: [],
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
+  it("returns bad request for non-json request body", async () => {
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: "{not-json}",
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
 });
 
 describe("GET /api/ai/stream", () => {
