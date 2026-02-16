@@ -80,6 +80,10 @@ export function useAIChat({
     }
   }, [defaultModel]);
 
+  const updateSelectedModel = useCallback((modelId: string) => {
+    setSelectedModel(normalizeModelId(modelId));
+  }, []);
+
   const sendPrompt = useCallback(
     async (prompt: string) => {
       const userMessage = createMessage(
@@ -239,7 +243,7 @@ export function useAIChat({
     messages,
     selectedModel,
     selectedModelLabel,
-    setSelectedModel,
+    setSelectedModel: updateSelectedModel,
     sendPrompt,
     isLoading,
     error,

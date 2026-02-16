@@ -306,6 +306,24 @@ describe("useAIChat", () => {
     expect(result.current.selectedModel).toBe("gpt-4o");
   });
 
+  it("normalizes unknown selected model updates to known ids", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-model-update",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      result.current.setSelectedModel("unknown-model");
+    });
+
+    expect(result.current.selectedModel).toBe("gpt-4o");
+  });
+
   it("normalizes whitespace current user id for headers and messages", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     createDiffMock.mockReturnValue({ id: "diff-user-normalized" });
