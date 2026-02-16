@@ -13,20 +13,22 @@ export interface RemoteCursor {
 const remoteCursorsPluginKey = new PluginKey("remoteCursors");
 
 /**
+ * Shared mutable ref for cursor data. The plugin reads from this
+ * on every transaction so the extension config doesn't need to change.
+ */
+export const remoteCursorsState = {
+  cursors: [] as RemoteCursor[],
+};
+
+/**
  * Tiptap extension to render remote collaborator cursors and selections
- * as ProseMirror decorations.
+ * as ProseMirror decorations. Uses a shared mutable ref for cursor data
+ * so the extension instance is stable and doesn't need to be recreated.
  */
 export const RemoteCursorsExtension = Extension.create({
   name: "remoteCursors",
 
-  addOptions() {
-    return {
-      cursors: [] as RemoteCursor[],
-    };
-  },
-
   addProseMirrorPlugins() {
-    const extension = this;
     return [
       new Plugin({
         key: remoteCursorsPluginKey,
@@ -34,8 +36,8 @@ export const RemoteCursorsExtension = Extension.create({
           init() {
             return DecorationSet.empty;
           },
-          apply(tr, _old, _oldState, newState) {
-            const cursors = extension.options.cursors as RemoteCursor[];
+          apply(_tr, _old, _oldState, newState) {
+            const cursors = remoteCursorsState.cursors;
             const decorations: Decoration[] = [];
 
             for (const cursor of cursors) {
@@ -63,13 +65,11 @@ export const RemoteCursorsExtension = Extension.create({
                     const cursorEl = document.createElement("span");
                     cursorEl.className = "remote-cursor";
                     cursorEl.style.borderLeft = `2px solid ${cursor.color}`;
-                    cursorEl.style.borderRight = "none";
                     cursorEl.style.marginLeft = "-1px";
                     cursorEl.style.position = "relative";
                     cursorEl.style.display = "inline";
                     cursorEl.style.height = "1.2em";
 
-                    // Name label
                     const label = document.createElement("span");
                     label.className = "remote-cursor-label";
                     label.textContent = cursor.userName;

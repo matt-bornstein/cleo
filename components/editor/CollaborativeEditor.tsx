@@ -9,14 +9,34 @@ import {
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { editorExtensions } from "@/lib/editor/extensions";
-import { RemoteCursorsExtension, type RemoteCursor } from "@/lib/editor/remoteCursors";
-import { CommentHighlightsExtension, type CommentAnchor } from "@/lib/editor/commentHighlights";
+import {
+  RemoteCursorsExtension,
+  remoteCursorsState,
+  type RemoteCursor,
+} from "@/lib/editor/remoteCursors";
+import {
+  CommentHighlightsExtension,
+  commentHighlightsState,
+  type CommentAnchor,
+} from "@/lib/editor/commentHighlights";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { usePresence } from "@/hooks/usePresence";
 import { useEditorContext } from "./EditorContext";
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import { useQuery } from "convex/react";
+import type { Editor } from "@tiptap/react";
+
+/**
+ * Dispatch a no-op transaction to force ProseMirror to recompute decorations.
+ */
+function triggerDecorationRefresh(editor: Editor | null) {
+  if (editor && !editor.isDestroyed) {
+    // setMeta triggers apply() in all plugins without changing content
+    const tr = editor.state.tr.setMeta("decorationRefresh", true);
+    editor.view.dispatch(tr);
+  }
+}
 
 interface CollaborativeEditorProps {
   documentId: Id<"documents">;
@@ -92,52 +112,48 @@ function SyncedEditor({
   const { othersPresence, updateMyPresence } = usePresence(documentId, userName);
   const comments = useQuery(api.comments.list, { documentId });
 
-  // Build remote cursor data from presence
-  const remoteCursors: RemoteCursor[] = useMemo(() => {
-    return othersPresence.map((p) => ({
+  // Update the shared mutable cursor state and trigger editor refresh
+  const editorRefForDecorations = useRef<any>(null);
+
+  useEffect(() => {
+    remoteCursorsState.cursors = othersPresence.map((p) => ({
       visitorId: p.visitorId,
       userName: p.userName ?? "Anonymous",
       color: (p.data as any)?.color ?? "#888",
       cursor: (p.data as any)?.cursor,
       selection: (p.data as any)?.selection,
     }));
+    // Trigger a dummy transaction to force decoration recompute
+    triggerDecorationRefresh(editorRefForDecorations.current);
   }, [othersPresence]);
 
-  // Build comment anchors for highlight decorations
-  const commentAnchors: CommentAnchor[] = useMemo(() => {
-    if (!comments) return [];
-    // Only show top-level comments (not replies)
-    return comments
-      .filter((c) => !c.parentCommentId)
-      .map((c) => ({
-        id: c._id,
-        anchorFrom: c.anchorFrom,
-        anchorTo: c.anchorTo,
-        resolved: c.resolved,
-      }));
+  // Update the shared mutable comment state
+  useEffect(() => {
+    if (!comments) {
+      commentHighlightsState.comments = [];
+    } else {
+      commentHighlightsState.comments = comments
+        .filter((c) => !c.parentCommentId)
+        .map((c) => ({
+          id: c._id,
+          anchorFrom: c.anchorFrom,
+          anchorTo: c.anchorTo,
+          resolved: c.resolved,
+        }));
+    }
+    triggerDecorationRefresh(editorRefForDecorations.current);
   }, [comments]);
 
-  // Create the remote cursors extension instance with current cursor data
-  const remoteCursorsExt = useMemo(
-    () =>
-      RemoteCursorsExtension.configure({
-        cursors: remoteCursors,
-      }),
-    [remoteCursors]
-  );
-
-  // Create comment highlights extension
-  const commentHighlightsExt = useMemo(
-    () =>
-      CommentHighlightsExtension.configure({
-        comments: commentAnchors,
-      }),
-    [commentAnchors]
-  );
-
+  // Extensions are stable — they don't change when cursor/comment data updates.
+  // The plugins read from the shared mutable refs instead.
   const allExtensions = useMemo(
-    () => [...editorExtensions, syncExtension, remoteCursorsExt, commentHighlightsExt],
-    [syncExtension, remoteCursorsExt, commentHighlightsExt]
+    () => [
+      ...editorExtensions,
+      syncExtension,
+      RemoteCursorsExtension,
+      CommentHighlightsExtension,
+    ],
+    [syncExtension]
   );
 
   return (
@@ -150,7 +166,6 @@ function SyncedEditor({
           scheduleIdleSave(json);
         }}
         onSelectionUpdate={({ editor }) => {
-          // Broadcast cursor/selection to other collaborators
           const { from, to } = editor.state.selection;
           updateMyPresence({
             cursor: from,
@@ -164,21 +179,31 @@ function SyncedEditor({
           },
         }}
       >
-        <EditorToolbar documentId={documentId} />
+        <EditorToolbar documentId={documentId} editorRef={editorRefForDecorations} />
         <EditorContent editor={null} />
       </EditorProvider>
     </div>
   );
 }
 
-function EditorToolbar({ documentId }: { documentId: Id<"documents"> }) {
+function EditorToolbar({
+  documentId,
+  editorRef,
+}: {
+  documentId: Id<"documents">;
+  editorRef: React.MutableRefObject<Editor | null>;
+}) {
   const { editor } = useCurrentEditor();
   const { setEditor } = useEditorContext();
 
   useEffect(() => {
+    editorRef.current = editor;
     setEditor(editor);
-    return () => setEditor(null);
-  }, [editor, setEditor]);
+    return () => {
+      editorRef.current = null;
+      setEditor(null);
+    };
+  }, [editor, setEditor, editorRef]);
 
   if (!editor) return null;
   return <FormattingToolbar editor={editor} documentId={documentId} />;
