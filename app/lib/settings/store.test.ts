@@ -48,8 +48,21 @@ describe("settings store", () => {
     expect(saved.theme).toBe("dark");
     expect(saved.defaultModel).toBe("gpt-4.1");
     expect(saved.editorFontSize).toBe(16);
-    expect(saved.editorLineSpacing).toBe(1.6);
+    expect(saved.editorLineSpacing).toBe(1);
     expect(saved.userEmail).toBe("test@example.com");
+  });
+
+  it("clamps editor numeric settings within supported ranges", () => {
+    const saved = saveSettings({
+      theme: "dark",
+      defaultModel: "gpt-4o",
+      editorFontSize: 200,
+      editorLineSpacing: 10,
+      userEmail: "test@example.com",
+    });
+
+    expect(saved.editorFontSize).toBe(72);
+    expect(saved.editorLineSpacing).toBe(3);
   });
 
   it("falls back to default model for unknown model ids", () => {
@@ -88,7 +101,7 @@ describe("settings store", () => {
     expect(settings.theme).toBe("system");
     expect(settings.defaultModel).toBe("gpt-4o");
     expect(settings.editorFontSize).toBe(16);
-    expect(settings.editorLineSpacing).toBe(1.6);
+    expect(settings.editorLineSpacing).toBe(1);
     expect(settings.userEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
 });

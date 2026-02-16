@@ -14,6 +14,10 @@ const defaultSettings: AppUserSettings = {
   userEmail: DEFAULT_LOCAL_USER_EMAIL,
 };
 const VALID_THEMES = new Set(["system", "light", "dark"]);
+const MIN_EDITOR_FONT_SIZE = 8;
+const MAX_EDITOR_FONT_SIZE = 72;
+const MIN_EDITOR_LINE_SPACING = 1;
+const MAX_EDITOR_LINE_SPACING = 3;
 
 function canUseStorage() {
   return typeof window !== "undefined" && !!window.localStorage;
@@ -27,18 +31,18 @@ function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettin
       ? (normalizedThemeCandidate as AppUserSettings["theme"])
       : defaultSettings.theme;
   const normalizedModel = settings?.defaultModel?.trim();
-  const normalizedFontSize =
-    typeof settings?.editorFontSize === "number" &&
-    Number.isFinite(settings.editorFontSize) &&
-    settings.editorFontSize > 0
-      ? settings.editorFontSize
-      : defaultSettings.editorFontSize;
-  const normalizedLineSpacing =
-    typeof settings?.editorLineSpacing === "number" &&
-    Number.isFinite(settings.editorLineSpacing) &&
-    settings.editorLineSpacing > 0
-      ? settings.editorLineSpacing
-      : defaultSettings.editorLineSpacing;
+  const normalizedFontSize = clampSettingNumber(
+    settings?.editorFontSize,
+    MIN_EDITOR_FONT_SIZE,
+    MAX_EDITOR_FONT_SIZE,
+    defaultSettings.editorFontSize ?? 16,
+  );
+  const normalizedLineSpacing = clampSettingNumber(
+    settings?.editorLineSpacing,
+    MIN_EDITOR_LINE_SPACING,
+    MAX_EDITOR_LINE_SPACING,
+    defaultSettings.editorLineSpacing ?? 1.6,
+  );
   const normalizedEmail = normalizeEmailOrFallback(
     settings?.userEmail,
     DEFAULT_LOCAL_USER_EMAIL,
@@ -73,4 +77,17 @@ export function saveSettings(settings: AppUserSettings) {
   if (!canUseStorage()) return normalizedSettings;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSettings));
   return normalizedSettings;
+}
+
+function clampSettingNumber(
+  value: number | undefined,
+  min: number,
+  max: number,
+  fallback: number,
+) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, value));
 }
