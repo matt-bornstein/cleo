@@ -6,6 +6,8 @@ type ToolbarProps = {
   documentTitle: string;
   onNewDocument: () => void;
   onOpenDocument: () => void;
+  onHistory: () => void;
+  onExport: () => void;
   onShare: () => void;
   onSettings: () => void;
 };
@@ -14,6 +16,8 @@ export function Toolbar({
   documentTitle,
   onNewDocument,
   onOpenDocument,
+  onHistory,
+  onExport,
   onShare,
   onSettings,
 }: ToolbarProps) {
@@ -25,6 +29,12 @@ export function Toolbar({
         </Button>
         <Button variant="outline" size="sm" onClick={onOpenDocument}>
           Open
+        </Button>
+        <Button variant="outline" size="sm" onClick={onHistory}>
+          History
+        </Button>
+        <Button variant="outline" size="sm" onClick={onExport}>
+          Export
         </Button>
         <Button variant="outline" size="sm" onClick={onShare}>
           Share

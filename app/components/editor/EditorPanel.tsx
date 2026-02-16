@@ -9,6 +9,8 @@ type EditorPanelProps = {
   onLocalUpdate?: () => void;
   saveStateLabel?: string;
   otherPresence?: PresenceRecord[];
+  fontSize?: number;
+  lineSpacing?: number;
 };
 
 export function EditorPanel({
@@ -18,6 +20,8 @@ export function EditorPanel({
   onLocalUpdate,
   saveStateLabel,
   otherPresence = [],
+  fontSize,
+  lineSpacing,
 }: EditorPanelProps) {
   return (
     <div className="flex h-full flex-col">
@@ -33,6 +37,8 @@ export function EditorPanel({
           content={content}
           onContentChange={onContentChange}
           onLocalUpdate={onLocalUpdate}
+          fontSize={fontSize}
+          lineSpacing={lineSpacing}
         />
       </div>
     </div>

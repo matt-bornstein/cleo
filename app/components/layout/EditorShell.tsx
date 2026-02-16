@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AIPanel } from "@/components/ai/AIPanel";
@@ -10,13 +10,16 @@ import { EditorLayout } from "@/components/layout/EditorLayout";
 import { Toolbar } from "@/components/layout/Toolbar";
 import { NewDocModal } from "@/components/modals/NewDocModal";
 import { OpenDocModal } from "@/components/modals/OpenDocModal";
+import { ExportModal } from "@/components/modals/ExportModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { ShareModal } from "@/components/modals/ShareModal";
+import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
 import { triggerIdleSave } from "@/lib/diffs/store";
 import { useComments } from "@/hooks/useComments";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { useDocuments } from "@/hooks/useDocuments";
 import { usePresence } from "@/hooks/usePresence";
+import { useSettings } from "@/hooks/useSettings";
 
 type EditorShellProps = {
   documentId: string;
@@ -27,9 +30,12 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const { documents, create, getById, updateContent } = useDocuments();
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [openModalOpen, setOpenModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [saveStateLabel, setSaveStateLabel] = useState("Saved");
+  const { settings, refreshSettings } = useSettings();
   const { others, updateMyPresence } = usePresence(documentId);
   const { comments, createComment, markResolved } = useComments(documentId);
 
@@ -58,12 +64,45 @@ export function EditorShell({ documentId }: EditorShellProps) {
     },
   });
 
+  useEffect(() => {
+    if (settings.theme) {
+      document.documentElement.dataset.theme = settings.theme;
+    }
+  }, [settings.theme]);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const isMeta = event.metaKey || event.ctrlKey;
+      if (!isMeta) return;
+      const key = event.key.toLowerCase();
+
+      if (key === "n") {
+        event.preventDefault();
+        setNewModalOpen(true);
+      }
+
+      if (key === "o") {
+        event.preventDefault();
+        setOpenModalOpen(true);
+      }
+
+      if (key === "h") {
+        event.preventDefault();
+        setHistoryModalOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-100">
       <Toolbar
         documentTitle={documentTitle}
         onNewDocument={() => setNewModalOpen(true)}
         onOpenDocument={() => setOpenModalOpen(true)}
+        onHistory={() => setHistoryModalOpen(true)}
+        onExport={() => setExportModalOpen(true)}
         onShare={() => setShareModalOpen(true)}
         onSettings={() => setSettingsModalOpen(true)}
       />
@@ -77,6 +116,8 @@ export function EditorShell({ documentId }: EditorShellProps) {
                 content={content}
                 otherPresence={others}
                 saveStateLabel={saveStateLabel}
+                fontSize={settings.editorFontSize}
+                lineSpacing={settings.editorLineSpacing}
                 onContentChange={(nextContent) => {
                   updateContent(documentId, nextContent);
                 }}
@@ -124,12 +165,31 @@ export function EditorShell({ documentId }: EditorShellProps) {
         documents={documents}
         onOpenDocument={(nextDocumentId) => router.push(`/editor/${nextDocumentId}`)}
       />
+      <VersionHistoryModal
+        open={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
+        documentId={documentId}
+        onRestoreSnapshot={(snapshot) => {
+          updateContent(documentId, snapshot);
+          setSaveStateLabel("Saved");
+        }}
+      />
+      <ExportModal
+        open={exportModalOpen}
+        onOpenChange={setExportModalOpen}
+        documentTitle={documentTitle}
+        content={content}
+      />
       <ShareModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
         documentId={documentId}
       />
-      <SettingsModal open={settingsModalOpen} onOpenChange={setSettingsModalOpen} />
+      <SettingsModal
+        open={settingsModalOpen}
+        onOpenChange={setSettingsModalOpen}
+        onSaved={refreshSettings}
+      />
     </div>
   );
 }

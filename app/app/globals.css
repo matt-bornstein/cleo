@@ -5,6 +5,16 @@
   --foreground: #0f172a;
 }
 
+:root[data-theme="light"] {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+:root[data-theme="dark"] {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -4,6 +4,7 @@ import { beforeEach, vi } from "vitest";
 
 import { EditorShell } from "@/components/layout/EditorShell";
 import { createDocument, resetDocumentsForTests } from "@/lib/documents/store";
+import { triggerIdleSave } from "@/lib/diffs/store";
 
 const pushMock = vi.fn();
 
@@ -53,5 +54,29 @@ describe("EditorShell", () => {
     await user.click(screen.getByRole("button", { name: /Spec B/i }));
 
     expect(pushMock).toHaveBeenCalledWith(`/editor/${second.id}`);
+  });
+
+  it("opens modal from keyboard shortcut and restores from version history", async () => {
+    const user = userEvent.setup();
+    const document = createDocument("Versioned Doc");
+    const changedSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "updated" }] }],
+    });
+    triggerIdleSave({
+      documentId: document.id,
+      snapshot: changedSnapshot,
+      dedupWindowMs: 0,
+    });
+
+    render(<EditorShell documentId={document.id} />);
+
+    await user.keyboard("{Control>}o{/Control}");
+    expect(screen.getByText("Open document")).toBeInTheDocument();
+
+    await user.keyboard("{Control>}h{/Control}");
+    expect(screen.getByText("Version history")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Restore selected version" }));
+    expect(screen.queryByText("Version history")).not.toBeInTheDocument();
   });
 });

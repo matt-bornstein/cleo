@@ -27,6 +27,8 @@ export function OpenDocModal({
   onOpenDocument,
 }: OpenDocModalProps) {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const filteredDocuments = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -36,8 +38,22 @@ export function OpenDocModal({
     );
   }, [documents, search]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / pageSize));
+  const paginatedDocuments = filteredDocuments.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          setPage(1);
+        }
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Open document</DialogTitle>
@@ -49,10 +65,13 @@ export function OpenDocModal({
           <Input
             placeholder="Search by title"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
           />
           <div className="max-h-80 space-y-2 overflow-y-auto">
-            {filteredDocuments.map((document) => (
+            {paginatedDocuments.map((document) => (
               <button
                 key={document.id}
                 type="button"
@@ -73,6 +92,29 @@ export function OpenDocModal({
                 No documents found.
               </div>
             ) : null}
+          </div>
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>
+              Page {page} / {totalPages}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+              >
+                Prev
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+              >
+                Next
+              </Button>
+            </div>
           </div>
           <div className="flex justify-end">
             <Button variant="secondary" onClick={() => onOpenChange(false)}>

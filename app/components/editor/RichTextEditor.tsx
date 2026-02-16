@@ -10,6 +10,8 @@ type RichTextEditorProps = {
   content: string;
   onContentChange: (content: string) => void;
   onLocalUpdate?: () => void;
+  fontSize?: number;
+  lineSpacing?: number;
 };
 
 function parseContent(content: string) {
@@ -27,6 +29,8 @@ export function RichTextEditor({
   content,
   onContentChange,
   onLocalUpdate,
+  fontSize,
+  lineSpacing,
 }: RichTextEditorProps) {
   const parsedContent = useMemo(() => parseContent(content), [content]);
 
@@ -50,7 +54,13 @@ export function RichTextEditor({
     <div className="flex h-full flex-col">
       <FormattingToolbar editor={editor} />
       <div className="flex-1 overflow-y-auto bg-white">
-        <EditorContent editor={editor} />
+        <EditorContent
+          editor={editor}
+          style={{
+            fontSize: fontSize ? `${fontSize}px` : undefined,
+            lineHeight: lineSpacing ? String(lineSpacing) : undefined,
+          }}
+        />
       </div>
     </div>
   );
