@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
 import { AIPanel } from "@/components/ai/AIPanel";
@@ -235,5 +236,39 @@ describe("AIPanel", () => {
       screen.queryByText("AI edits are disabled for your current role."),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
+  });
+
+  it("does not throw when ai hooks return malformed payloads", async () => {
+    const user = userEvent.setup();
+    useAILockStatusMock.mockReturnValue(123);
+    useAIChatMock.mockReturnValue({
+      messages: 123,
+      selectedModel: 123,
+      selectedModelLabel: 123,
+      setSelectedModel: 123,
+      sendPrompt: 123,
+      isLoading: "yes",
+      error: 123,
+      clearChat: () => {
+        throw new Error("clear failed");
+      },
+    });
+
+    expect(() =>
+      render(
+        <AIPanel
+          documentId="doc-1"
+          currentDocumentContent="{}"
+          currentUserId="bob@example.com"
+          onApplyContent={vi.fn()}
+        />,
+      ),
+    ).not.toThrow();
+
+    expect(screen.queryByText(/AI \(.*\) is working/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Clear chat" })),
+    ).resolves.toBeUndefined();
   });
 });

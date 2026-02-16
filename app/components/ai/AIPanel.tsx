@@ -29,7 +29,7 @@ export function AIPanel({
   onClearChat,
 }: AIPanelProps) {
   const normalizedCanEdit = canEdit !== false;
-  const lockStatus = useAILockStatus(documentId);
+  const lockStatus = normalizeLockStatus(useAILockStatus(documentId));
   const normalizedCurrentUserId = normalizeAIUserId(currentUserId);
   const normalizedLockOwner = lockStatus.lockedBy
     ? normalizeAIUserId(lockStatus.lockedBy)
@@ -39,16 +39,7 @@ export function AIPanel({
     normalizedLockOwner &&
     normalizedLockOwner !== normalizedCurrentUserId;
 
-  const {
-    messages,
-    selectedModel,
-    selectedModelLabel,
-    setSelectedModel,
-    sendPrompt,
-    isLoading,
-    error,
-    clearChat,
-  } = useAIChat({
+  const aiChatState = useAIChat({
     documentId,
     currentDocumentContent,
     onApplyContent,
@@ -57,6 +48,30 @@ export function AIPanel({
     chatClearedAt,
     onClearChat,
   });
+  const messages = Array.isArray(aiChatState?.messages) ? aiChatState.messages : [];
+  const selectedModel =
+    typeof aiChatState?.selectedModel === "string" &&
+    aiChatState.selectedModel.trim().length > 0
+      ? aiChatState.selectedModel
+      : "gpt-4o";
+  const selectedModelLabel =
+    typeof aiChatState?.selectedModelLabel === "string" &&
+    aiChatState.selectedModelLabel.trim().length > 0
+      ? aiChatState.selectedModelLabel
+      : selectedModel;
+  const setSelectedModel =
+    typeof aiChatState?.setSelectedModel === "function"
+      ? aiChatState.setSelectedModel
+      : undefined;
+  const sendPrompt =
+    typeof aiChatState?.sendPrompt === "function"
+      ? aiChatState.sendPrompt
+      : undefined;
+  const isLoading = aiChatState?.isLoading === true;
+  const error =
+    typeof aiChatState?.error === "string" ? aiChatState.error : null;
+  const clearChat =
+    typeof aiChatState?.clearChat === "function" ? aiChatState.clearChat : undefined;
 
   return (
     <div className="flex h-full flex-col">
@@ -65,7 +80,9 @@ export function AIPanel({
         <button
           type="button"
           className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
-          onClick={clearChat}
+          onClick={() => {
+            safeInvoke(clearChat);
+          }}
           disabled={isLoading || (messages.length === 0 && !error)}
         >
           Clear chat
@@ -100,4 +117,31 @@ export function AIPanel({
       </div>
     </div>
   );
+}
+
+function normalizeLockStatus(lockStatus: unknown) {
+  if (!lockStatus || typeof lockStatus !== "object") {
+    return { locked: false, lockedBy: undefined };
+  }
+
+  const candidate = lockStatus as {
+    locked?: unknown;
+    lockedBy?: unknown;
+  };
+  return {
+    locked: candidate.locked === true,
+    lockedBy: typeof candidate.lockedBy === "string" ? candidate.lockedBy : undefined,
+  };
+}
+
+function safeInvoke(callback: unknown) {
+  if (typeof callback !== "function") {
+    return;
+  }
+
+  try {
+    callback();
+  } catch {
+    return;
+  }
 }
