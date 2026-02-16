@@ -56,19 +56,24 @@ describe("useComments", () => {
     );
   });
 
-  it("normalizes malformed non-string comment inputs before dispatch", () => {
+  it("short-circuits malformed non-string comment inputs before dispatch", () => {
     const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
 
     act(() => {
       result.current.createComment(123 as unknown as string, 456 as unknown as string);
     });
 
-    expect(addCommentMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: "",
-        anchorText: "",
-      }),
-    );
+    expect(addCommentMock).not.toHaveBeenCalled();
+  });
+
+  it("short-circuits malformed non-string reply inputs before dispatch", () => {
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+
+    act(() => {
+      result.current.createReply("parent-1", 123 as unknown as string);
+    });
+
+    expect(addCommentMock).not.toHaveBeenCalled();
   });
 
   it("uses parent anchor text and current user id for replies", () => {

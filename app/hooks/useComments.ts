@@ -28,6 +28,9 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
         return null;
       }
       const normalizedContent = typeof content === "string" ? content : "";
+      if (normalizedContent.trim().length === 0) {
+        return null;
+      }
       const normalizedAnchorText = typeof anchorText === "string" ? anchorText : "";
       const normalizedParentCommentId =
         typeof parentCommentId === "string" ? parentCommentId : undefined;
@@ -73,6 +76,9 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
       const normalizedParentCommentId =
         typeof parentCommentId === "string" ? parentCommentId.trim() : "";
       const normalizedContent = typeof content === "string" ? content : "";
+      if (normalizedContent.trim().length === 0) {
+        return null;
+      }
       const parent = comments.find((comment) => comment.id === normalizedParentCommentId);
       const anchorText = parent?.anchorText ?? "Reply";
       const parentIdForReply =
