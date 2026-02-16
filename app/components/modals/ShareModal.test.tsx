@@ -190,6 +190,19 @@ describe("ShareModal", () => {
     expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
   });
 
+  it("shows validation error for oversized collaborator email", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-invalid-email-long" />);
+
+    await user.type(
+      screen.getByPlaceholderText("user@example.com"),
+      `${"a".repeat(260)}@example.com`,
+    );
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+  });
+
   it("clears validation error while user edits collaborator email", async () => {
     const user = userEvent.setup();
     render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-invalid-clear" />);

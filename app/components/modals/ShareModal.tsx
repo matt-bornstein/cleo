@@ -17,6 +17,7 @@ import {
   upsertPermission,
 } from "@/lib/permissions/store";
 import type { Role } from "@/lib/types";
+import { normalizeEmailOrUndefined } from "@/lib/user/email";
 import { isValidEmail } from "@/lib/validators/email";
 
 type ShareModalProps = {
@@ -173,13 +174,14 @@ export function ShareModal({
             <Button
               disabled={isAddDisabled}
               onClick={() => {
-                const normalizedEmail = email.trim().toLowerCase();
-                if (!isValidEmail(normalizedEmail)) {
+                const normalizedEmail = normalizeEmailOrUndefined(email);
+                if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
                   setAddError("Enter a valid email address.");
                   return;
                 }
 
-                if (ownerEmail && normalizedEmail === ownerEmail.toLowerCase()) {
+                const normalizedOwnerEmail = normalizeEmailOrUndefined(ownerEmail);
+                if (normalizedOwnerEmail && normalizedEmail === normalizedOwnerEmail) {
                   setAddError("Owner access is fixed and cannot be re-added.");
                   return;
                 }
