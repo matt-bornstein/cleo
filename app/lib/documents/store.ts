@@ -1,5 +1,6 @@
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { AppDocument } from "@/lib/types";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.documents.v1";
@@ -12,7 +13,7 @@ const EMPTY_EDITOR_DOC = JSON.stringify({
   type: "doc",
   content: [{ type: "paragraph" }],
 });
-const DEFAULT_OWNER_EMAIL = "me@local.dev";
+const DEFAULT_OWNER_EMAIL = DEFAULT_LOCAL_USER_EMAIL;
 
 const inMemoryState: DocumentStoreState = {
   documents: [],

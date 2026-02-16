@@ -1,4 +1,5 @@
 import type { AppUserSettings } from "@/lib/types";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 const STORAGE_KEY = "plan00.settings.v1";
 
@@ -7,7 +8,7 @@ const defaultSettings: AppUserSettings = {
   defaultModel: "gpt-4o",
   editorFontSize: 16,
   editorLineSpacing: 1.6,
-  userEmail: "me@local.dev",
+  userEmail: DEFAULT_LOCAL_USER_EMAIL,
 };
 
 function canUseStorage() {

@@ -1,4 +1,5 @@
 import { getSettings, saveSettings } from "@/lib/settings/store";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 describe("settings store", () => {
   beforeEach(() => {
@@ -9,7 +10,7 @@ describe("settings store", () => {
     const settings = getSettings();
     expect(settings.defaultModel).toBe("gpt-4o");
     expect(settings.editorFontSize).toBe(16);
-    expect(settings.userEmail).toBe("me@local.dev");
+    expect(settings.userEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
 
   it("persists and reloads settings", () => {

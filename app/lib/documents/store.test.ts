@@ -7,6 +7,7 @@ import {
   setDocumentChatClearedAt,
   updateDocumentTitle,
 } from "@/lib/documents/store";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 describe("document store", () => {
   beforeEach(() => {
@@ -19,16 +20,16 @@ describe("document store", () => {
 
     expect(document.title).toBe("Product spec");
     expect(document.content).toContain('"type":"doc"');
-    expect(document.ownerEmail).toBe("me@local.dev");
+    expect(document.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
     expect(document.id).toBeTruthy();
   });
 
   it("falls back to default owner email for invalid owner input", () => {
     const blankOwner = createDocument("Blank owner", "   ");
-    expect(blankOwner.ownerEmail).toBe("me@local.dev");
+    expect(blankOwner.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
 
     const controlCharOwner = createDocument("Bad owner", "owner\nname@example.com");
-    expect(controlCharOwner.ownerEmail).toBe("me@local.dev");
+    expect(controlCharOwner.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
 
   it("lists documents sorted by updatedAt desc and searchable", async () => {
@@ -62,7 +63,7 @@ describe("document store", () => {
     );
 
     const documents = listDocuments();
-    expect(documents[0]?.ownerEmail).toBe("me@local.dev");
+    expect(documents[0]?.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
 
   it("gets a document by id", () => {

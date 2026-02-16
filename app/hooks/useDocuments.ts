@@ -13,8 +13,12 @@ import {
 } from "@/lib/documents/store";
 import { hasDocumentAccess } from "@/lib/permissions/store";
 import type { AppDocument } from "@/lib/types";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
-export function useDocuments(search?: string, currentUserEmail = "me@local.dev") {
+export function useDocuments(
+  search?: string,
+  currentUserEmail = DEFAULT_LOCAL_USER_EMAIL,
+) {
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   const refresh = useCallback(() => {

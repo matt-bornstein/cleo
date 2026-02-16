@@ -28,6 +28,7 @@ import {
 } from "@/lib/permissions/store";
 import { hasPermission } from "@/lib/permissions";
 import { sanitizeShareRole } from "@/lib/permissions/shareLink";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 type EditorShellProps = {
   documentId: string;
@@ -37,7 +38,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings, refreshSettings } = useSettings();
-  const currentUserEmail = settings.userEmail ?? "me@local.dev";
+  const currentUserEmail = settings.userEmail ?? DEFAULT_LOCAL_USER_EMAIL;
   const {
     documents,
     create,

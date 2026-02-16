@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useSettings } from "@/hooks/useSettings";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 export default function EditorIndexPage() {
   const router = useRouter();
   const { settings } = useSettings();
-  const currentUserEmail = settings.userEmail ?? "me@local.dev";
+  const currentUserEmail = settings.userEmail ?? DEFAULT_LOCAL_USER_EMAIL;
   const { documents, create } = useDocuments(undefined, currentUserEmail);
 
   const handleContinue = () => {

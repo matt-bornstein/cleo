@@ -4,6 +4,7 @@ import { vi } from "vitest";
 
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { getSettings } from "@/lib/settings/store";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 describe("SettingsModal", () => {
   beforeEach(() => {
@@ -18,7 +19,7 @@ describe("SettingsModal", () => {
       <SettingsModal open onOpenChange={vi.fn()} onSaved={onSaved} />,
     );
 
-    const emailInput = screen.getByDisplayValue("me@local.dev");
+    const emailInput = screen.getByDisplayValue(DEFAULT_LOCAL_USER_EMAIL);
     await user.clear(emailInput);
     await user.type(emailInput, "owner@example.com");
     await user.click(screen.getByRole("button", { name: "Save" }));
