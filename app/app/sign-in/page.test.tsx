@@ -67,6 +67,29 @@ describe("SignInPage", () => {
     expect(pushMock).toHaveBeenCalledWith("/editor");
   });
 
+  it("falls back to /editor when search params getter throws", async () => {
+    const user = userEvent.setup();
+    mockedSearchParams = {
+      get: () => {
+        throw new Error("search params unavailable");
+      },
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", { status: 200 }),
+    );
+
+    render(<SignInPage />);
+    await user.click(screen.getByRole("button", { name: "Continue (local auth)" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/local-signin",
+      expect.objectContaining({
+        body: JSON.stringify({ next: "/editor" }),
+      }),
+    );
+    expect(pushMock).toHaveBeenCalledWith("/editor");
+  });
+
   it("shows error when sign-in response payload is malformed", async () => {
     const user = userEvent.setup();
     vi.spyOn(globalThis, "fetch").mockResolvedValue({} as Response);

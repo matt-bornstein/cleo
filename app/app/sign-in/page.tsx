@@ -12,13 +12,7 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nextPath = useMemo(() => {
-    const rawNextPath =
-      searchParams &&
-      typeof searchParams === "object" &&
-      "get" in searchParams &&
-      typeof (searchParams as { get?: unknown }).get === "function"
-        ? (searchParams as { get: (key: string) => string | null }).get("next")
-        : undefined;
+    const rawNextPath = readNextPath(searchParams);
     return sanitizeNextPath(rawNextPath);
   }, [searchParams]);
 
@@ -77,4 +71,21 @@ export default function SignInPage() {
       </section>
     </main>
   );
+}
+
+function readNextPath(searchParams: unknown) {
+  if (
+    !searchParams ||
+    typeof searchParams !== "object" ||
+    !("get" in searchParams) ||
+    typeof (searchParams as { get?: unknown }).get !== "function"
+  ) {
+    return undefined;
+  }
+
+  try {
+    return (searchParams as { get: (key: string) => string | null }).get("next");
+  } catch {
+    return undefined;
+  }
 }
