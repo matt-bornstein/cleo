@@ -14,6 +14,12 @@ type CommentThreadProps = {
   canComment?: boolean;
 };
 
+function getAuthorLabel(userId: string | undefined) {
+  if (typeof userId !== "string") return "Unknown user";
+  const normalizedUserId = userId.trim();
+  return normalizedUserId.length > 0 ? normalizedUserId : "Unknown user";
+}
+
 export function CommentThread({
   comment,
   replies,
@@ -22,7 +28,7 @@ export function CommentThread({
   canComment = true,
 }: CommentThreadProps) {
   const [isReplying, setIsReplying] = useState(false);
-  const authorLabel = comment.userId.trim() || "Unknown user";
+  const authorLabel = getAuthorLabel(comment.userId);
 
   return (
     <article className="rounded-md border border-slate-200 bg-white p-3 text-sm">
@@ -67,7 +73,7 @@ export function CommentThread({
         <div className="mt-2 space-y-1 border-l border-slate-200 pl-2">
           {replies.map((reply) => (
             <p key={reply.id} className="text-xs text-slate-700">
-              ↳ {reply.userId.trim() || "Unknown user"}: {reply.content}
+              ↳ {getAuthorLabel(reply.userId)}: {reply.content}
             </p>
           ))}
         </div>

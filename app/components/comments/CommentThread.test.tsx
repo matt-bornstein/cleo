@@ -65,4 +65,32 @@ describe("CommentThread", () => {
     expect(screen.getByText("By: user-1")).toBeInTheDocument();
     expect(screen.getByText("↳ reviewer@example.com: Agreed")).toBeInTheDocument();
   });
+
+  it("falls back to unknown user label for blank authors", () => {
+    render(
+      <CommentThread
+        comment={{ ...baseComment, userId: "   " }}
+        replies={[
+          {
+            id: "reply-2",
+            documentId: "doc-1",
+            userId: "",
+            content: "Needs clarification",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "section",
+            resolved: false,
+            parentCommentId: "comment-1",
+            createdAt: 2,
+            updatedAt: 2,
+          },
+        ]}
+        onResolve={vi.fn()}
+        onReply={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("By: Unknown user")).toBeInTheDocument();
+    expect(screen.getByText("↳ Unknown user: Needs clarification")).toBeInTheDocument();
+  });
 });
