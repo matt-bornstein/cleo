@@ -21,5 +21,7 @@
 5. `CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3210 npx convex dev --once --codegen enable --typecheck disable` still entered login flow and failed immediately in non-interactive mode.
 6. `npx convex codegen --typecheck disable` no longer prompted for login, but failed because no `CONVEX_DEPLOYMENT` is configured.
 7. `CONVEX_DEPLOYMENT=local npx convex codegen --typecheck disable` failed with `401 MissingAccessToken`, confirming access token is still mandatory even for codegen against deployment identifiers.
+8. `npx convex login status` now reports `Status: Not logged in` (and references `/home/ubuntu/.convex/config.json`), but no usable authenticated session is present.
+9. `npx convex dev --once` still immediately fails in non-interactive mode with the login prompt (`Would you like to login to your account?`).
 
 **Revisit result:** Still unresolved in this environment. Convex CLI setup cannot complete without an interactive token entry mechanism or pre-provisioned machine token.
