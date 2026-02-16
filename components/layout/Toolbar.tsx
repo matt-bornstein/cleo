@@ -30,10 +30,13 @@ import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Id } from "@/convex/_generated/dataModel";
 import { Input } from "@/components/ui/input";
+import { PresenceIndicator } from "@/components/editor/PresenceIndicator";
+import { exportAsHtml, exportAsText } from "@/lib/export";
 
 interface ToolbarProps {
   documentId?: Id<"documents">;
   documentTitle?: string;
+  documentContent?: string;
   onToggleComments?: () => void;
   showComments?: boolean;
 }
@@ -41,6 +44,7 @@ interface ToolbarProps {
 export function Toolbar({
   documentId,
   documentTitle,
+  documentContent,
   onToggleComments,
   showComments,
 }: ToolbarProps) {
@@ -62,18 +66,16 @@ export function Toolbar({
   };
 
   const handleExportHtml = () => {
-    // For now, simple export of the document title
-    // The actual HTML export would serialize the editor content
-    const blob = new Blob(["<html><body><p>Export coming soon</p></body></html>"], {
-      type: "text/html",
-    });
+    if (!documentContent) return;
+    const html = exportAsHtml(documentContent, documentTitle || "Document");
+    const blob = new Blob([html], { type: "text/html" });
     downloadBlob(blob, `${documentTitle || "document"}.html`);
   };
 
   const handleExportText = () => {
-    const blob = new Blob(["Export coming soon"], {
-      type: "text/plain",
-    });
+    if (!documentContent) return;
+    const text = exportAsText(documentContent);
+    const blob = new Blob([text], { type: "text/plain" });
     downloadBlob(blob, `${documentTitle || "document"}.txt`);
   };
 
@@ -147,6 +149,7 @@ export function Toolbar({
           </Button>
         </div>
         <div className="flex items-center gap-2">
+          {documentId && <PresenceIndicator documentId={documentId} />}
           {documentId && (
             isEditingTitle ? (
               <Input

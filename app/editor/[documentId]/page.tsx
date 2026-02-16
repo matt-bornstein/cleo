@@ -70,6 +70,7 @@ export default function EditorPage({
       <Toolbar
         documentId={document._id}
         documentTitle={document.title}
+        documentContent={document.content}
         onToggleComments={() => setShowComments(!showComments)}
         showComments={showComments}
       />
