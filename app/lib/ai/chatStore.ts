@@ -11,6 +11,11 @@ type AIMessageState = {
 const inMemoryState: AIMessageState = {
   messages: [],
 };
+const ALLOWED_MESSAGE_ROLES = new Set<AIMessage["role"]>([
+  "user",
+  "assistant",
+  "system",
+]);
 
 function canUseStorage() {
   return typeof window !== "undefined" && !!window.localStorage;
@@ -28,28 +33,8 @@ function loadState(): AIMessageState {
 
     return {
       messages: parsed.messages.flatMap((message) => {
-        const normalizedDocumentId = normalizeDocumentId(message.documentId);
-        if (
-          typeof message.id !== "string" ||
-          message.id.trim().length === 0 ||
-          !isValidDocumentId(normalizedDocumentId) ||
-          (message.role !== "user" &&
-            message.role !== "assistant" &&
-            message.role !== "system") ||
-          typeof message.content !== "string" ||
-          typeof message.createdAt !== "number" ||
-          !Number.isFinite(message.createdAt)
-        ) {
-          return [];
-        }
-
-        return [
-          {
-            ...message,
-            documentId: normalizedDocumentId,
-            userId: normalizeAIUserId(message.userId),
-          },
-        ];
+        const normalized = normalizeMessage(message);
+        return normalized ? [normalized] : [];
       }),
     };
   } catch {
@@ -78,24 +63,40 @@ export function listMessagesByDocument(documentId: string, chatClearedAt?: numbe
 }
 
 export function saveMessage(message: AIMessage) {
-  const normalizedDocumentId = normalizeDocumentId(message.documentId);
-  if (!isValidDocumentId(normalizedDocumentId)) {
+  const normalized = normalizeMessage(message);
+  if (!normalized) {
     return null;
   }
 
   const state = loadState();
-  state.messages = [
-    ...state.messages,
-    {
-      ...message,
-      documentId: normalizedDocumentId,
-      userId: normalizeAIUserId(message.userId),
-    },
-  ];
+  state.messages = [...state.messages, normalized];
   persistState(state);
   return state.messages[state.messages.length - 1];
 }
 
 export function resetMessagesForTests() {
   persistState({ messages: [] });
+}
+
+function normalizeMessage(message: AIMessage): AIMessage | null {
+  const normalizedDocumentId = normalizeDocumentId(message.documentId);
+  const normalizedMessageId = message.id?.trim();
+  if (
+    !normalizedMessageId ||
+    !isValidDocumentId(normalizedDocumentId) ||
+    !ALLOWED_MESSAGE_ROLES.has(message.role) ||
+    typeof message.content !== "string" ||
+    message.content.trim().length === 0 ||
+    typeof message.createdAt !== "number" ||
+    !Number.isFinite(message.createdAt)
+  ) {
+    return null;
+  }
+
+  return {
+    ...message,
+    id: normalizedMessageId,
+    documentId: normalizedDocumentId,
+    userId: normalizeAIUserId(message.userId),
+  };
 }

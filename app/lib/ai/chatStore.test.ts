@@ -79,6 +79,38 @@ describe("ai chat store", () => {
     expect(listMessagesByDocument("   ")).toEqual([]);
   });
 
+  it("rejects malformed saveMessage payloads", () => {
+    const invalidRole = saveMessage({
+      id: "msg-invalid-role",
+      documentId: "doc-bad",
+      userId: "author",
+      role: "moderator" as never,
+      content: "Hello",
+      createdAt: Date.now(),
+    });
+    const blankContent = saveMessage({
+      id: "msg-blank-content",
+      documentId: "doc-bad",
+      userId: "author",
+      role: "user",
+      content: "   ",
+      createdAt: Date.now(),
+    });
+    const blankId = saveMessage({
+      id: "   ",
+      documentId: "doc-bad",
+      userId: "author",
+      role: "assistant",
+      content: "Hello",
+      createdAt: Date.now(),
+    });
+
+    expect(invalidRole).toBeNull();
+    expect(blankContent).toBeNull();
+    expect(blankId).toBeNull();
+    expect(listMessagesByDocument("doc-bad")).toEqual([]);
+  });
+
   it("filters malformed persisted messages on load", () => {
     window.localStorage.setItem(
       "plan00.aiMessages.v1",
