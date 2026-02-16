@@ -14,5 +14,9 @@ describe("normalizeAIUserId", () => {
   it("falls back to local default for oversized identities", () => {
     expect(normalizeAIUserId("u".repeat(257))).toBe("local-dev-user");
   });
+
+  it("falls back to local default for control-character identities", () => {
+    expect(normalizeAIUserId("alice\nadmin")).toBe("local-dev-user");
+  });
 });
 
