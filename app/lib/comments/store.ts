@@ -107,8 +107,34 @@ function loadState(): CommentState {
       }
     }
 
+    const dedupedComments = Array.from(dedupedByCommentId.values());
+    const commentIdsByDocument = new Map<string, Set<string>>();
+    for (const comment of dedupedComments) {
+      const documentCommentIds =
+        commentIdsByDocument.get(comment.documentId) ?? new Set<string>();
+      documentCommentIds.add(comment.id);
+      commentIdsByDocument.set(comment.documentId, documentCommentIds);
+    }
+
     return {
-      comments: Array.from(dedupedByCommentId.values()),
+      comments: dedupedComments.map((comment) => {
+        const documentCommentIds = commentIdsByDocument.get(comment.documentId);
+        const normalizedParentCommentId =
+          comment.parentCommentId &&
+          comment.parentCommentId !== comment.id &&
+          documentCommentIds?.has(comment.parentCommentId)
+            ? comment.parentCommentId
+            : undefined;
+
+        if (normalizedParentCommentId === comment.parentCommentId) {
+          return comment;
+        }
+
+        return {
+          ...comment,
+          parentCommentId: normalizedParentCommentId,
+        };
+      }),
     };
   } catch {
     return { comments: [] };

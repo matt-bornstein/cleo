@@ -370,4 +370,34 @@ describe("comments store", () => {
       }),
     ]);
   });
+
+  it("drops persisted parent references that do not exist in the same document", () => {
+    window.localStorage.setItem(
+      "plan00.comments.v1",
+      JSON.stringify({
+        comments: [
+          {
+            id: "child-comment",
+            documentId: "doc-parent-validate",
+            userId: "user-1",
+            content: "Child",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            parentCommentId: "missing-parent",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      }),
+    );
+
+    expect(listComments("doc-parent-validate")).toEqual([
+      expect.objectContaining({
+        id: "child-comment",
+        parentCommentId: undefined,
+      }),
+    ]);
+  });
 });
