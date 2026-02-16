@@ -6,15 +6,16 @@ import SignInPage from "@/app/sign-in/page";
 
 const pushMock = vi.fn();
 const refreshMock = vi.fn();
+let mockedRouter: unknown = {
+  push: pushMock,
+  refresh: refreshMock,
+};
 let mockedSearchParams: unknown = {
   get: () => "/editor/doc-1",
 };
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: pushMock,
-    refresh: refreshMock,
-  }),
+  useRouter: () => mockedRouter,
   useSearchParams: () => mockedSearchParams,
 }));
 
@@ -22,6 +23,10 @@ describe("SignInPage", () => {
   beforeEach(() => {
     pushMock.mockReset();
     refreshMock.mockReset();
+    mockedRouter = {
+      push: pushMock,
+      refresh: refreshMock,
+    };
     mockedSearchParams = {
       get: () => "/editor/doc-1",
     };
@@ -100,5 +105,36 @@ describe("SignInPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Unable to sign in.")).toBeInTheDocument();
     });
+  });
+
+  it("does not throw when router getters are malformed", async () => {
+    const user = userEvent.setup();
+    const malformedRouter = Object.create(null) as {
+      push: unknown;
+      refresh: unknown;
+    };
+    Object.defineProperty(malformedRouter, "push", {
+      get() {
+        throw new Error("push getter failed");
+      },
+    });
+    Object.defineProperty(malformedRouter, "refresh", {
+      get() {
+        throw new Error("refresh getter failed");
+      },
+    });
+    mockedRouter = malformedRouter;
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", { status: 200 }),
+    );
+
+    render(<SignInPage />);
+    await user.click(screen.getByRole("button", { name: "Continue (local auth)" }));
+
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText("Unable to sign in."),
+    ).not.toBeInTheDocument();
   });
 });

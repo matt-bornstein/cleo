@@ -28,12 +28,8 @@ export default function SignInPage() {
       if (!response || typeof response !== "object" || response.ok !== true) {
         throw new Error("Unable to sign in.");
       }
-      if (typeof router.push === "function") {
-        router.push(nextPath);
-      }
-      if (typeof router.refresh === "function") {
-        router.refresh();
-      }
+      safeRouterPush(router, nextPath);
+      safeRouterRefresh(router);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Sign in failed.");
     } finally {
@@ -87,5 +83,35 @@ function readNextPath(searchParams: unknown) {
     return (searchParams as { get: (key: string) => string | null }).get("next");
   } catch {
     return undefined;
+  }
+}
+
+function safeRouterPush(router: unknown, path: string) {
+  if (!router || typeof router !== "object" || !("push" in router)) {
+    return;
+  }
+
+  try {
+    const push = (router as { push?: unknown }).push;
+    if (typeof push === "function") {
+      push(path);
+    }
+  } catch {
+    return;
+  }
+}
+
+function safeRouterRefresh(router: unknown) {
+  if (!router || typeof router !== "object" || !("refresh" in router)) {
+    return;
+  }
+
+  try {
+    const refresh = (router as { refresh?: unknown }).refresh;
+    if (typeof refresh === "function") {
+      refresh();
+    }
+  } catch {
+    return;
   }
 }
