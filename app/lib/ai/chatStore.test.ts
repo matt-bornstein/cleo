@@ -3,6 +3,7 @@ import {
   resetMessagesForTests,
   saveMessage,
 } from "@/lib/ai/chatStore";
+import { DEFAULT_AI_USER_ID } from "@/lib/ai/identity";
 import * as aiModels from "@/lib/ai/models";
 import { vi } from "vitest";
 
@@ -231,6 +232,68 @@ describe("ai chat store", () => {
     expect(negativeTimestamp).toBeNull();
     expect(nonObjectPayload).toBeNull();
     expect(listMessagesByDocument("doc-bad")).toEqual([]);
+  });
+
+  it("handles saveMessage payload getter traps safely", () => {
+    const payloadWithThrowingRequiredField = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingRequiredField, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingRequiredField, "documentId", {
+      value: "doc-getter-trap",
+    });
+    Object.defineProperty(payloadWithThrowingRequiredField, "role", {
+      value: "assistant",
+    });
+    Object.defineProperty(payloadWithThrowingRequiredField, "content", {
+      value: "Hello",
+    });
+    Object.defineProperty(payloadWithThrowingRequiredField, "createdAt", {
+      value: 1,
+    });
+
+    expect(
+      saveMessage(
+        payloadWithThrowingRequiredField as unknown as Parameters<typeof saveMessage>[0],
+      ),
+    ).toBeNull();
+
+    const payloadWithThrowingOptionalFields = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingOptionalFields, "id", {
+      value: "getter-safe-message",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "documentId", {
+      value: "doc-getter-safe",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "role", {
+      value: "assistant",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "content", {
+      value: "Hello",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "createdAt", {
+      value: 2,
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "userId", {
+      get() {
+        throw new Error("userId getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "model", {
+      get() {
+        throw new Error("model getter failed");
+      },
+    });
+
+    const saved = saveMessage(
+      payloadWithThrowingOptionalFields as unknown as Parameters<typeof saveMessage>[0],
+    );
+    expect(saved).not.toBeNull();
+    expect(saved?.id).toBe("getter-safe-message");
+    expect(saved?.userId).toBe(DEFAULT_AI_USER_ID);
+    expect(saved?.model).toBeUndefined();
   });
 
   it("normalizes unknown message model ids to supported defaults", () => {

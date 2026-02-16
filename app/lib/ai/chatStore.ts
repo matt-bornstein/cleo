@@ -139,35 +139,42 @@ function normalizeMessage(message: unknown): AIMessage | null {
   }
   const candidate = message as Partial<AIMessage>;
 
-  const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+  const documentId = safeReadMessageField(candidate, "documentId");
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  const id = safeReadMessageField(candidate, "id");
   const normalizedMessageId =
-    typeof candidate.id === "string" ? candidate.id.trim() : undefined;
+    typeof id === "string" ? id.trim() : undefined;
+  const role = safeReadMessageField(candidate, "role");
+  const content = safeReadMessageField(candidate, "content");
+  const createdAt = safeReadMessageField(candidate, "createdAt");
   if (
     !normalizedMessageId ||
     normalizedMessageId.length > MAX_USER_ID_LENGTH ||
     hasControlChars(normalizedMessageId) ||
     !isValidDocumentId(normalizedDocumentId) ||
-    !ALLOWED_MESSAGE_ROLES.has(candidate.role as AIMessage["role"]) ||
-    typeof candidate.content !== "string" ||
-    candidate.content.trim().length === 0 ||
-    candidate.content.length > MAX_MESSAGE_CONTENT_LENGTH ||
-    hasDisallowedTextControlChars(candidate.content) ||
-    typeof candidate.createdAt !== "number" ||
-    !Number.isFinite(candidate.createdAt) ||
-    candidate.createdAt < 0
+    !ALLOWED_MESSAGE_ROLES.has(role as AIMessage["role"]) ||
+    typeof content !== "string" ||
+    content.trim().length === 0 ||
+    content.length > MAX_MESSAGE_CONTENT_LENGTH ||
+    hasDisallowedTextControlChars(content) ||
+    typeof createdAt !== "number" ||
+    !Number.isFinite(createdAt) ||
+    createdAt < 0
   ) {
     return null;
   }
+  const userId = safeReadMessageField(candidate, "userId");
+  const model = safeReadMessageField(candidate, "model");
 
   return {
     ...candidate,
     id: normalizedMessageId,
     documentId: normalizedDocumentId,
-    role: candidate.role as AIMessage["role"],
-    content: candidate.content,
-    createdAt: candidate.createdAt,
-    userId: normalizeAIUserId(candidate.userId),
-    model: normalizeMessageModel(candidate.model),
+    role: role as AIMessage["role"],
+    content,
+    createdAt,
+    userId: normalizeAIUserId(userId),
+    model: normalizeMessageModel(model),
   };
 }
 
@@ -194,6 +201,24 @@ function normalizeMessageModel(model: unknown) {
 
   try {
     return getModelConfig(model.trim()).id;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeReadMessageField(
+  message: Partial<AIMessage>,
+  key:
+    | "id"
+    | "documentId"
+    | "userId"
+    | "role"
+    | "content"
+    | "createdAt"
+    | "model",
+) {
+  try {
+    return message[key];
   } catch {
     return undefined;
   }
