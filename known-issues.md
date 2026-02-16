@@ -9,14 +9,15 @@
 - AI assistant with 4 model providers (OpenAI, Anthropic, Google)
 - Streaming AI responses with rich message rendering (code blocks, diff visualization)
 - "Changes applied" indicator on AI messages
-- AI context includes proper HTML (not raw JSON) and user name prefixes
+- AI context includes proper HTML and user name prefixes
 - Version history with preview and restore
+- HTML-level diffs via diff-match-patch (not placeholder text)
 - Comment highlight decorations in the editor (yellow highlights on anchored text)
 - Comments with text anchoring, threads, resolve
 - Comment creation from editor text selection
 - Document sharing with role-based permissions (owner/editor/commenter/viewer)
 - Permission-gated prosemirror-sync API (checkRead/checkWrite hooks)
-- HTML, Markdown, and plain text export (live editor HTML when available)
+- HTML, Markdown, plain text, and PDF export
 - Responsive layout (mobile drawer for AI panel with floating toggle)
 - Error boundary and offline disconnection banner
 - Dark/light/system theme with flash prevention
@@ -35,4 +36,3 @@
 1. **Comment anchor remapping** — Comment positions (from/to) are not remapped when the document is concurrently edited. The `anchorText` field provides a fallback for re-anchoring.
 2. **Image upload** — Images are inserted via URL only. File upload to Convex storage is not implemented.
 3. **No offline editing** — The app requires an active connection. A disconnection banner is shown when offline.
-4. **PDF export** — Not implemented. HTML, Markdown, and plain text exports are available.
