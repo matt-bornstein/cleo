@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
@@ -45,6 +45,18 @@ describe("ChatInput", () => {
 
     expect(screen.getByPlaceholderText("Ask AI to edit this document...")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Working..." })).toBeDisabled();
+  });
+
+  it("ignores form submit events while disabled", () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<ChatInput onSubmit={onSubmit} disabled />);
+
+    const submitButton = screen.getByRole("button", { name: "Working..." });
+    const form = submitButton.closest("form");
+    expect(form).not.toBeNull();
+    fireEvent.submit(form as HTMLFormElement);
+
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("restores prompt text when submit handler rejects", async () => {

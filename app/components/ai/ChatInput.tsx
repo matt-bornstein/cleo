@@ -14,6 +14,7 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (disabled) return;
     const normalizedPrompt = prompt.trim();
     if (!normalizedPrompt) return;
     const previousPrompt = prompt;
