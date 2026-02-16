@@ -41,17 +41,23 @@ function loadState(): PresenceState {
           return [];
         }
         const candidate = entry as Partial<PresenceRecord>;
+        const documentId = safeReadPersistedPresenceField(candidate, "documentId");
+        const id = safeReadPersistedPresenceField(candidate, "id");
+        const visitorId = safeReadPersistedPresenceField(candidate, "visitorId");
+        const updatedAt = safeReadPersistedPresenceField(candidate, "updatedAt");
+        const userId = safeReadPersistedPresenceField(candidate, "userId");
+        const data = safeReadPersistedPresenceField(candidate, "data");
 
-        const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
-        const normalizedPresenceId = normalizePresenceRecordId(candidate.id);
-        const normalizedVisitorId = normalizePresenceVisitorId(candidate.visitorId);
+        const normalizedDocumentId = normalizeDocumentId(documentId);
+        const normalizedPresenceId = normalizePresenceRecordId(id);
+        const normalizedVisitorId = normalizePresenceVisitorId(visitorId);
         if (
           !normalizedPresenceId ||
           !normalizedVisitorId ||
           !isValidDocumentId(normalizedDocumentId) ||
-          typeof candidate.updatedAt !== "number" ||
-          !Number.isFinite(candidate.updatedAt) ||
-          candidate.updatedAt < 0
+          typeof updatedAt !== "number" ||
+          !Number.isFinite(updatedAt) ||
+          updatedAt < 0
         ) {
           return [];
         }
@@ -60,9 +66,9 @@ function loadState(): PresenceState {
           id: normalizedPresenceId,
           documentId: normalizedDocumentId,
           visitorId: normalizedVisitorId,
-          userId: normalizePresenceUserId(candidate.userId),
-          data: normalizePresenceData(candidate.data),
-          updatedAt: candidate.updatedAt,
+          userId: normalizePresenceUserId(userId),
+          data: normalizePresenceData(data),
+          updatedAt,
         };
 
         return [
@@ -261,6 +267,17 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeReadPersistedPresenceField(
+  presence: Partial<PresenceRecord>,
+  key: "id" | "documentId" | "visitorId" | "userId" | "data" | "updatedAt",
+) {
+  try {
+    return presence[key];
+  } catch {
+    return undefined;
   }
 }
 

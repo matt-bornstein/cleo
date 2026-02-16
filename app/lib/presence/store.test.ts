@@ -264,6 +264,37 @@ describe("presence store", () => {
     );
   });
 
+  it("skips persisted presence entries when field getters throw during load", () => {
+    const presenceWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(presenceWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(presenceWithThrowingGetters, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+    Object.defineProperty(presenceWithThrowingGetters, "visitorId", {
+      get() {
+        throw new Error("visitorId getter failed");
+      },
+    });
+    Object.defineProperty(presenceWithThrowingGetters, "updatedAt", {
+      get() {
+        throw new Error("updatedAt getter failed");
+      },
+    });
+
+    window.localStorage.setItem("plan00.presence.v1", "{}");
+    vi.spyOn(JSON, "parse").mockReturnValue({
+      presence: [presenceWithThrowingGetters],
+    });
+
+    expect(listPresence("doc-valid")).toEqual([]);
+  });
+
   it("returns empty when persisted presence container is non-array", () => {
     window.localStorage.setItem(
       "plan00.presence.v1",
