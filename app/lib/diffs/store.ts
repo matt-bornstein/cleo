@@ -1,5 +1,6 @@
 import { diff_match_patch } from "diff-match-patch";
 
+import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import {
   getDocumentById,
@@ -54,7 +55,11 @@ function createDiffPatch(previousSnapshot: string, nextSnapshot: string) {
 
 function normalizeDiffUserId(userId: string | undefined) {
   const normalizedUserId = userId?.trim();
-  if (!normalizedUserId || hasControlChars(normalizedUserId)) {
+  if (
+    !normalizedUserId ||
+    normalizedUserId.length > MAX_USER_ID_LENGTH ||
+    hasControlChars(normalizedUserId)
+  ) {
     return DEFAULT_LOCAL_USER_ID;
   }
 

@@ -7,6 +7,7 @@ import {
   restoreVersion,
   triggerIdleSave,
 } from "@/lib/diffs/store";
+import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 
 describe("diff store triggerIdleSave", () => {
   beforeEach(() => {
@@ -104,5 +105,29 @@ describe("diff store triggerIdleSave", () => {
     });
 
     expect(listDiffsByDocument("doc-\ninvalid")).toEqual([]);
+  });
+
+  it("falls back to local user id for invalid diff user ids", () => {
+    const document = createDocument("User fallback doc");
+    const content = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "hello" }] }],
+    });
+
+    const controlCharDiff = createDiff({
+      documentId: document.id,
+      userId: "bad\nuser",
+      snapshotAfter: content,
+      source: "manual",
+    });
+    const longUserDiff = createDiff({
+      documentId: document.id,
+      userId: "u".repeat(257),
+      snapshotAfter: content,
+      source: "manual",
+    });
+
+    expect(controlCharDiff?.userId).toBe(DEFAULT_LOCAL_USER_ID);
+    expect(longUserDiff?.userId).toBe(DEFAULT_LOCAL_USER_ID);
   });
 });
