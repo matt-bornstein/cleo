@@ -4,7 +4,7 @@ export function generateLocalId(prefix?: unknown) {
     typeof globalThis.crypto !== "undefined" &&
     typeof globalThis.crypto.randomUUID === "function"
       ? globalThis.crypto.randomUUID()
-      : `${Math.max(0, Date.now()).toString(36)}-${buildRandomSegment()}`;
+      : `${safeNow().toString(36)}-${buildRandomSegment()}`;
 
   return normalizedPrefix ? `${normalizedPrefix}-${baseId}` : baseId;
 }
@@ -17,4 +17,12 @@ function buildRandomSegment() {
 
   const segment = randomValue.toString(36).slice(2, 10);
   return segment || "fallback";
+}
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
+  }
 }

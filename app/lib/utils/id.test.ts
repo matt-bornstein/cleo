@@ -41,4 +41,18 @@ describe("generateLocalId", () => {
     nowSpy.mockRestore();
     randomSpy.mockRestore();
   });
+
+  it("falls back to zero timestamp segment when Date.now throws", () => {
+    vi.stubGlobal("crypto", {} as unknown as Crypto);
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.123456789);
+
+    const id = generateLocalId("local");
+
+    expect(id).toMatch(/^local-0-/);
+    nowSpy.mockRestore();
+    randomSpy.mockRestore();
+  });
 });
