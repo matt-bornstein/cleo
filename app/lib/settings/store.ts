@@ -20,8 +20,16 @@ const MAX_EDITOR_FONT_SIZE = 72;
 const MIN_EDITOR_LINE_SPACING = 1;
 const MAX_EDITOR_LINE_SPACING = 3;
 
-function canUseStorage() {
-  return typeof window !== "undefined" && !!window.localStorage;
+function getStorage() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function normalizeSettings(settings: unknown): AppUserSettings {
@@ -70,8 +78,9 @@ function normalizeSettings(settings: unknown): AppUserSettings {
 }
 
 export function getSettings(): AppUserSettings {
-  if (!canUseStorage()) return { ...defaultSettings };
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const storage = getStorage();
+  if (!storage) return { ...defaultSettings };
+  const raw = safeGetItem(storage, STORAGE_KEY);
   if (!raw) return { ...defaultSettings };
   try {
     return normalizeSettings(JSON.parse(raw));
@@ -82,8 +91,9 @@ export function getSettings(): AppUserSettings {
 
 export function saveSettings(settings: unknown) {
   const normalizedSettings = normalizeSettings(settings);
-  if (!canUseStorage()) return normalizedSettings;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSettings));
+  const storage = getStorage();
+  if (!storage) return normalizedSettings;
+  safeSetItem(storage, STORAGE_KEY, JSON.stringify(normalizedSettings));
   return normalizedSettings;
 }
 
@@ -98,4 +108,20 @@ function clampSettingNumber(
   }
 
   return Math.min(max, Math.max(min, value));
+}
+
+function safeGetItem(storage: Storage, key: string) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
 }

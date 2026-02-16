@@ -1,8 +1,18 @@
 import { getSettings, saveSettings } from "@/lib/settings/store";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
+import { vi } from "vitest";
 
 describe("settings store", () => {
+  const localStorageDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    "localStorage",
+  );
+
   beforeEach(() => {
+    vi.restoreAllMocks();
+    if (localStorageDescriptor) {
+      Object.defineProperty(window, "localStorage", localStorageDescriptor);
+    }
     window.localStorage.clear();
   });
 
@@ -139,5 +149,68 @@ describe("settings store", () => {
       userEmail: DEFAULT_LOCAL_USER_EMAIL,
     });
     expect(getSettings()).toEqual(saved);
+  });
+
+  it("falls back to defaults when localStorage getter throws", () => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("localStorage getter failed");
+      },
+    });
+
+    expect(getSettings()).toEqual({
+      theme: "system",
+      defaultModel: "gpt-4o",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: DEFAULT_LOCAL_USER_EMAIL,
+    });
+
+    const saved = saveSettings({
+      theme: "dark",
+      defaultModel: "gpt-4o",
+      editorFontSize: 18,
+      editorLineSpacing: 1.8,
+      userEmail: "test@example.com",
+    });
+    expect(saved.theme).toBe("dark");
+    expect(saved.userEmail).toBe("test@example.com");
+  });
+
+  it("falls back safely when localStorage getItem throws", () => {
+    vi.spyOn(window.localStorage, "getItem").mockImplementation(() => {
+      throw new Error("getItem failed");
+    });
+
+    expect(getSettings()).toEqual({
+      theme: "system",
+      defaultModel: "gpt-4o",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: DEFAULT_LOCAL_USER_EMAIL,
+    });
+  });
+
+  it("returns normalized settings even when localStorage setItem throws", () => {
+    vi.spyOn(window.localStorage, "setItem").mockImplementation(() => {
+      throw new Error("setItem failed");
+    });
+
+    const saved = saveSettings({
+      theme: " dark ",
+      defaultModel: " gpt-4.1 ",
+      editorFontSize: 18,
+      editorLineSpacing: 2,
+      userEmail: "Test@example.com",
+    });
+
+    expect(saved).toEqual({
+      theme: "dark",
+      defaultModel: "gpt-4.1",
+      editorFontSize: 18,
+      editorLineSpacing: 2,
+      userEmail: "test@example.com",
+    });
   });
 });
