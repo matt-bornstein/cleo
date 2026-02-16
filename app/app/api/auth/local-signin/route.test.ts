@@ -1,4 +1,8 @@
 import { POST } from "@/app/api/auth/local-signin/route";
+import {
+  LOCAL_AUTH_COOKIE,
+  LOCAL_AUTH_COOKIE_VALUE,
+} from "@/lib/auth/session";
 
 describe("POST /api/auth/local-signin", () => {
   it("sets local auth cookie and returns next path", async () => {
@@ -16,7 +20,9 @@ describe("POST /api/auth/local-signin", () => {
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
     expect(payload.next).toBe("/editor/abc");
-    expect(response.headers.get("set-cookie")).toContain("plan00_local_auth=1");
+    expect(response.headers.get("set-cookie")).toContain(
+      `${LOCAL_AUTH_COOKIE}=${LOCAL_AUTH_COOKIE_VALUE}`,
+    );
   });
 
   it("falls back to /editor when next path is invalid", async () => {

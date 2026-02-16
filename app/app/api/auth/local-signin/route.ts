@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { sanitizeNextPath } from "@/lib/auth/nextPath";
-import { LOCAL_AUTH_COOKIE } from "@/lib/auth/session";
+import { LOCAL_AUTH_COOKIE, LOCAL_AUTH_COOKIE_VALUE } from "@/lib/auth/session";
 
 export async function POST(request: Request) {
   const payload = (await request.json().catch(() => ({}))) as unknown;
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   );
 
   const response = NextResponse.json({ ok: true, next: nextPath });
-  response.cookies.set(LOCAL_AUTH_COOKIE, "1", {
+  response.cookies.set(LOCAL_AUTH_COOKIE, LOCAL_AUTH_COOKIE_VALUE, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

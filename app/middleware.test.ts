@@ -1,5 +1,9 @@
 import { NextRequest } from "next/server";
 
+import {
+  LOCAL_AUTH_COOKIE,
+  LOCAL_AUTH_COOKIE_VALUE,
+} from "@/lib/auth/session";
 import { middleware } from "@/middleware";
 
 describe("middleware auth guard", () => {
@@ -16,7 +20,7 @@ describe("middleware auth guard", () => {
   it("allows authenticated editor requests", () => {
     const request = new NextRequest("http://localhost/editor/doc-1", {
       headers: {
-        cookie: "plan00_local_auth=1",
+        cookie: `${LOCAL_AUTH_COOKIE}=${LOCAL_AUTH_COOKIE_VALUE}`,
       },
     });
     const response = middleware(request);
