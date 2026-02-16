@@ -113,6 +113,25 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toBe("Invalid request payload");
   });
 
+  it("returns bad request for oversized document id in payload", async () => {
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        createRequestBody({
+          documentId: "d".repeat(257),
+        }),
+      ),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
   it("accepts payloads without messages array", async () => {
     const request = new Request("http://localhost/api/ai/stream", {
       method: "POST",
@@ -376,6 +395,15 @@ describe("GET /api/ai/stream", () => {
   it("requires non-empty documentId query parameter", async () => {
     const response = await GET(
       new Request("http://localhost/api/ai/stream?documentId=%20%20%20"),
+    );
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("documentId is required");
+  });
+
+  it("rejects oversized documentId query parameter", async () => {
+    const response = await GET(
+      new Request(`http://localhost/api/ai/stream?documentId=${"d".repeat(257)}`),
     );
     expect(response.status).toBe(400);
     const payload = (await response.json()) as { error: string };

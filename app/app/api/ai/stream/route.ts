@@ -16,6 +16,7 @@ export const runtime = "nodejs";
 const MAX_MESSAGE_COUNT = 100;
 const MAX_PROMPT_LENGTH = 4_000;
 const MAX_MESSAGE_CONTENT_LENGTH = 8_000;
+const MAX_DOCUMENT_ID_LENGTH = 256;
 
 type StreamRequestPayload = {
   documentId: string;
@@ -61,6 +62,9 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
 
   const rawMessages = candidate.messages;
   const documentId = candidate.documentId.trim();
+  if (documentId.length > MAX_DOCUMENT_ID_LENGTH) {
+    return null;
+  }
   const model = candidate.model.trim();
   const prompt = candidate.prompt.trim();
   if (prompt.length > MAX_PROMPT_LENGTH) {
@@ -112,7 +116,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const documentId = searchParams.get("documentId")?.trim();
-  if (!documentId) {
+  if (!documentId || documentId.length > MAX_DOCUMENT_ID_LENGTH) {
     return Response.json({ error: "documentId is required" }, { status: 400 });
   }
 
