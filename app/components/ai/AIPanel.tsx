@@ -5,6 +5,7 @@ import { ChatMessages } from "@/components/ai/ChatMessages";
 import { ModelSelector } from "@/components/ai/ModelSelector";
 import { useAILockStatus } from "@/hooks/useAILockStatus";
 import { useAIChat } from "@/hooks/useAIChat";
+import { normalizeAIUserId } from "@/lib/ai/identity";
 
 type AIPanelProps = {
   documentId: string;
@@ -28,8 +29,11 @@ export function AIPanel({
   onClearChat,
 }: AIPanelProps) {
   const lockStatus = useAILockStatus(documentId);
+  const normalizedCurrentUserId = normalizeAIUserId(currentUserId);
   const isLockedByOther =
-    lockStatus.locked && lockStatus.lockedBy && lockStatus.lockedBy !== currentUserId;
+    lockStatus.locked &&
+    lockStatus.lockedBy &&
+    lockStatus.lockedBy !== normalizedCurrentUserId;
 
   const {
     messages,
@@ -44,7 +48,7 @@ export function AIPanel({
     documentId,
     currentDocumentContent,
     onApplyContent,
-    currentUserId,
+    currentUserId: normalizedCurrentUserId,
     defaultModel,
     chatClearedAt,
     onClearChat,

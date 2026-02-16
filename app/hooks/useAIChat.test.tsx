@@ -306,6 +306,58 @@ describe("useAIChat", () => {
     expect(result.current.selectedModel).toBe("gpt-4o");
   });
 
+  it("normalizes whitespace current user id for headers and messages", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-user-normalized" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied normalized id edit.",
+            nextContent: "<p>Changed</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-user-normalized",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "  owner@example.com  ",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Normalize identity");
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/ai/stream",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "x-user-id": "owner@example.com",
+        }),
+      }),
+    );
+    expect(saveMessageMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        role: "user",
+        userId: "owner@example.com",
+      }),
+    );
+    expect(createDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "owner@example.com",
+      }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("clears visible errors when chat history is cleared", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi

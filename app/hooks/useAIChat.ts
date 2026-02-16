@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getModelConfig } from "@/lib/ai/models";
 import { listMessagesByDocument, saveMessage } from "@/lib/ai/chatStore";
 import { getRecentMessages } from "@/lib/ai/history";
+import { normalizeAIUserId } from "@/lib/ai/identity";
 import { createDiff } from "@/lib/diffs/store";
 import type { AIMessage } from "@/lib/types";
 
@@ -64,6 +65,10 @@ export function useAIChat({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const normalizedCurrentUserId = useMemo(
+    () => normalizeAIUserId(currentUserId),
+    [currentUserId],
+  );
 
   useEffect(() => {
     setMessages(listMessagesByDocument(documentId, chatClearedAt));
@@ -77,7 +82,12 @@ export function useAIChat({
 
   const sendPrompt = useCallback(
     async (prompt: string) => {
-      const userMessage = createMessage(documentId, currentUserId, "user", prompt);
+      const userMessage = createMessage(
+        documentId,
+        normalizedCurrentUserId,
+        "user",
+        prompt,
+      );
       const assistantDraft = createMessage(
         documentId,
         "assistant",
@@ -95,7 +105,7 @@ export function useAIChat({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-user-id": currentUserId,
+            "x-user-id": normalizedCurrentUserId,
           },
           body: JSON.stringify({
             documentId,
@@ -136,7 +146,7 @@ export function useAIChat({
             const diff = didContentChange
               ? createDiff({
                   documentId,
-                  userId: currentUserId,
+                  userId: normalizedCurrentUserId,
                   snapshotAfter: payload.nextContent,
                   source: "ai",
                   aiPrompt: prompt,
@@ -206,8 +216,8 @@ export function useAIChat({
     [
       currentDocumentContent,
       chatClearedAt,
-      currentUserId,
       documentId,
+      normalizedCurrentUserId,
       onApplyContent,
       selectedModel,
     ],

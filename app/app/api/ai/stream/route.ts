@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 
 import { aiLockManager } from "@/lib/ai/lock";
+import { normalizeAIUserId } from "@/lib/ai/identity";
 import { getModelConfig, isSupportedModel } from "@/lib/ai/models";
 import { applyParsedEditsToHtml, parseAIResponse } from "@/lib/ai/parseResponse";
 import { getSystemPrompt } from "@/lib/ai/prompts";
@@ -40,11 +41,6 @@ function hasValidDocumentJson(value: unknown): value is string {
   } catch {
     return false;
   }
-}
-
-function normalizeUserId(value: string | null) {
-  const normalized = value?.trim();
-  return normalized ? normalized : "local-dev-user";
 }
 
 function parsePayload(value: unknown): StreamRequestPayload | null {
@@ -204,7 +200,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request payload" }, { status: 400 });
   }
 
-  const userId = normalizeUserId(request.headers.get("x-user-id"));
+  const userId = normalizeAIUserId(request.headers.get("x-user-id"));
   const lockResult = aiLockManager.acquire(payload.documentId, userId);
 
   if (!lockResult.acquired) {
