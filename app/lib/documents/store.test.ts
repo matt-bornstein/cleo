@@ -61,6 +61,9 @@ describe("document store", () => {
     const filtered = listDocuments("plan");
     expect(filtered).toHaveLength(1);
     expect(filtered[0].id).toBe(second.id);
+
+    const fromNonStringQuery = listDocuments(123 as unknown as string);
+    expect(fromNonStringQuery).toHaveLength(2);
   });
 
   it("uses deterministic id tie-breaker for equal updatedAt timestamps", () => {

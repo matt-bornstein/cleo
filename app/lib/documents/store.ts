@@ -169,7 +169,8 @@ export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL):
 
 export function listDocuments(query?: string): AppDocument[] {
   const state = loadState();
-  const normalizedQuery = query?.trim().toLowerCase();
+  const normalizedQuery =
+    typeof query === "string" ? query.trim().toLowerCase() : undefined;
 
   return state.documents
     .filter((doc) => {
