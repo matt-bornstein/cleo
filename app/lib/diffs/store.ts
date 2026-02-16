@@ -144,24 +144,39 @@ function normalizeDiffReferenceId(diffId: unknown) {
   return normalizedDiffId;
 }
 
-export function createDiff(params: {
-  documentId: string;
-  userId: string;
-  snapshotAfter: string;
-  source: DiffSource;
-  aiPrompt?: string;
-  aiModel?: string;
-  previousSnapshot?: string;
-}) {
-  const normalizedDocumentId = normalizeDocumentId(params.documentId);
+export function createDiff(params: unknown) {
+  const candidate =
+    params && typeof params === "object"
+      ? (params as {
+          documentId?: unknown;
+          userId?: unknown;
+          snapshotAfter?: unknown;
+          source?: unknown;
+          aiPrompt?: unknown;
+          aiModel?: unknown;
+          previousSnapshot?: unknown;
+        })
+      : undefined;
+  if (!candidate) {
+    return null;
+  }
+
+  const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+  const normalizedSource =
+    candidate.source === "manual" ||
+    candidate.source === "created" ||
+    candidate.source === "ai"
+      ? candidate.source
+      : undefined;
   if (
     !isValidDocumentId(normalizedDocumentId) ||
-    !isValidDocumentContentJson(params.snapshotAfter) ||
-    !ALLOWED_SOURCES.has(params.source)
+    !isValidDocumentContentJson(candidate.snapshotAfter) ||
+    !normalizedSource ||
+    !ALLOWED_SOURCES.has(normalizedSource)
   ) {
     return null;
   }
-  const normalizedMetadata = normalizeDiffMetadata(params.aiPrompt, params.aiModel);
+  const normalizedMetadata = normalizeDiffMetadata(candidate.aiPrompt, candidate.aiModel);
   if (!normalizedMetadata) {
     return null;
   }
@@ -170,17 +185,20 @@ export function createDiff(params: {
   const previousSnapshot = resolvePreviousSnapshot({
     state,
     documentId: normalizedDocumentId,
-    previousSnapshot: params.previousSnapshot,
+    previousSnapshot:
+      typeof candidate.previousSnapshot === "string"
+        ? candidate.previousSnapshot
+        : undefined,
   });
 
-  const patch = createDiffPatch(previousSnapshot, params.snapshotAfter);
+  const patch = createDiffPatch(previousSnapshot, candidate.snapshotAfter);
   const diffRecord: DiffRecord = {
     id: generateLocalId(),
     documentId: normalizedDocumentId,
-    userId: normalizeDiffUserId(params.userId),
+    userId: normalizeDiffUserId(candidate.userId),
     patch,
-    snapshotAfter: params.snapshotAfter,
-    source: params.source,
+    snapshotAfter: candidate.snapshotAfter,
+    source: normalizedSource,
     aiPrompt: normalizedMetadata.aiPrompt,
     aiModel: normalizedMetadata.aiModel,
     createdAt: Math.max(0, Date.now()),
@@ -191,7 +209,7 @@ export function createDiff(params: {
   return diffRecord;
 }
 
-export function listDiffsByDocument(documentId: string) {
+export function listDiffsByDocument(documentId: unknown) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) return [];
 

@@ -275,6 +275,12 @@ describe("diff store triggerIdleSave", () => {
     expect(listDiffsByDocument("doc-\ninvalid")).toEqual([]);
   });
 
+  it("rejects malformed non-object createDiff payloads", () => {
+    const diff = createDiff(123 as unknown as never);
+
+    expect(diff).toBeNull();
+  });
+
   it("rejects invalid snapshots for create/save/restore flows", () => {
     const document = createDocument("Invalid snapshot doc");
 
@@ -517,6 +523,10 @@ describe("diff store triggerIdleSave", () => {
     );
 
     expect(listDiffsByDocument("doc-legacy")).toEqual([]);
+  });
+
+  it("returns empty for malformed non-string listDiffsByDocument inputs", () => {
+    expect(listDiffsByDocument(123 as unknown as string)).toEqual([]);
   });
 
   it("uses deterministic id tie-breaker for same-timestamp diffs", () => {
