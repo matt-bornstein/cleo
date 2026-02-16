@@ -1,6 +1,6 @@
 import { diff_match_patch } from "diff-match-patch";
 
-import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
+import { MAX_PROMPT_LENGTH, MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import {
@@ -41,37 +41,33 @@ function loadState(): DiffStoreState {
     }
 
     const sanitizedDiffs = parsed.diffs.flatMap((diff) => {
-        const normalizedDocumentId = normalizeDocumentId(diff.documentId);
-        const normalizedDiffId = diff.id?.trim();
-        if (
-          !normalizedDiffId ||
-          !isValidDocumentId(normalizedDocumentId) ||
-          !ALLOWED_SOURCES.has(diff.source) ||
-          typeof diff.patch !== "string" ||
-          !isValidDocumentContentJson(diff.snapshotAfter) ||
-          typeof diff.createdAt !== "number" ||
-          !Number.isFinite(diff.createdAt)
-        ) {
-          return [];
-        }
+      const normalizedDocumentId = normalizeDocumentId(diff.documentId);
+      const normalizedDiffId = diff.id?.trim();
+      const normalizedMetadata = normalizeDiffMetadata(diff.aiPrompt, diff.aiModel);
+      if (
+        !normalizedDiffId ||
+        !isValidDocumentId(normalizedDocumentId) ||
+        !ALLOWED_SOURCES.has(diff.source) ||
+        !normalizedMetadata ||
+        typeof diff.patch !== "string" ||
+        !isValidDocumentContentJson(diff.snapshotAfter) ||
+        typeof diff.createdAt !== "number" ||
+        !Number.isFinite(diff.createdAt)
+      ) {
+        return [];
+      }
 
-        return [
-          {
-            ...diff,
-            id: normalizedDiffId,
-            documentId: normalizedDocumentId,
-            userId: normalizeDiffUserId(diff.userId),
-            aiPrompt:
-              typeof diff.aiPrompt === "string" && diff.aiPrompt.trim().length > 0
-                ? diff.aiPrompt.trim()
-                : undefined,
-            aiModel:
-              typeof diff.aiModel === "string" && diff.aiModel.trim().length > 0
-                ? diff.aiModel.trim()
-                : undefined,
-          },
-        ];
-      });
+      return [
+        {
+          ...diff,
+          id: normalizedDiffId,
+          documentId: normalizedDocumentId,
+          userId: normalizeDiffUserId(diff.userId),
+          aiPrompt: normalizedMetadata.aiPrompt,
+          aiModel: normalizedMetadata.aiModel,
+        },
+      ];
+    });
 
     const dedupedByDiffId = new Map<string, DiffRecord>();
     for (const diff of sanitizedDiffs) {
@@ -123,8 +119,13 @@ export function createDiff(params: {
   const normalizedDocumentId = normalizeDocumentId(params.documentId);
   if (
     !isValidDocumentId(normalizedDocumentId) ||
-    !isValidDocumentContentJson(params.snapshotAfter)
+    !isValidDocumentContentJson(params.snapshotAfter) ||
+    !ALLOWED_SOURCES.has(params.source)
   ) {
+    return null;
+  }
+  const normalizedMetadata = normalizeDiffMetadata(params.aiPrompt, params.aiModel);
+  if (!normalizedMetadata) {
     return null;
   }
 
@@ -142,8 +143,8 @@ export function createDiff(params: {
     patch,
     snapshotAfter: params.snapshotAfter,
     source: params.source,
-    aiPrompt: params.aiPrompt,
-    aiModel: params.aiModel,
+    aiPrompt: normalizedMetadata.aiPrompt,
+    aiModel: normalizedMetadata.aiModel,
     createdAt: Date.now(),
   };
 
@@ -262,4 +263,20 @@ export function triggerIdleSave(params: {
 
 export function resetDiffsForTests() {
   persistState({ diffs: [] });
+}
+
+function normalizeDiffMetadata(aiPrompt: unknown, aiModel: unknown) {
+  const normalizedPrompt = typeof aiPrompt === "string" ? aiPrompt.trim() : "";
+  const normalizedModel = typeof aiModel === "string" ? aiModel.trim() : "";
+  const hasInvalidPrompt =
+    normalizedPrompt.length > MAX_PROMPT_LENGTH || hasControlChars(normalizedPrompt);
+  const hasInvalidModel = hasControlChars(normalizedModel);
+  if (hasInvalidPrompt || hasInvalidModel) {
+    return null;
+  }
+
+  return {
+    aiPrompt: normalizedPrompt.length > 0 ? normalizedPrompt : undefined,
+    aiModel: normalizedModel.length > 0 ? normalizedModel : undefined,
+  };
 }

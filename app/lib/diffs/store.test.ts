@@ -137,6 +137,36 @@ describe("diff store triggerIdleSave", () => {
     });
   });
 
+  it("rejects invalid diff source and metadata inputs", () => {
+    const document = createDocument("Invalid metadata doc");
+    const snapshot = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
+
+    const invalidSource = createDiff({
+      documentId: document.id,
+      userId: "reviewer@example.com",
+      snapshotAfter: snapshot,
+      source: "automerge" as never,
+    });
+    const oversizedPrompt = createDiff({
+      documentId: document.id,
+      userId: "reviewer@example.com",
+      snapshotAfter: snapshot,
+      source: "manual",
+      aiPrompt: "a".repeat(4_001),
+    });
+    const controlCharModel = createDiff({
+      documentId: document.id,
+      userId: "reviewer@example.com",
+      snapshotAfter: snapshot,
+      source: "manual",
+      aiModel: "gpt-\nmodel",
+    });
+
+    expect(invalidSource).toBeNull();
+    expect(oversizedPrompt).toBeNull();
+    expect(controlCharModel).toBeNull();
+  });
+
   it("falls back to local user id for invalid diff user ids", () => {
     const document = createDocument("User fallback doc");
     const content = JSON.stringify({
@@ -202,6 +232,16 @@ describe("diff store triggerIdleSave", () => {
             patch: "@@ -0,0 +1 @@\n+text",
             snapshotAfter: "not-json",
             source: "manual",
+            createdAt: 4,
+          },
+          {
+            id: "bad-metadata",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+text",
+            snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            source: "manual",
+            aiPrompt: "bad\nprompt",
             createdAt: 4,
           },
           {
