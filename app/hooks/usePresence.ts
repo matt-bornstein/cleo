@@ -41,10 +41,17 @@ export function filterStalePresence<
     Number.isFinite(maxAgeMs) && maxAgeMs >= 0 ? maxAgeMs : 10_000;
   return entries.filter(
     (entry) => {
+      if (
+        !entry ||
+        typeof entry !== "object" ||
+        typeof entry.updatedAt !== "number" ||
+        !Number.isFinite(entry.updatedAt)
+      ) {
+        return false;
+      }
       const ageMs = safeNow - entry.updatedAt;
       return (
-      Number.isFinite(entry.updatedAt) &&
-      entry.updatedAt >= 0 &&
+        entry.updatedAt >= 0 &&
         ageMs < safeMaxAge &&
         ageMs >= -safeMaxAge
       );

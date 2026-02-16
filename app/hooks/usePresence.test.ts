@@ -58,6 +58,20 @@ describe("filterStalePresence", () => {
     const active = filterStalePresence("bad" as unknown as Array<{ updatedAt: number }>, 10_000);
     expect(active).toEqual([]);
   });
+
+  it("ignores malformed null and non-numeric entries inside presence arrays", () => {
+    const active = filterStalePresence(
+      [
+        null,
+        { id: "bad-type", updatedAt: "bad" },
+        { id: "valid", updatedAt: 9_000 },
+      ] as unknown as Array<{ id: string; updatedAt: number }>,
+      10_000,
+      10_000,
+    );
+
+    expect(active).toEqual([{ id: "valid", updatedAt: 9_000 }]);
+  });
 });
 
 describe("usePresence", () => {
