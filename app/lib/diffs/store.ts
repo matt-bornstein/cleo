@@ -11,6 +11,7 @@ import {
 } from "@/lib/documents/store";
 import type { DiffRecord, DiffSource } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
+import { generateLocalId } from "@/lib/utils/id";
 import {
   hasControlChars,
   hasDisallowedTextControlChars,
@@ -165,7 +166,7 @@ export function createDiff(params: {
 
   const patch = createDiffPatch(previousSnapshot, params.snapshotAfter);
   const diffRecord: DiffRecord = {
-    id: crypto.randomUUID(),
+    id: generateLocalId(),
     documentId: normalizedDocumentId,
     userId: normalizeDiffUserId(params.userId),
     patch,

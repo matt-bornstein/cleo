@@ -2,6 +2,7 @@ import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { Role } from "@/lib/types";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
+import { generateLocalId } from "@/lib/utils/id";
 import { hasControlChars } from "@/lib/validators/controlChars";
 import { isValidEmail } from "@/lib/validators/email";
 
@@ -188,7 +189,7 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
   );
   if (index === -1) {
     const permission: PermissionEntry = {
-      id: crypto.randomUUID(),
+      id: generateLocalId(),
       documentId: normalizedDocumentId,
       email: normalizedEmail,
       role,

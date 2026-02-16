@@ -3,6 +3,7 @@ import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
+import { generateLocalId } from "@/lib/utils/id";
 import { hasControlChars } from "@/lib/validators/controlChars";
 import { isValidEmail } from "@/lib/validators/email";
 
@@ -154,7 +155,7 @@ export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL):
   const normalizedTitle = normalizeDocumentTitle(title);
   const state = loadState();
   const document: AppDocument = {
-    id: crypto.randomUUID(),
+    id: generateLocalId(),
     title: normalizedTitle,
     content: EMPTY_EDITOR_DOC,
     ownerEmail: normalizeOwnerEmail(ownerEmail),

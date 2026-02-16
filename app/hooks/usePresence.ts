@@ -9,6 +9,7 @@ import {
   updatePresence,
 } from "@/lib/presence/store";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
+import { generateLocalId } from "@/lib/utils/id";
 
 type PresenceData = {
   name: string;
@@ -24,7 +25,7 @@ const CURRENT_USER = {
 };
 
 function createVisitorId() {
-  return `visitor-${crypto.randomUUID()}`;
+  return generateLocalId("visitor");
 }
 
 export function filterStalePresence<

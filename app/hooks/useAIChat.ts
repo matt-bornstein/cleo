@@ -12,6 +12,7 @@ import { getRecentMessages } from "@/lib/ai/history";
 import { normalizeAIUserId } from "@/lib/ai/identity";
 import { createDiff } from "@/lib/diffs/store";
 import type { AIMessage } from "@/lib/types";
+import { generateLocalId } from "@/lib/utils/id";
 import { hasDisallowedTextControlChars } from "@/lib/validators/controlChars";
 
 const DEFAULT_MODEL = "gpt-4o";
@@ -34,7 +35,7 @@ function createMessage(
   model?: string,
 ): AIMessage {
   return {
-    id: crypto.randomUUID(),
+    id: generateLocalId(),
     documentId,
     userId,
     role,

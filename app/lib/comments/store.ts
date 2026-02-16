@@ -2,6 +2,7 @@ import type { CommentRecord } from "@/lib/types";
 import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
+import { generateLocalId } from "@/lib/utils/id";
 import {
   hasControlChars,
   hasDisallowedTextControlChars,
@@ -201,7 +202,7 @@ export function addComment(params: {
   const normalizedUserId =
     typeof params.userId === "string" ? params.userId.trim() : undefined;
   const comment: CommentRecord = {
-    id: crypto.randomUUID(),
+    id: generateLocalId(),
     documentId: normalizedDocumentId,
     userId:
       normalizedUserId &&

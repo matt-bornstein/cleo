@@ -2,6 +2,7 @@ import type { PresenceRecord } from "@/lib/types";
 import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
+import { generateLocalId } from "@/lib/utils/id";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.presence.v1";
@@ -111,8 +112,8 @@ export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">)
     data: normalizedData,
     id:
       existingIndex === -1
-        ? crypto.randomUUID()
-        : normalizedExistingRecordId ?? crypto.randomUUID(),
+        ? generateLocalId()
+        : normalizedExistingRecordId ?? generateLocalId(),
     updatedAt:
       existingIndex === -1
         ? now
