@@ -102,6 +102,49 @@ describe("useAILockStatus", () => {
     vi.unstubAllGlobals();
   });
 
+  it("falls back to unlocked status when response ok getter throws", async () => {
+    const response = Object.create(null) as { ok: unknown; json: () => Promise<unknown> };
+    Object.defineProperty(response, "ok", {
+      get() {
+        throw new Error("ok getter failed");
+      },
+    });
+    response.json = async () => ({ locked: true, lockedBy: "alice" });
+    const fetchMock = vi.fn().mockResolvedValue(response);
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("doc-hook"));
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ locked: false });
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back to unlocked status when response json getter throws", async () => {
+    const response = {
+      ok: true,
+    } as { ok: boolean; json: unknown };
+    Object.defineProperty(response, "json", {
+      get() {
+        throw new Error("json getter failed");
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue(response);
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("doc-hook"));
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ locked: false });
+    });
+
+    vi.unstubAllGlobals();
+  });
+
   it("resets status when lock status request fails", async () => {
     const fetchMock = vi
       .fn()

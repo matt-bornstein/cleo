@@ -36,13 +36,13 @@ export function useAILockStatus(documentId: unknown) {
         const response = await fetch(
           `/api/ai/stream?documentId=${encodeURIComponent(normalizedDocumentId)}`,
         );
-        if (!response.ok) {
+        if (!isSuccessfulResponse(response)) {
           if (isMounted) {
             setState({ documentId: normalizedDocumentId, status: { locked: false } });
           }
           return;
         }
-        const payload = normalizeLockStatus(await response.json());
+        const payload = normalizeLockStatus(await readResponseJson(response));
         if (isMounted) {
           setState({ documentId: normalizedDocumentId, status: payload });
         }
@@ -112,4 +112,38 @@ function normalizeLockStatus(value: unknown): LockStatus {
     lockedBy: normalizedLockedBy,
     lockedAt: normalizedLockedAt,
   };
+}
+
+function isSuccessfulResponse(response: unknown) {
+  if (!response || typeof response !== "object" || !("ok" in response)) {
+    return false;
+  }
+
+  try {
+    return (response as { ok?: unknown }).ok === true;
+  } catch {
+    return false;
+  }
+}
+
+async function readResponseJson(response: unknown) {
+  if (!response || typeof response !== "object" || !("json" in response)) {
+    return null;
+  }
+
+  let jsonFn: unknown;
+  try {
+    jsonFn = (response as { json?: unknown }).json;
+  } catch {
+    return null;
+  }
+  if (typeof jsonFn !== "function") {
+    return null;
+  }
+
+  try {
+    return await Reflect.apply(jsonFn, response, []);
+  } catch {
+    return null;
+  }
 }
