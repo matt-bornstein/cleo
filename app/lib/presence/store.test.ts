@@ -102,4 +102,35 @@ describe("presence store", () => {
       }),
     );
   });
+
+  it("returns document presence ordered by latest update timestamp", () => {
+    window.localStorage.setItem(
+      "plan00.presence.v1",
+      JSON.stringify({
+        presence: [
+          {
+            id: "first",
+            documentId: "doc-order",
+            visitorId: "visitor-1",
+            userId: "user-1",
+            data: {},
+            updatedAt: 1,
+          },
+          {
+            id: "second",
+            documentId: "doc-order",
+            visitorId: "visitor-2",
+            userId: "user-2",
+            data: {},
+            updatedAt: 2,
+          },
+        ],
+      }),
+    );
+
+    expect(listPresence("doc-order").map((entry) => entry.id)).toEqual([
+      "second",
+      "first",
+    ]);
+  });
 });

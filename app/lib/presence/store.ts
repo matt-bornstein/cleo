@@ -118,7 +118,9 @@ export function listPresence(documentId: string) {
     return [];
   }
 
-  return loadState().presence.filter((entry) => entry.documentId === normalizedDocumentId);
+  return loadState()
+    .presence.filter((entry) => entry.documentId === normalizedDocumentId)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export function resetPresenceForTests() {
