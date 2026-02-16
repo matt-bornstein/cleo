@@ -113,6 +113,29 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toBe("Invalid request payload");
   });
 
+  it("accepts payloads without messages array", async () => {
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        documentId: "doc-no-messages",
+        model: "gpt-4o",
+        prompt: "Summarize",
+        documentContent: JSON.stringify({
+          type: "doc",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "Initial" }] }],
+        }),
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const events = await readStream(response);
+    expect(events.some((event) => event.type === "done")).toBe(true);
+  });
+
   it("returns bad request for empty required text fields", async () => {
     const request = new Request("http://localhost/api/ai/stream", {
       method: "POST",
