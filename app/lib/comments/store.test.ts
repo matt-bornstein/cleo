@@ -128,16 +128,23 @@ describe("comments store", () => {
     });
     expect(blank).toBeNull();
 
+    const parent = addComment({
+      documentId: "doc-6",
+      content: "Parent",
+      anchorText: "Line",
+    });
+    expect(parent).not.toBeNull();
+
     const comment = addComment({
       documentId: "doc-6",
       content: "  Keep this  ",
       anchorText: "   ",
-      parentCommentId: "  parent-1  ",
+      parentCommentId: `  ${parent!.id}  `,
     });
     expect(comment).not.toBeNull();
     expect(comment?.content).toBe("Keep this");
     expect(comment?.anchorText).toBe("Comment");
-    expect(comment?.parentCommentId).toBe("parent-1");
+    expect(comment?.parentCommentId).toBe(parent!.id);
   });
 
   it("drops malformed parent comment references", () => {
@@ -150,6 +157,18 @@ describe("comments store", () => {
 
     expect(comment).not.toBeNull();
     expect(comment?.parentCommentId).toBeUndefined();
+  });
+
+  it("drops parent references that do not exist in the same document", () => {
+    const orphan = addComment({
+      documentId: "doc-7",
+      content: "Orphan reply",
+      anchorText: "Line",
+      parentCommentId: "missing-parent",
+    });
+
+    expect(orphan).not.toBeNull();
+    expect(orphan?.parentCommentId).toBeUndefined();
   });
 
   it("uses deterministic id tie-breaker for same-timestamp comments", () => {

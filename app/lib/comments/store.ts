@@ -155,6 +155,15 @@ export function addComment(params: {
   const normalizedParentCommentId = normalizeCommentReferenceId(params.parentCommentId);
 
   const state = loadState();
+  const safeParentCommentId =
+    normalizedParentCommentId &&
+    state.comments.some(
+      (comment) =>
+        comment.id === normalizedParentCommentId &&
+        comment.documentId === normalizedDocumentId,
+    )
+      ? normalizedParentCommentId
+      : undefined;
   const now = Date.now();
   const normalizedUserId = params.userId?.trim();
   const comment: CommentRecord = {
@@ -171,7 +180,7 @@ export function addComment(params: {
     anchorTo: 0,
     anchorText: normalizedAnchorText,
     resolved: false,
-    parentCommentId: normalizedParentCommentId,
+    parentCommentId: safeParentCommentId,
     createdAt: now,
     updatedAt: now,
   };
