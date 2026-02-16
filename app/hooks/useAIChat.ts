@@ -46,7 +46,7 @@ function createMessage(
     role,
     content,
     model,
-    createdAt: Math.max(0, Date.now()),
+    createdAt: safeNow(),
   };
 }
 
@@ -54,7 +54,7 @@ function normalizeModelId(modelId?: unknown) {
   if (typeof modelId !== "string" || modelId.trim().length === 0) {
     return DEFAULT_MODEL;
   }
-  return getModelConfig(modelId.trim()).id;
+  return safeGetModelConfigId(modelId.trim());
 }
 
 function updateMessageContent(messages: AIMessage[], messageId: string, content: string) {
@@ -245,7 +245,9 @@ export function useAIChat({
       setMessages([]);
       return;
     }
-    setMessages(listMessagesByDocument(normalizedDocumentId, normalizedChatClearedAt));
+    setMessages(
+      safeListMessagesByDocument(normalizedDocumentId, normalizedChatClearedAt),
+    );
   }, [hasValidDocumentId, normalizedChatClearedAt, normalizedDocumentId]);
 
   useEffect(() => {
@@ -298,7 +300,7 @@ export function useAIChat({
         selectedModel,
       );
       setMessages((prev) => [...prev, userMessage, assistantDraft]);
-      saveMessage(userMessage);
+      safeSaveMessage(userMessage);
       setIsLoading(true);
       setError(null);
 
@@ -315,7 +317,10 @@ export function useAIChat({
             model: selectedModel,
             documentContent: normalizedCurrentDocumentContent,
             messages: getRecentMessages(
-              listMessagesByDocument(normalizedDocumentId, normalizedChatClearedAt),
+              safeListMessagesByDocument(
+                normalizedDocumentId,
+                normalizedChatClearedAt,
+              ),
             ),
           }),
         });
@@ -346,7 +351,7 @@ export function useAIChat({
             const didContentChange =
               payload.nextContent !== normalizedCurrentDocumentContent;
             const diff = didContentChange
-              ? createDiff({
+              ? safeCreateDiff({
                   documentId: normalizedDocumentId,
                   userId: normalizedCurrentUserId,
                   previousSnapshot: normalizedCurrentDocumentContent,
@@ -360,14 +365,12 @@ export function useAIChat({
             setMessages((prev) =>
               updateMessageContent(prev, assistantDraft.id, payload.assistantMessage),
             );
-            saveMessage({
+            safeSaveMessage({
               ...assistantDraft,
               content: payload.assistantMessage,
               diffId: diff?.id,
             });
-            if (typeof onApplyContent === "function") {
-              onApplyContent(payload.nextContent);
-            }
+            safeOnApplyContent(onApplyContent, payload.nextContent);
             return;
           }
 
@@ -408,7 +411,7 @@ export function useAIChat({
         setMessages((prev) =>
           updateMessageContent(prev, assistantDraft.id, errorContent),
         );
-        saveMessage({
+        safeSaveMessage({
           ...assistantDraft,
           content: errorContent,
         });
@@ -429,15 +432,13 @@ export function useAIChat({
   );
 
   const selectedModelLabel = useMemo(
-    () => getModelConfig(selectedModel).label,
+    () => safeGetModelConfigLabel(selectedModel),
     [selectedModel],
   );
 
   const clearChat = useCallback(() => {
-    const clearedAt = Math.max(0, Date.now());
-    if (typeof onClearChat === "function") {
-      onClearChat(clearedAt);
-    }
+    const clearedAt = safeNow();
+    safeOnClearChat(onClearChat, clearedAt);
     setMessages([]);
     setError(null);
   }, [onClearChat]);
@@ -452,4 +453,83 @@ export function useAIChat({
     error,
     clearChat,
   };
+}
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
+  }
+}
+
+function safeGetModelConfigId(modelId: string) {
+  try {
+    return getModelConfig(modelId).id;
+  } catch {
+    return DEFAULT_MODEL;
+  }
+}
+
+function safeGetModelConfigLabel(modelId: string) {
+  try {
+    return getModelConfig(modelId).label;
+  } catch {
+    try {
+      return getModelConfig(DEFAULT_MODEL).label;
+    } catch {
+      return DEFAULT_MODEL;
+    }
+  }
+}
+
+function safeListMessagesByDocument(
+  documentId: string,
+  chatClearedAt?: number,
+) {
+  try {
+    return listMessagesByDocument(documentId, chatClearedAt);
+  } catch {
+    return [];
+  }
+}
+
+function safeSaveMessage(message: AIMessage) {
+  try {
+    saveMessage(message);
+  } catch {
+    return;
+  }
+}
+
+function safeCreateDiff(payload: Parameters<typeof createDiff>[0]) {
+  try {
+    return createDiff(payload);
+  } catch {
+    return undefined;
+  }
+}
+
+function safeOnApplyContent(onApplyContent: unknown, nextContent: string) {
+  if (typeof onApplyContent !== "function") {
+    return;
+  }
+
+  try {
+    onApplyContent(nextContent);
+  } catch {
+    return;
+  }
+}
+
+function safeOnClearChat(onClearChat: unknown, clearedAt: number) {
+  if (typeof onClearChat !== "function") {
+    return;
+  }
+
+  try {
+    onClearChat(clearedAt);
+  } catch {
+    return;
+  }
 }

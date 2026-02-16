@@ -257,6 +257,116 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("does not fail request when onApplyContent callback throws", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-throwing-apply" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied update",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-throwing-apply",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: () => {
+          throw new Error("apply failed");
+        },
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Apply update");
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.messages.at(-1)?.content).toBe("Applied update");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back to empty history when listMessagesByDocument throws", async () => {
+    listMessagesByDocumentMock.mockImplementation(() => {
+      throw new Error("list failed");
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied update",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-list-throw",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Apply with list fallback");
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("does not throw when saveMessage throws during request lifecycle", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    saveMessageMock.mockImplementation(() => {
+      throw new Error("save failed");
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied update",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-save-throw",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await expect(
+      act(async () => {
+        await result.current.sendPrompt("Apply with save fallback");
+      }),
+    ).resolves.toBeUndefined();
+    expect(result.current.error).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
   it("parses final stream event without trailing newline", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     createDiffMock.mockReturnValue({ id: "diff-nl" });
@@ -1243,6 +1353,83 @@ describe("useAIChat", () => {
     }).not.toThrow();
     expect(result.current.error).toBeNull();
     expect(result.current.messages).toEqual([]);
+  });
+
+  it("does not throw when onClearChat callback throws", () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-clear-throw",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+        onClearChat: () => {
+          throw new Error("clear failed");
+        },
+      }),
+    );
+
+    expect(() => {
+      act(() => {
+        result.current.clearChat();
+      });
+    }).not.toThrow();
+    expect(result.current.error).toBeNull();
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("falls back to zero timestamp when Date.now throws", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-date-throw" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied edit.",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+    const onClearChat = vi.fn();
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-date-throw",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+        onClearChat,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Apply update");
+    });
+    expect(saveMessageMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        createdAt: 0,
+      }),
+    );
+    expect(saveMessageMock.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        createdAt: 0,
+      }),
+    );
+
+    act(() => {
+      result.current.clearChat();
+    });
+    expect(onClearChat).toHaveBeenCalledWith(0);
+
+    nowSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it("floors generated chat timestamps at zero when clock is negative", async () => {
