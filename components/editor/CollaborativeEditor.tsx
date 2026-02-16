@@ -138,6 +138,7 @@ function SyncedEditor({
           id: c._id,
           anchorFrom: c.anchorFrom,
           anchorTo: c.anchorTo,
+          anchorText: c.anchorText,
           resolved: c.resolved,
         }));
     }
