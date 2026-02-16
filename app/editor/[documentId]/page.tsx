@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -10,6 +10,8 @@ import { Toolbar } from "@/components/layout/Toolbar";
 import { EditorLayout } from "@/components/layout/EditorLayout";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { AIPanel } from "@/components/ai/AIPanel";
+import { CommentsSidebar } from "@/components/comments/CommentsSidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function EditorPage({
   params,
@@ -19,6 +21,7 @@ export default function EditorPage({
   const { documentId } = use(params);
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const router = useRouter();
+  const [showComments, setShowComments] = useState(false);
 
   const document = useQuery(
     api.documents.get,
@@ -67,16 +70,36 @@ export default function EditorPage({
       <Toolbar
         documentId={document._id}
         documentTitle={document.title}
+        onToggleComments={() => setShowComments(!showComments)}
+        showComments={showComments}
       />
-      <EditorLayout
-        editor={
+      <div className="flex flex-1 overflow-hidden">
+        {/* Editor panel - takes remaining space */}
+        <div className="flex flex-1 flex-col border-r">
           <EditorPanel
             documentId={document._id}
             initialContent={document.content}
           />
-        }
-        aiPanel={<AIPanel documentId={document._id} />}
-      />
+        </div>
+
+        {/* Right side: AI Panel + Comments */}
+        <div className="flex w-1/3 flex-col">
+          {showComments ? (
+            <div className="flex h-full flex-col">
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-1/2 border-b">
+                  <CommentsSidebar documentId={document._id} />
+                </ScrollArea>
+                <div className="h-1/2">
+                  <AIPanel documentId={document._id} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <AIPanel documentId={document._id} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
