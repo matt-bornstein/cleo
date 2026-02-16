@@ -26,7 +26,7 @@ describe("EditorShell", () => {
     render(<EditorShell documentId={document.id} />);
 
     expect(screen.getAllByText("Phase 1 Doc")).toHaveLength(2);
-    expect(screen.getByText("AI Assistant")).toBeInTheDocument();
+    expect(screen.getByText(/AI Assistant/)).toBeInTheDocument();
     expect(screen.getByText("Saved")).toBeInTheDocument();
   });
 

@@ -78,7 +78,16 @@ export function EditorShell({ documentId }: EditorShellProps) {
             }}
           />
         }
-        aiPanel={<AIPanel />}
+        aiPanel={
+          <AIPanel
+            documentId={documentId}
+            currentDocumentContent={content}
+            onApplyContent={(nextContent) => {
+              updateContent(documentId, nextContent);
+              setSaveStateLabel("Saved");
+            }}
+          />
+        }
       />
       <NewDocModal
         open={newModalOpen}
