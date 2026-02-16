@@ -164,6 +164,19 @@ describe("comments store", () => {
             createdAt: 4,
             updatedAt: 4,
           },
+          {
+            id: "valid-comment",
+            documentId: "doc-legacy",
+            userId: "user-2",
+            content: "Latest content",
+            anchorFrom: 10,
+            anchorTo: 20,
+            anchorText: "Anchor",
+            resolved: false,
+            parentCommentId: "",
+            createdAt: 5,
+            updatedAt: 6,
+          },
         ],
       }),
     );
@@ -174,11 +187,11 @@ describe("comments store", () => {
       expect.objectContaining({
         id: "valid-comment",
         documentId: "doc-legacy",
-        userId: "USER-1",
-        content: "Legacy content",
-        anchorText: "Comment",
-        parentCommentId: "parent-1",
-        resolved: true,
+        userId: "user-2",
+        content: "Latest content",
+        anchorText: "Anchor",
+        parentCommentId: undefined,
+        resolved: false,
       }),
     );
   });

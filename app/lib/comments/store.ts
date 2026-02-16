@@ -26,8 +26,7 @@ function loadState(): CommentState {
       return { comments: [] };
     }
 
-    return {
-      comments: parsed.comments.flatMap((comment) => {
+    const sanitizedComments = parsed.comments.flatMap((comment) => {
         const normalizedDocumentId = normalizeDocumentId(comment.documentId);
         const normalizedCommentId = comment.id?.trim();
         const normalizedContent = comment.content?.trim();
@@ -73,7 +72,15 @@ function loadState(): CommentState {
                 : 0,
           },
         ];
-      }),
+      });
+
+    const dedupedByCommentId = new Map<string, CommentRecord>();
+    for (const comment of sanitizedComments) {
+      dedupedByCommentId.set(comment.id, comment);
+    }
+
+    return {
+      comments: Array.from(dedupedByCommentId.values()),
     };
   } catch {
     return { comments: [] };
