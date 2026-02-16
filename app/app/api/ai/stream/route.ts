@@ -125,10 +125,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
 }
 
 export async function GET(request: Request) {
-  const normalizedUrl =
-    request && typeof request === "object" && "url" in request
-      ? (request as { url?: unknown }).url
-      : "";
+  const normalizedUrl = readRequestUrl(request);
   if (typeof normalizedUrl !== "string") {
     return Response.json({ error: "documentId is required" }, { status: 400 });
   }
@@ -236,7 +233,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request payload" }, { status: 400 });
   }
 
-  const userId = normalizeAIUserId(request.headers.get("x-user-id"));
+  const userId = normalizeAIUserId(readRequestHeader(request, "x-user-id"));
   const lockResult = aiLockManager.acquire(payload.documentId, userId);
 
   if (!lockResult.acquired) {
@@ -299,16 +296,74 @@ async function parseJsonBody(request: unknown) {
     return null;
   }
 
-  if (
-    !("json" in request) ||
-    typeof (request as { json?: unknown }).json !== "function"
-  ) {
+  const jsonFn = readJsonFunction(request);
+  if (!jsonFn) {
     return null;
   }
 
   try {
-    return await (request as { json: () => Promise<unknown> }).json();
+    return await jsonFn();
   } catch {
     return null;
+  }
+}
+
+function readJsonFunction(request: unknown) {
+  if (
+    !request ||
+    typeof request !== "object" ||
+    !("json" in request)
+  ) {
+    return undefined;
+  }
+
+  try {
+    const candidate = (request as { json?: unknown }).json;
+    if (typeof candidate !== "function") {
+      return undefined;
+    }
+
+    const owner = request as { json: () => Promise<unknown> };
+    return () => Reflect.apply(candidate, owner, []);
+  } catch {
+    return undefined;
+  }
+}
+
+function readRequestHeader(request: unknown, headerName: string) {
+  if (!request || typeof request !== "object" || !("headers" in request)) {
+    return null;
+  }
+
+  try {
+    const headers = (request as { headers?: unknown }).headers;
+    if (
+      !headers ||
+      typeof headers !== "object" ||
+      !("get" in headers) ||
+      typeof headers.get !== "function"
+    ) {
+      return null;
+    }
+
+    return headers.get(headerName);
+  } catch {
+    return null;
+  }
+}
+
+function readRequestUrl(request: unknown) {
+  if (
+    !request ||
+    typeof request !== "object" ||
+    !("url" in request)
+  ) {
+    return "";
+  }
+
+  try {
+    return (request as { url?: unknown }).url;
+  } catch {
+    return undefined;
   }
 }

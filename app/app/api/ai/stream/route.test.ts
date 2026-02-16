@@ -32,6 +32,39 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toBe("Invalid request payload");
   });
 
+  it("returns bad request when request json getter throws on access", async () => {
+    const malformedRequest = Object.create(null) as { json: unknown };
+    Object.defineProperty(malformedRequest, "json", {
+      get() {
+        throw new Error("json getter failed");
+      },
+    });
+
+    const response = await POST(malformedRequest as unknown as Request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
+  it("streams successfully when request headers getter throws", async () => {
+    const requestWithThrowingHeaders = {
+      json: async () => createRequestBody({ documentId: "doc-throw-headers" }),
+    } as {
+      json: () => Promise<Record<string, unknown>>;
+      headers?: unknown;
+    };
+    Object.defineProperty(requestWithThrowingHeaders, "headers", {
+      get() {
+        throw new Error("headers getter failed");
+      },
+    });
+
+    const response = await POST(requestWithThrowingHeaders as unknown as Request);
+    expect(response.status).toBe(200);
+    const events = await readStream(response);
+    expect(events.some((event) => event.type === "done")).toBe(true);
+  });
+
   it("streams tokens and done payload", async () => {
     const request = new Request("http://localhost/api/ai/stream", {
       method: "POST",
@@ -499,6 +532,20 @@ describe("POST /api/ai/stream", () => {
 describe("GET /api/ai/stream", () => {
   it("returns bad request for malformed request url payload", async () => {
     const response = await GET({ url: 123 } as unknown as Request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("documentId is required");
+  });
+
+  it("returns bad request when request url getter throws", async () => {
+    const malformedRequest = Object.create(null) as { url: unknown };
+    Object.defineProperty(malformedRequest, "url", {
+      get() {
+        throw new Error("url getter failed");
+      },
+    });
+
+    const response = await GET(malformedRequest as unknown as Request);
     expect(response.status).toBe(400);
     const payload = (await response.json()) as { error: string };
     expect(payload.error).toBe("documentId is required");
