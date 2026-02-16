@@ -1,0 +1,58 @@
+"use client";
+
+import { useState, useRef, KeyboardEvent } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Send } from "lucide-react";
+
+interface ChatInputProps {
+  onSubmit: (prompt: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}
+
+export function ChatInput({
+  onSubmit,
+  disabled = false,
+  placeholder = "Ask AI to edit your document...",
+}: ChatInputProps) {
+  const [value, setValue] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSubmit = () => {
+    const trimmed = value.trim();
+    if (!trimmed || disabled) return;
+    onSubmit(trimmed);
+    setValue("");
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  return (
+    <div className="flex gap-2 p-3">
+      <Textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="min-h-[60px] max-h-[120px] resize-none text-sm"
+        rows={2}
+      />
+      <Button
+        size="sm"
+        onClick={handleSubmit}
+        disabled={!value.trim() || disabled}
+        className="self-end"
+      >
+        <Send className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}

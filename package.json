@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@auth/core": "^0.37.2",
     "@convex-dev/auth": "^0.0.90",
     "@convex-dev/prosemirror-sync": "^0.2.2",
+    "@google/genai": "^1.41.0",
     "@tiptap/extension-image": "^3.19.0",
     "@tiptap/extension-placeholder": "^3.19.0",
     "@tiptap/extension-table": "^3.19.0",
@@ -27,8 +29,10 @@
     "clsx": "^2.1.1",
     "convex": "^1.31.7",
     "diff-match-patch": "^1.0.5",
+    "linkedom": "^0.18.12",
     "lucide-react": "^0.564.0",
     "next": "16.1.6",
+    "openai": "^6.22.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
