@@ -183,6 +183,46 @@ describe("settings store", () => {
     expect(getSettings()).toEqual(saved);
   });
 
+  it("falls back safely when saving settings with throwing getters", () => {
+    const settingsWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(settingsWithThrowingGetters, "theme", {
+      get() {
+        throw new Error("theme getter failed");
+      },
+    });
+    Object.defineProperty(settingsWithThrowingGetters, "defaultModel", {
+      get() {
+        throw new Error("defaultModel getter failed");
+      },
+    });
+    Object.defineProperty(settingsWithThrowingGetters, "editorFontSize", {
+      get() {
+        throw new Error("editorFontSize getter failed");
+      },
+    });
+    Object.defineProperty(settingsWithThrowingGetters, "editorLineSpacing", {
+      get() {
+        throw new Error("editorLineSpacing getter failed");
+      },
+    });
+    Object.defineProperty(settingsWithThrowingGetters, "userEmail", {
+      get() {
+        throw new Error("userEmail getter failed");
+      },
+    });
+
+    const saved = saveSettings(
+      settingsWithThrowingGetters as unknown as Parameters<typeof saveSettings>[0],
+    );
+    expect(saved).toEqual({
+      theme: "system",
+      defaultModel: "gpt-4o",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: DEFAULT_LOCAL_USER_EMAIL,
+    });
+  });
+
   it("falls back to defaults when localStorage getter throws", () => {
     Object.defineProperty(window, "localStorage", {
       configurable: true,

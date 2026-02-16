@@ -37,29 +37,34 @@ function normalizeSettings(settings: unknown): AppUserSettings {
     settings && typeof settings === "object"
       ? (settings as Partial<AppUserSettings>)
       : undefined;
+  const rawTheme = readSettingsField(candidate, "theme");
+  const rawDefaultModel = readSettingsField(candidate, "defaultModel");
+  const rawEditorFontSize = readSettingsField(candidate, "editorFontSize");
+  const rawEditorLineSpacing = readSettingsField(candidate, "editorLineSpacing");
+  const rawUserEmail = readSettingsField(candidate, "userEmail");
   const normalizedThemeCandidate =
-    typeof candidate?.theme === "string" ? candidate.theme.trim().toLowerCase() : "";
+    typeof rawTheme === "string" ? rawTheme.trim().toLowerCase() : "";
   const normalizedTheme =
     normalizedThemeCandidate && VALID_THEMES.has(normalizedThemeCandidate)
       ? (normalizedThemeCandidate as AppUserSettings["theme"])
       : defaultSettings.theme;
   const normalizedModel =
-    typeof candidate?.defaultModel === "string"
-      ? candidate.defaultModel.trim()
+    typeof rawDefaultModel === "string"
+      ? rawDefaultModel.trim()
       : undefined;
   const normalizedFontSize = clampSettingNumber(
-    candidate?.editorFontSize,
+    typeof rawEditorFontSize === "number" ? rawEditorFontSize : undefined,
     MIN_EDITOR_FONT_SIZE,
     MAX_EDITOR_FONT_SIZE,
     defaultSettings.editorFontSize ?? 16,
   );
   const normalizedLineSpacing = clampSettingNumber(
-    candidate?.editorLineSpacing,
+    typeof rawEditorLineSpacing === "number" ? rawEditorLineSpacing : undefined,
     MIN_EDITOR_LINE_SPACING,
     MAX_EDITOR_LINE_SPACING,
     defaultSettings.editorLineSpacing ?? 1.6,
   );
-  const normalizedEmail = normalizeEmailOrUndefined(candidate?.userEmail);
+  const normalizedEmail = normalizeEmailOrUndefined(rawUserEmail);
 
   return {
     ...defaultSettings,
@@ -131,5 +136,20 @@ function normalizeDefaultModel(modelId: string) {
     return getModelConfig(modelId).id;
   } catch {
     return defaultSettings.defaultModel;
+  }
+}
+
+function readSettingsField(
+  settings: Partial<AppUserSettings> | undefined,
+  key: keyof AppUserSettings,
+) {
+  if (!settings) {
+    return undefined;
+  }
+
+  try {
+    return settings[key];
+  } catch {
+    return undefined;
   }
 }
