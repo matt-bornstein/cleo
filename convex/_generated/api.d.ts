@@ -18,6 +18,7 @@ import type * as http from "../http.js";
 import type * as permissions from "../permissions.js";
 import type * as presence from "../presence.js";
 import type * as prosemirrorSync from "../prosemirrorSync.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   permissions: typeof permissions;
   presence: typeof presence;
   prosemirrorSync: typeof prosemirrorSync;
+  users: typeof users;
 }>;
 
 /**
