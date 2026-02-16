@@ -229,7 +229,7 @@ async function callModel(
 }
 
 export async function POST(request: Request) {
-  const rawPayload = await request.json().catch(() => null);
+  const rawPayload = await parseJsonBody(request);
   const payload = parsePayload(rawPayload);
 
   if (!payload) {
@@ -292,4 +292,23 @@ export async function POST(request: Request) {
       "Cache-Control": "no-cache, no-transform",
     },
   });
+}
+
+async function parseJsonBody(request: unknown) {
+  if (!request || typeof request !== "object") {
+    return null;
+  }
+
+  if (
+    !("json" in request) ||
+    typeof (request as { json?: unknown }).json !== "function"
+  ) {
+    return null;
+  }
+
+  try {
+    return await (request as { json: () => Promise<unknown> }).json();
+  } catch {
+    return null;
+  }
 }

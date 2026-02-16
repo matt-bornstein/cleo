@@ -25,6 +25,13 @@ async function readStream(response: Response) {
 }
 
 describe("POST /api/ai/stream", () => {
+  it("returns bad request for malformed request object payload", async () => {
+    const response = await POST({} as unknown as Request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
   it("streams tokens and done payload", async () => {
     const request = new Request("http://localhost/api/ai/stream", {
       method: "POST",

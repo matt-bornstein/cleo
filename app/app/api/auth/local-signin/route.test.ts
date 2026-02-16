@@ -5,6 +5,15 @@ import {
 } from "@/lib/auth/session";
 
 describe("POST /api/auth/local-signin", () => {
+  it("falls back to /editor when request payload is malformed", async () => {
+    const response = await POST({} as unknown as Request);
+    const payload = (await response.json()) as { ok: boolean; next: string };
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.next).toBe("/editor");
+  });
+
   it("sets local auth cookie and returns next path", async () => {
     const request = new Request("http://localhost/api/auth/local-signin", {
       method: "POST",
