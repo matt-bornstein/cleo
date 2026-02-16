@@ -7,6 +7,11 @@ import {
 import { middleware } from "@/middleware";
 
 describe("middleware auth guard", () => {
+  it("handles malformed request payloads safely", () => {
+    const response = middleware({} as unknown as NextRequest);
+    expect(response.status).toBe(200);
+  });
+
   it("redirects unauthenticated editor requests to sign-in", () => {
     const request = new NextRequest("http://localhost/editor/doc-1?from=share");
     const response = middleware(request);
