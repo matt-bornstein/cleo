@@ -34,6 +34,8 @@ type StreamRequestPayload = {
   }>;
 };
 
+const CONTROL_CHARS_REGEX = /[\u0000-\u001F\u007F]/;
+
 function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -88,6 +90,12 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     if (
       typeof item.userId === "string" &&
       item.userId.trim().length > MAX_USER_ID_LENGTH
+    ) {
+      return null;
+    }
+    if (
+      typeof item.userId === "string" &&
+      CONTROL_CHARS_REGEX.test(item.userId.trim())
     ) {
       return null;
     }
