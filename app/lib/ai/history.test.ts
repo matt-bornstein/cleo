@@ -146,6 +146,22 @@ describe("getRecentMessages", () => {
         content: 123,
         createdAt: 4,
       },
+      {
+        id: "bad-content-control",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "assistant",
+        content: "bad\u0000content",
+        createdAt: 5,
+      },
+      {
+        id: "bad-user-id-length",
+        documentId: "doc-1",
+        userId: "u".repeat(257),
+        role: "assistant",
+        content: "bad user id",
+        createdAt: 6,
+      },
     ] as unknown as AIMessage[];
 
     expect(getRecentMessages(messages, 5)).toEqual([
