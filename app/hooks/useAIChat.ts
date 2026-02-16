@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getModelConfig } from "@/lib/ai/models";
-import { listMessagesByDocument, saveMessage } from "@/lib/ai/chatStore";
+import {
+  clearMessagesForDocument,
+  listMessagesByDocument,
+  saveMessage,
+} from "@/lib/ai/chatStore";
+import { createDiff } from "@/lib/diffs/store";
 import type { AIMessage } from "@/lib/types";
 
 const DEFAULT_MODEL = "gpt-4o";
@@ -12,6 +17,7 @@ type UseAIChatArgs = {
   documentId: string;
   currentDocumentContent: string;
   onApplyContent: (nextContent: string) => void;
+  defaultModel?: string;
 };
 
 function createMessage(
@@ -41,15 +47,22 @@ export function useAIChat({
   documentId,
   currentDocumentContent,
   onApplyContent,
+  defaultModel,
 }: UseAIChatArgs) {
   const [messages, setMessages] = useState<AIMessage[]>([]);
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const [selectedModel, setSelectedModel] = useState(defaultModel ?? DEFAULT_MODEL);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMessages(listMessagesByDocument(documentId));
   }, [documentId]);
+
+  useEffect(() => {
+    if (defaultModel) {
+      setSelectedModel(defaultModel);
+    }
+  }, [defaultModel]);
 
   const sendPrompt = useCallback(
     async (prompt: string) => {
@@ -105,12 +118,25 @@ export function useAIChat({
             }
 
             if (payload.type === "done") {
+              const didContentChange = payload.nextContent !== currentDocumentContent;
+              const diff = didContentChange
+                ? createDiff({
+                    documentId,
+                    userId: "local-dev-user",
+                    snapshotAfter: payload.nextContent,
+                    source: "ai",
+                    aiPrompt: prompt,
+                    aiModel: selectedModel,
+                  })
+                : undefined;
+
               setMessages((prev) =>
                 updateMessageContent(prev, assistantDraft.id, payload.assistantMessage),
               );
               saveMessage({
                 ...assistantDraft,
                 content: payload.assistantMessage,
+                diffId: diff?.id,
               });
               onApplyContent(payload.nextContent);
             }
@@ -147,6 +173,11 @@ export function useAIChat({
     [selectedModel],
   );
 
+  const clearChat = useCallback(() => {
+    clearMessagesForDocument(documentId);
+    setMessages([]);
+  }, [documentId]);
+
   return {
     messages,
     selectedModel,
@@ -155,5 +186,6 @@ export function useAIChat({
     sendPrompt,
     isLoading,
     error,
+    clearChat,
   };
 }

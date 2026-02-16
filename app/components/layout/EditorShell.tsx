@@ -144,6 +144,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
           <AIPanel
             documentId={documentId}
             currentDocumentContent={content}
+            defaultModel={settings.defaultModel}
             onApplyContent={(nextContent) => {
               updateContent(documentId, nextContent);
               setSaveStateLabel("Saved");

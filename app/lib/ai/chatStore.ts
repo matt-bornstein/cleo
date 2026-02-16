@@ -4,10 +4,12 @@ const STORAGE_KEY = "plan00.aiMessages.v1";
 
 type AIMessageState = {
   messages: AIMessage[];
+  chatClearedAtByDocument: Record<string, number>;
 };
 
 const inMemoryState: AIMessageState = {
   messages: [],
+  chatClearedAtByDocument: {},
 };
 
 function canUseStorage() {
@@ -17,12 +19,17 @@ function canUseStorage() {
 function loadState(): AIMessageState {
   if (!canUseStorage()) return inMemoryState;
   const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return { messages: [] };
+  if (!raw) return { messages: [], chatClearedAtByDocument: {} };
   try {
     const parsed = JSON.parse(raw) as AIMessageState;
-    return parsed.messages ? parsed : { messages: [] };
+    return parsed.messages
+      ? {
+          messages: parsed.messages,
+          chatClearedAtByDocument: parsed.chatClearedAtByDocument ?? {},
+        }
+      : { messages: [], chatClearedAtByDocument: {} };
   } catch {
-    return { messages: [] };
+    return { messages: [], chatClearedAtByDocument: {} };
   }
 }
 
@@ -35,8 +42,11 @@ function persistState(state: AIMessageState) {
 }
 
 export function listMessagesByDocument(documentId: string) {
-  return loadState()
-    .messages.filter((message) => message.documentId === documentId)
+  const state = loadState();
+  const clearedAt = state.chatClearedAtByDocument[documentId] ?? 0;
+  return state.messages
+    .filter((message) => message.documentId === documentId)
+    .filter((message) => message.createdAt >= clearedAt)
     .sort((a, b) => a.createdAt - b.createdAt);
 }
 
@@ -47,6 +57,12 @@ export function saveMessage(message: AIMessage) {
   return message;
 }
 
+export function clearMessagesForDocument(documentId: string) {
+  const state = loadState();
+  state.chatClearedAtByDocument[documentId] = Date.now();
+  persistState(state);
+}
+
 export function resetMessagesForTests() {
-  persistState({ messages: [] });
+  persistState({ messages: [], chatClearedAtByDocument: {} });
 }
