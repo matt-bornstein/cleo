@@ -31,6 +31,17 @@ describe("filterStalePresence", () => {
     expect(active).toHaveLength(1);
     expect(active[0].id).toBe("fresh");
   });
+
+  it("normalizes malformed now/maxAge values and ignores malformed entry timestamps", () => {
+    const entries = [
+      { id: "fresh", updatedAt: 5_000 },
+      { id: "negative", updatedAt: -1 },
+      { id: "nan", updatedAt: Number.NaN },
+    ];
+
+    const active = filterStalePresence(entries, Number.NaN, Number.NaN);
+    expect(active).toEqual([{ id: "fresh", updatedAt: 5_000 }]);
+  });
 });
 
 describe("usePresence", () => {

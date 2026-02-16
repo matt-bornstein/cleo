@@ -32,7 +32,15 @@ export function filterStalePresence<
     updatedAt: number;
   },
 >(entries: T[], now: number, maxAgeMs = 10_000) {
-  return entries.filter((entry) => now - entry.updatedAt < maxAgeMs);
+  const safeNow = Number.isFinite(now) ? Math.max(0, now) : 0;
+  const safeMaxAge =
+    Number.isFinite(maxAgeMs) && maxAgeMs >= 0 ? maxAgeMs : 10_000;
+  return entries.filter(
+    (entry) =>
+      Number.isFinite(entry.updatedAt) &&
+      entry.updatedAt >= 0 &&
+      safeNow - entry.updatedAt < safeMaxAge,
+  );
 }
 
 export function usePresence(documentId: string) {
@@ -40,11 +48,11 @@ export function usePresence(documentId: string) {
   const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
   const [visitorId] = useState(createVisitorId);
   const [version, setVersion] = useState(0);
-  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [currentTime, setCurrentTime] = useState(() => Math.max(0, Date.now()));
 
   const refresh = useCallback(() => {
     setVersion((value) => value + 1);
-    setCurrentTime(Date.now());
+    setCurrentTime(Math.max(0, Date.now()));
   }, []);
 
   useEffect(() => {
