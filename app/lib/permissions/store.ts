@@ -86,7 +86,8 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
   const normalizedEmail = email.trim().toLowerCase();
   const index = state.permissions.findIndex(
     (entry) =>
-      entry.documentId === documentId && entry.email.toLowerCase() === normalizedEmail,
+      entry.documentId === documentId &&
+      entry.email.trim().toLowerCase() === normalizedEmail,
   );
   if (index === -1) {
     const permission: PermissionEntry = {
@@ -101,6 +102,7 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
   }
   state.permissions[index] = {
     ...state.permissions[index],
+    email: normalizedEmail,
     role,
   };
   persistState(state);

@@ -50,4 +50,26 @@ describe("permissions store", () => {
       true,
     );
   });
+
+  it("normalizes legacy whitespace collaborator emails during updates", () => {
+    window.localStorage.setItem(
+      "plan00.permissions.v1",
+      JSON.stringify({
+        permissions: [
+          {
+            id: "legacy-perm",
+            documentId: "doc-legacy",
+            email: " Legacy@Example.com ",
+            role: "viewer",
+          },
+        ],
+      }),
+    );
+
+    const updated = upsertPermission("doc-legacy", "legacy@example.com", "editor");
+    expect(updated.id).toBe("legacy-perm");
+    expect(updated.email).toBe("legacy@example.com");
+    expect(updated.role).toBe("editor");
+    expect(listPermissions("doc-legacy")).toHaveLength(1);
+  });
 });
