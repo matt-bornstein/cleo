@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { vi } from "vitest";
 
 import { ShareModal } from "@/components/modals/ShareModal";
@@ -140,5 +141,38 @@ describe("ShareModal", () => {
     expect(
       screen.getByText("Owner access is fixed and cannot be re-added."),
     ).toBeInTheDocument();
+  });
+
+  it("resets transient form state after modal is closed and reopened", async () => {
+    const user = userEvent.setup();
+
+    function ShareModalHarness() {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          <ShareModal open={open} onOpenChange={setOpen} documentId="doc-reopen" />
+          <button type="button" onClick={() => setOpen(true)}>
+            Reopen share
+          </button>
+        </>
+      );
+    }
+
+    render(<ShareModalHarness />);
+
+    const input = screen.getByPlaceholderText("user@example.com");
+    await user.type(input, "not-an-email");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "Close" })[0]);
+    await user.click(screen.getByRole("button", { name: "Reopen share" }));
+
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
+    expect(screen.queryByText("Enter a valid email address.")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("user@example.com")).toHaveValue("");
   });
 });

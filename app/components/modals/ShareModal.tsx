@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -61,8 +61,28 @@ export function ShareModal({
     };
   }, []);
 
+  const resetTransientState = useCallback(() => {
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = null;
+    }
+    setEmail("");
+    setAddError(null);
+    setCopyState("idle");
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        resetTransientState();
+      }
+      onOpenChange(nextOpen);
+    },
+    [onOpenChange, resetTransientState],
+  );
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Share document</DialogTitle>
@@ -192,7 +212,7 @@ export function ShareModal({
             ) : null}
           </div>
           <div className="flex justify-end">
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button variant="secondary" onClick={() => handleOpenChange(false)}>
               Close
             </Button>
           </div>
