@@ -675,7 +675,7 @@ export const { getSnapshot, submitSnapshot, latestVersion, getSteps, submitSteps
 
 ### 8.2 System Prompt (Draft)
 
-```
+````
 You are an AI writing assistant helping edit a rich text document collaboratively. Multiple users may be working on this document. Each message in the conversation is prefixed with the user's name (e.g., "[Alice]: fix the grammar"). Pay attention to who is asking — different users may have different requests.
 
 The document is provided as HTML.
@@ -703,7 +703,7 @@ RULES:
 - Always preserve the document's existing structure and formatting unless asked to change it.
 - Use standard HTML elements: <h1>-<h3>, <p>, <strong>, <em>, <u>, <s>, <ul>, <ol>, <li>, <blockquote>, <pre><code>, <a>, <img>, <table>, <tr>, <td>, <th>, <hr>.
 - Briefly explain what you changed before the blocks.
-```
+````
 
 ### 8.3 Model Calling
 
