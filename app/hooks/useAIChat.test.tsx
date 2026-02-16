@@ -700,4 +700,56 @@ describe("useAIChat", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("floors generated chat timestamps at zero when clock is negative", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-negative-clock" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied edit.",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(-1000);
+
+    const onClearChat = vi.fn();
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-negative-clock",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+        onClearChat,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Apply update");
+    });
+
+    expect(saveMessageMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        createdAt: 0,
+      }),
+    );
+    expect(saveMessageMock.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        createdAt: 0,
+      }),
+    );
+
+    await act(async () => {
+      result.current.clearChat();
+    });
+    expect(onClearChat).toHaveBeenCalledWith(0);
+
+    nowSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
 });

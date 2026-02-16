@@ -39,7 +39,7 @@ function createMessage(
     role,
     content,
     model,
-    createdAt: Date.now(),
+    createdAt: Math.max(0, Date.now()),
   };
 }
 
@@ -268,7 +268,7 @@ export function useAIChat({
   );
 
   const clearChat = useCallback(() => {
-    const clearedAt = Date.now();
+    const clearedAt = Math.max(0, Date.now());
     onClearChat?.(clearedAt);
     setMessages([]);
     setError(null);
