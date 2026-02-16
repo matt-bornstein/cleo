@@ -58,6 +58,59 @@ describe("diff store triggerIdleSave", () => {
     expect(getDocumentById(document.id)?.content).toBe(changedSnapshot);
   });
 
+  it("builds new diff patches from latest historical snapshot by timestamp", () => {
+    const document = createDocument("Patch baseline doc");
+    const legacySnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "legacy baseline marker" }] }],
+    });
+    const latestSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "latest baseline marker" }] }],
+    });
+    const nextSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "next baseline marker" }] }],
+    });
+
+    window.localStorage.setItem(
+      "plan00.diffs.v1",
+      JSON.stringify({
+        diffs: [
+          {
+            id: "legacy",
+            documentId: document.id,
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+legacy",
+            snapshotAfter: legacySnapshot,
+            source: "manual",
+            createdAt: 1,
+          },
+          {
+            id: "latest",
+            documentId: document.id,
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+latest",
+            snapshotAfter: latestSnapshot,
+            source: "manual",
+            createdAt: 2,
+          },
+        ],
+      }),
+    );
+
+    const created = createDiff({
+      documentId: document.id,
+      userId: "u-1",
+      snapshotAfter: nextSnapshot,
+      source: "manual",
+    });
+
+    expect(created).not.toBeNull();
+    expect(created?.patch).toContain("-lates");
+    expect(created?.patch).not.toContain("legacy");
+  });
+
   it("falls back to default dedup window for malformed dedup values", () => {
     const document = createDocument("Changed doc");
     const changedSnapshot = JSON.stringify({

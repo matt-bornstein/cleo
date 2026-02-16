@@ -155,8 +155,7 @@ export function createDiff(params: {
 
   const state = loadState();
   const previousSnapshot =
-    state.diffs.find((diff) => diff.documentId === normalizedDocumentId)
-      ?.snapshotAfter ??
+    getLatestDiffByDocumentFromState(state, normalizedDocumentId)?.snapshotAfter ??
     JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
 
   const patch = createDiffPatch(previousSnapshot, params.snapshotAfter);
@@ -313,4 +312,35 @@ function normalizeDiffMetadata(aiPrompt: unknown, aiModel: unknown) {
     aiPrompt: normalizedPrompt.length > 0 ? normalizedPrompt : undefined,
     aiModel: normalizedModel.length > 0 ? getModelConfig(normalizedModel).id : undefined,
   };
+}
+
+function getLatestDiffByDocumentFromState(
+  state: DiffStoreState,
+  documentId: string,
+) {
+  let latestDiff: DiffRecord | undefined;
+  for (const diff of state.diffs) {
+    if (diff.documentId !== documentId) {
+      continue;
+    }
+
+    if (!latestDiff) {
+      latestDiff = diff;
+      continue;
+    }
+
+    if (diff.createdAt > latestDiff.createdAt) {
+      latestDiff = diff;
+      continue;
+    }
+
+    if (
+      diff.createdAt === latestDiff.createdAt &&
+      diff.id.localeCompare(latestDiff.id) < 0
+    ) {
+      latestDiff = diff;
+    }
+  }
+
+  return latestDiff;
 }
