@@ -92,6 +92,18 @@ describe("useAILockStatus", () => {
     vi.unstubAllGlobals();
   });
 
+  it("does not poll when document id exceeds max length", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAILockStatus("d".repeat(257)));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current).toEqual({ locked: false });
+
+    vi.unstubAllGlobals();
+  });
+
   it("trims document id before lock status fetch", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

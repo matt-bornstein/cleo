@@ -11,6 +11,7 @@ import type { AIMessage } from "@/lib/types";
 
 const DEFAULT_MODEL = "gpt-4o";
 const MAX_PROMPT_LENGTH = 4_000;
+const MAX_DOCUMENT_ID_LENGTH = 256;
 
 type UseAIChatArgs = {
   documentId: string;
@@ -68,18 +69,21 @@ export function useAIChat({
   const [error, setError] = useState<string | null>(null);
   const isSendingRef = useRef(false);
   const normalizedDocumentId = useMemo(() => documentId.trim(), [documentId]);
+  const hasValidDocumentId =
+    normalizedDocumentId.length > 0 &&
+    normalizedDocumentId.length <= MAX_DOCUMENT_ID_LENGTH;
   const normalizedCurrentUserId = useMemo(
     () => normalizeAIUserId(currentUserId),
     [currentUserId],
   );
 
   useEffect(() => {
-    if (!normalizedDocumentId) {
+    if (!hasValidDocumentId) {
       setMessages([]);
       return;
     }
     setMessages(listMessagesByDocument(normalizedDocumentId, chatClearedAt));
-  }, [chatClearedAt, normalizedDocumentId]);
+  }, [chatClearedAt, hasValidDocumentId, normalizedDocumentId]);
 
   useEffect(() => {
     if (defaultModel) {
@@ -94,7 +98,7 @@ export function useAIChat({
   const sendPrompt = useCallback(
     async (prompt: string) => {
       if (isSendingRef.current) return;
-      if (!normalizedDocumentId) {
+      if (!hasValidDocumentId) {
         setError("Document is unavailable.");
         return;
       }
@@ -244,6 +248,7 @@ export function useAIChat({
     [
       currentDocumentContent,
       chatClearedAt,
+      hasValidDocumentId,
       normalizedDocumentId,
       normalizedCurrentUserId,
       onApplyContent,

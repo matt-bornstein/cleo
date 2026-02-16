@@ -485,6 +485,32 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects prompts when document id exceeds max length", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "d".repeat(257),
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Help improve this");
+    });
+
+    expect(result.current.error).toBe("Document is unavailable.");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).not.toHaveBeenCalled();
+    expect(listMessagesByDocumentMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
   it("rejects oversized prompts without sending requests", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi.fn();

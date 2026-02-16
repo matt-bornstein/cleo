@@ -8,8 +8,13 @@ type LockStatus = {
   lockedAt?: number;
 };
 
+const MAX_DOCUMENT_ID_LENGTH = 256;
+
 export function useAILockStatus(documentId: string) {
   const normalizedDocumentId = documentId.trim();
+  const hasValidDocumentId =
+    normalizedDocumentId.length > 0 &&
+    normalizedDocumentId.length <= MAX_DOCUMENT_ID_LENGTH;
   const [state, setState] = useState<{
     documentId: string;
     status: LockStatus;
@@ -23,7 +28,7 @@ export function useAILockStatus(documentId: string) {
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     async function fetchStatus() {
-      if (!normalizedDocumentId) {
+      if (!hasValidDocumentId) {
         return;
       }
 
@@ -49,7 +54,7 @@ export function useAILockStatus(documentId: string) {
     }
 
     void fetchStatus();
-    if (!normalizedDocumentId) {
+    if (!hasValidDocumentId) {
       return () => {
         isMounted = false;
       };
@@ -65,7 +70,7 @@ export function useAILockStatus(documentId: string) {
         clearInterval(intervalId);
       }
     };
-  }, [normalizedDocumentId]);
+  }, [hasValidDocumentId, normalizedDocumentId]);
 
   if (state.documentId !== normalizedDocumentId) {
     return { locked: false };
