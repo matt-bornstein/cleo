@@ -1,4 +1,5 @@
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
+import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
@@ -93,7 +94,9 @@ function loadState(): DocumentStoreState {
               : undefined,
           aiLockedBy:
             typeof candidate.aiLockedBy === "string" &&
-            candidate.aiLockedBy.trim().length > 0
+            candidate.aiLockedBy.trim().length > 0 &&
+            candidate.aiLockedBy.trim().length <= MAX_USER_ID_LENGTH &&
+            !hasControlChars(candidate.aiLockedBy.trim())
               ? candidate.aiLockedBy.trim()
               : undefined,
           aiLockedAt:

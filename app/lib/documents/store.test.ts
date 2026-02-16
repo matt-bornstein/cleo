@@ -284,6 +284,52 @@ describe("document store", () => {
     expect(listDocuments()).toEqual([]);
   });
 
+  it("normalizes malformed persisted ai lock metadata", () => {
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({
+        documents: [
+          {
+            id: "doc-lock-invalid",
+            title: "Invalid lock",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "owner@example.com",
+            createdAt: 1,
+            updatedAt: 1,
+            aiLockedBy: "bad\nuser",
+            aiLockedAt: -10,
+          },
+          {
+            id: "doc-lock-valid",
+            title: "Valid lock",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "owner@example.com",
+            createdAt: 2,
+            updatedAt: 2,
+            aiLockedBy: "  owner@example.com  ",
+            aiLockedAt: 10,
+          },
+        ],
+      }),
+    );
+
+    const invalid = getDocumentById("doc-lock-invalid");
+    const valid = getDocumentById("doc-lock-valid");
+
+    expect(invalid).toEqual(
+      expect.objectContaining({
+        aiLockedBy: undefined,
+        aiLockedAt: undefined,
+      }),
+    );
+    expect(valid).toEqual(
+      expect.objectContaining({
+        aiLockedBy: "owner@example.com",
+        aiLockedAt: 10,
+      }),
+    );
+  });
+
   it("gets a document by id", () => {
     const created = createDocument("Roadmap");
 
