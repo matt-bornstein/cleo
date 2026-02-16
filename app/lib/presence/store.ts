@@ -13,13 +13,22 @@ type PresenceState = {
 
 const inMemoryState: PresenceState = { presence: [] };
 
-function canUseStorage() {
-  return typeof window !== "undefined" && !!window.localStorage;
+function getStorage() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function loadState(): PresenceState {
-  if (!canUseStorage()) return inMemoryState;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const storage = getStorage();
+  if (!storage) return inMemoryState;
+  const raw = safeGetItem(storage, STORAGE_KEY);
   if (!raw) return { presence: [] };
   try {
     const parsed = JSON.parse(raw) as { presence?: unknown };
@@ -88,11 +97,12 @@ function loadState(): PresenceState {
 }
 
 function persistState(state: PresenceState) {
-  if (!canUseStorage()) {
-    inMemoryState.presence = state.presence;
+  inMemoryState.presence = [...state.presence];
+  const storage = getStorage();
+  if (!storage) {
     return;
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  safeSetItem(storage, STORAGE_KEY, JSON.stringify(state));
 }
 
 export function updatePresence(record: unknown) {
@@ -180,6 +190,7 @@ export function listPresence(documentId: unknown) {
 }
 
 export function resetPresenceForTests() {
+  inMemoryState.presence = [];
   persistState({ presence: [] });
 }
 
@@ -231,5 +242,21 @@ function normalizePresenceData(value: unknown) {
     return JSON.parse(serialized) as unknown;
   } catch {
     return null;
+  }
+}
+
+function safeGetItem(storage: Storage, key: string) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
   }
 }

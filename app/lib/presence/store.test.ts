@@ -7,7 +7,16 @@ import {
 import { vi } from "vitest";
 
 describe("presence store", () => {
+  const localStorageDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    "localStorage",
+  );
+
   beforeEach(() => {
+    vi.restoreAllMocks();
+    if (localStorageDescriptor) {
+      Object.defineProperty(window, "localStorage", localStorageDescriptor);
+    }
     resetPresenceForTests();
     window.localStorage.clear();
   });
@@ -318,5 +327,63 @@ describe("presence store", () => {
     expect(updated).not.toBeNull();
     expect(updated?.data).toBeNull();
     expect(listPresence("doc-serializable")[0]?.data).toBeNull();
+  });
+
+  it("falls back to in-memory presence when localStorage getter throws", () => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("localStorage getter failed");
+      },
+    });
+
+    const updated = updatePresence({
+      documentId: "doc-memory-presence",
+      visitorId: "visitor-memory",
+      userId: "user-1",
+      data: { name: "Memory" },
+    });
+
+    expect(updated).not.toBeNull();
+    expect(listPresence("doc-memory-presence")).toEqual([
+      expect.objectContaining({
+        visitorId: "visitor-memory",
+      }),
+    ]);
+  });
+
+  it("returns empty list when localStorage getItem throws", () => {
+    updatePresence({
+      documentId: "doc-getitem-presence",
+      visitorId: "visitor-1",
+      userId: "user-1",
+      data: {},
+    });
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("getItem failed");
+    });
+
+    expect(listPresence("doc-getitem-presence")).toEqual([]);
+  });
+
+  it("returns normalized updates when localStorage setItem throws", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("setItem failed");
+    });
+
+    const updated = updatePresence({
+      documentId: " doc-setitem-presence ",
+      visitorId: " visitor-1 ",
+      userId: " user-1 ",
+      data: {},
+    });
+
+    expect(updated).toEqual(
+      expect.objectContaining({
+        documentId: "doc-setitem-presence",
+        visitorId: "visitor-1",
+        userId: "user-1",
+      }),
+    );
   });
 });
