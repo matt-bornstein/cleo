@@ -18,5 +18,8 @@
 2. `npx convex login --login-flow paste --no-open` failed due device-name prompt in non-interactive terminal.
 3. `npx convex login --login-flow paste --no-open --device-name cursorvm` failed due token paste prompt in non-interactive terminal.
 4. `CONVEX_DEPLOYMENT=local npx convex dev --once` still entered login flow and failed on non-interactive device-name prompt.
+5. `CONVEX_SELF_HOSTED_URL=http://127.0.0.1:3210 npx convex dev --once --codegen enable --typecheck disable` still entered login flow and failed immediately in non-interactive mode.
+6. `npx convex codegen --typecheck disable` no longer prompted for login, but failed because no `CONVEX_DEPLOYMENT` is configured.
+7. `CONVEX_DEPLOYMENT=local npx convex codegen --typecheck disable` failed with `401 MissingAccessToken`, confirming access token is still mandatory even for codegen against deployment identifiers.
 
 **Revisit result:** Still unresolved in this environment. Convex CLI setup cannot complete without an interactive token entry mechanism or pre-provisioned machine token.
