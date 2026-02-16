@@ -13,6 +13,7 @@ describe("sanitizeNextPath", () => {
     expect(sanitizeNextPath(123)).toBe("/editor");
     expect(sanitizeNextPath({ next: "/editor/doc-1" })).toBe("/editor");
     expect(sanitizeNextPath("/editor/doc-1\nx")).toBe("/editor");
+    expect(sanitizeNextPath("/editor/doc-1%0Aevil")).toBe("/editor");
     expect(sanitizeNextPath(oversizedPath)).toBe("/editor");
   });
 
