@@ -44,7 +44,9 @@ export function useDocuments(search?: string, currentUserEmail = "me@local.dev")
   const updateContent = useCallback(
     (documentId: string, content: string) => {
       const updated = updateDocumentContent(documentId, content);
-      refresh();
+      if (updated) {
+        refresh();
+      }
       return updated;
     },
     [refresh],
@@ -53,7 +55,9 @@ export function useDocuments(search?: string, currentUserEmail = "me@local.dev")
   const updateTitle = useCallback(
     (documentId: string, title: string) => {
       const updated = updateDocumentTitle(documentId, title);
-      refresh();
+      if (updated) {
+        refresh();
+      }
       return updated;
     },
     [refresh],
@@ -62,7 +66,9 @@ export function useDocuments(search?: string, currentUserEmail = "me@local.dev")
   const setChatClearedAt = useCallback(
     (documentId: string, timestamp: number) => {
       const updated = setDocumentChatClearedAt(documentId, timestamp);
-      refresh();
+      if (updated) {
+        refresh();
+      }
       return updated;
     },
     [refresh],
@@ -71,7 +77,9 @@ export function useDocuments(search?: string, currentUserEmail = "me@local.dev")
   const remove = useCallback(
     (documentId: string) => {
       const removed = deleteDocument(documentId);
-      refresh();
+      if (removed) {
+        refresh();
+      }
       return removed;
     },
     [refresh],
