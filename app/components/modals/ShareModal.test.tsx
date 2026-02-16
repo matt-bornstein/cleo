@@ -124,6 +124,20 @@ describe("ShareModal", () => {
     expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
   });
 
+  it("does not duplicate collaborator rows for unchanged re-adds", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-share-dedupe" />);
+
+    const input = screen.getByPlaceholderText("user@example.com");
+    await user.type(input, "person@example.com");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getAllByText("person@example.com · editor")).toHaveLength(1);
+
+    await user.type(input, "person@example.com");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getAllByText("person@example.com · editor")).toHaveLength(1);
+  });
+
   it("disables add action until collaborator email has content", async () => {
     const user = userEvent.setup();
     render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-add-disabled" />);

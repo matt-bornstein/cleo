@@ -186,10 +186,20 @@ export function ShareModal({
                   return;
                 }
 
-                upsertPermission(documentId, normalizedEmail, role);
+                const existing = permissions.find(
+                  (permission) => permission.email === normalizedEmail,
+                );
+                const upserted = upsertPermission(documentId, normalizedEmail, role);
+                if (!upserted) {
+                  setAddError("Unable to add collaborator.");
+                  return;
+                }
+
                 setEmail("");
                 setAddError(null);
-                setVersion((value) => value + 1);
+                if (!existing || existing.role !== role) {
+                  setVersion((value) => value + 1);
+                }
               }}
             >
               Add
