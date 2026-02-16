@@ -13,7 +13,7 @@ const SEARCH_REPLACE_REGEX =
   /<<<SEARCH\s*([\s\S]*?)\s*===\s*([\s\S]*?)\s*>>>/g;
 const FULL_HTML_REGEX = /```html\s*([\s\S]*?)\s*```/i;
 
-export function parseAIResponse(response: string): ParsedAIResponse {
+export function parseAIResponse(response: unknown): ParsedAIResponse {
   const safeResponse = typeof response === "string" ? response : "";
   const fullHtmlMatch = safeResponse.match(FULL_HTML_REGEX);
   const blocks: SearchReplaceBlock[] = [];
@@ -40,11 +40,14 @@ export function parseAIResponse(response: string): ParsedAIResponse {
 }
 
 export function applyParsedEditsToHtml(
-  originalHtml: string,
-  parsed: ParsedAIResponse,
+  originalHtml: unknown,
+  parsed: unknown,
 ) {
   const safeOriginalHtml = typeof originalHtml === "string" ? originalHtml : "";
-  const safeParsed = parsed && typeof parsed === "object" ? parsed : undefined;
+  const safeParsed =
+    parsed && typeof parsed === "object"
+      ? (parsed as { fullHtml?: unknown; blocks?: unknown })
+      : undefined;
   const safeFullHtml =
     safeParsed && typeof safeParsed.fullHtml === "string"
       ? safeParsed.fullHtml

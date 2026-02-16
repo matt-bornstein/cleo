@@ -32,7 +32,7 @@ Rewrote section.
   });
 
   it("handles malformed non-string AI response payloads", () => {
-    const parsed = parseAIResponse(123 as unknown as string);
+    const parsed = parseAIResponse(123);
     expect(parsed).toEqual({
       explanation: "",
       fullHtml: undefined,
@@ -51,5 +51,10 @@ Rewrote section.
     });
 
     expect(nextHtml).toBe("<p>New</p>");
+  });
+
+  it("returns original html when parsed payload is malformed non-object", () => {
+    const nextHtml = applyParsedEditsToHtml("<p>Old</p>", 123);
+    expect(nextHtml).toBe("<p>Old</p>");
   });
 });

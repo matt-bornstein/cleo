@@ -44,7 +44,7 @@ function nodeToHtml(node: JSONContent): string {
   }
 }
 
-export function prosemirrorJsonToHtml(content: string) {
+export function prosemirrorJsonToHtml(content: unknown) {
   try {
     if (typeof content !== "string") {
       return EMPTY_DOCUMENT_HTML;
@@ -62,7 +62,7 @@ export function prosemirrorJsonToHtml(content: string) {
   }
 }
 
-export function htmlToProsemirrorJson(html: string) {
+export function htmlToProsemirrorJson(html: unknown) {
   if (typeof html !== "string") {
     return EMPTY_DOCUMENT_JSON;
   }
