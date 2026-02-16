@@ -21,7 +21,9 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
     try {
       await onSubmit(normalizedPrompt);
     } catch {
-      setPrompt(previousPrompt);
+      setPrompt((currentPrompt) =>
+        currentPrompt.length === 0 ? previousPrompt : currentPrompt,
+      );
     }
   };
 

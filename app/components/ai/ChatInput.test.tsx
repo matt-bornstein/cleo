@@ -4,6 +4,14 @@ import { vi } from "vitest";
 
 import { ChatInput } from "@/components/ai/ChatInput";
 
+function createDeferred() {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((_, rejectFn) => {
+    reject = rejectFn;
+  });
+  return { promise, reject };
+}
+
 describe("ChatInput", () => {
   it("submits on Enter and clears input", async () => {
     const user = userEvent.setup();
@@ -51,6 +59,26 @@ describe("ChatInput", () => {
 
     await waitFor(() => {
       expect((textarea as HTMLTextAreaElement).value).toBe("retry me");
+    });
+  });
+
+  it("does not overwrite newer user input after async submit rejection", async () => {
+    const user = userEvent.setup();
+    const deferred = createDeferred();
+    const onSubmit = vi.fn().mockReturnValue(deferred.promise);
+
+    render(<ChatInput onSubmit={onSubmit} />);
+    const textarea = screen.getByPlaceholderText("Ask AI to edit this document...");
+
+    await user.type(textarea, "first request");
+    await user.keyboard("{Enter}");
+    expect((textarea as HTMLTextAreaElement).value).toBe("");
+
+    await user.type(textarea, "new draft");
+    deferred.reject(new Error("network issue"));
+
+    await waitFor(() => {
+      expect((textarea as HTMLTextAreaElement).value).toBe("new draft");
     });
   });
 });
