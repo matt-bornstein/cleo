@@ -116,4 +116,15 @@ describe("settings store", () => {
     expect(settings.editorLineSpacing).toBe(1);
     expect(settings.userEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
+
+  it("falls back to defaults for non-object persisted settings payloads", () => {
+    window.localStorage.setItem("plan00.settings.v1", JSON.stringify(123));
+
+    const settings = getSettings();
+    expect(settings.theme).toBe("system");
+    expect(settings.defaultModel).toBe("gpt-4o");
+    expect(settings.editorFontSize).toBe(16);
+    expect(settings.editorLineSpacing).toBe(1.6);
+    expect(settings.userEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
+  });
 });

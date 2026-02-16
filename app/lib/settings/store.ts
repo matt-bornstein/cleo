@@ -24,30 +24,34 @@ function canUseStorage() {
   return typeof window !== "undefined" && !!window.localStorage;
 }
 
-function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettings {
+function normalizeSettings(settings: unknown): AppUserSettings {
+  const candidate =
+    settings && typeof settings === "object"
+      ? (settings as Partial<AppUserSettings>)
+      : undefined;
   const normalizedThemeCandidate =
-    typeof settings?.theme === "string" ? settings.theme.trim().toLowerCase() : "";
+    typeof candidate?.theme === "string" ? candidate.theme.trim().toLowerCase() : "";
   const normalizedTheme =
     normalizedThemeCandidate && VALID_THEMES.has(normalizedThemeCandidate)
       ? (normalizedThemeCandidate as AppUserSettings["theme"])
       : defaultSettings.theme;
   const normalizedModel =
-    typeof settings?.defaultModel === "string"
-      ? settings.defaultModel.trim()
+    typeof candidate?.defaultModel === "string"
+      ? candidate.defaultModel.trim()
       : undefined;
   const normalizedFontSize = clampSettingNumber(
-    settings?.editorFontSize,
+    candidate?.editorFontSize,
     MIN_EDITOR_FONT_SIZE,
     MAX_EDITOR_FONT_SIZE,
     defaultSettings.editorFontSize ?? 16,
   );
   const normalizedLineSpacing = clampSettingNumber(
-    settings?.editorLineSpacing,
+    candidate?.editorLineSpacing,
     MIN_EDITOR_LINE_SPACING,
     MAX_EDITOR_LINE_SPACING,
     defaultSettings.editorLineSpacing ?? 1.6,
   );
-  const normalizedEmail = normalizeEmailOrUndefined(settings?.userEmail);
+  const normalizedEmail = normalizeEmailOrUndefined(candidate?.userEmail);
 
   return {
     ...defaultSettings,
@@ -70,7 +74,7 @@ export function getSettings(): AppUserSettings {
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) return { ...defaultSettings };
   try {
-    return normalizeSettings(JSON.parse(raw) as AppUserSettings);
+    return normalizeSettings(JSON.parse(raw));
   } catch {
     return { ...defaultSettings };
   }
