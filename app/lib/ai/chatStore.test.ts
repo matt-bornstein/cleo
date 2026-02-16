@@ -159,6 +159,21 @@ describe("ai chat store", () => {
     expect(listMessagesByDocument("doc-bad")).toEqual([]);
   });
 
+  it("normalizes unknown message model ids to supported defaults", () => {
+    const saved = saveMessage({
+      id: "model-message",
+      documentId: "doc-model",
+      userId: "author",
+      role: "assistant",
+      content: "Response",
+      model: "unknown-model-id",
+      createdAt: Date.now(),
+    });
+
+    expect(saved?.model).toBe("gpt-4o");
+    expect(listMessagesByDocument("doc-model")[0]?.model).toBe("gpt-4o");
+  });
+
   it("filters malformed persisted messages on load", () => {
     window.localStorage.setItem(
       "plan00.aiMessages.v1",
@@ -210,6 +225,7 @@ describe("ai chat store", () => {
             userId: "u-2",
             role: "assistant",
             content: "Latest",
+            model: "unknown-model-id",
             createdAt: 5,
           },
           {
@@ -232,6 +248,7 @@ describe("ai chat store", () => {
         documentId: "doc-legacy",
         userId: "u-2",
         content: "Latest",
+        model: "gpt-4o",
       }),
     );
   });

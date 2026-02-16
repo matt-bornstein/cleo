@@ -1,6 +1,7 @@
 import { MAX_MESSAGE_CONTENT_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { normalizeAIUserId } from "@/lib/ai/identity";
+import { getModelConfig } from "@/lib/ai/models";
 import type { AIMessage } from "@/lib/types";
 
 const STORAGE_KEY = "plan00.aiMessages.v1";
@@ -122,5 +123,9 @@ function normalizeMessage(message: AIMessage): AIMessage | null {
     id: normalizedMessageId,
     documentId: normalizedDocumentId,
     userId: normalizeAIUserId(message.userId),
+    model:
+      typeof message.model === "string" && message.model.trim().length > 0
+        ? getModelConfig(message.model.trim()).id
+        : undefined,
   };
 }
