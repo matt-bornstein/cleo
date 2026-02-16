@@ -139,4 +139,57 @@ describe("CommentThread", () => {
       user.click(screen.getByRole("button", { name: "Add" })),
     ).resolves.toBeUndefined();
   });
+
+  it("does not throw when comment and reply field getters throw", () => {
+    const commentWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(commentWithThrowingGetters, "id", {
+      get() {
+        throw new Error("comment id getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "userId", {
+      get() {
+        throw new Error("comment userId getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "content", {
+      get() {
+        throw new Error("comment content getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "anchorText", {
+      get() {
+        throw new Error("comment anchorText getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "resolved", {
+      get() {
+        throw new Error("comment resolved getter failed");
+      },
+    });
+    const replyWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(replyWithThrowingGetters, "id", {
+      get() {
+        throw new Error("reply id getter failed");
+      },
+    });
+    Object.defineProperty(replyWithThrowingGetters, "content", {
+      get() {
+        throw new Error("reply content getter failed");
+      },
+    });
+
+    expect(() =>
+      render(
+        <CommentThread
+          comment={commentWithThrowingGetters}
+          replies={[replyWithThrowingGetters]}
+          onResolve={vi.fn()}
+          onReply={vi.fn()}
+        />,
+      ),
+    ).not.toThrow();
+    expect(screen.getByText("Anchor: No anchor text")).toBeInTheDocument();
+    expect(screen.getByText("By: Unknown user")).toBeInTheDocument();
+  });
 });

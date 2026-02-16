@@ -39,23 +39,28 @@ function normalizeDisplayComment(value: unknown, fallbackId: string): DisplayCom
           resolved?: unknown;
         })
       : undefined;
+  const id = readCommentField(candidate, "id");
+  const userId = readCommentField(candidate, "userId");
+  const content = readCommentField(candidate, "content");
+  const anchorText = readCommentField(candidate, "anchorText");
+  const resolved = readCommentField(candidate, "resolved");
   const normalizedId =
-    typeof candidate?.id === "string" &&
-    candidate.id.trim().length > 0 &&
-    !hasControlChars(candidate.id.trim())
-      ? candidate.id.trim()
+    typeof id === "string" &&
+    id.trim().length > 0 &&
+    !hasControlChars(id.trim())
+      ? id.trim()
       : fallbackId;
   return {
     id: normalizedId,
-    userId: typeof candidate?.userId === "string" ? candidate.userId : undefined,
-    content: typeof candidate?.content === "string" ? candidate.content : "",
+    userId: typeof userId === "string" ? userId : undefined,
+    content: typeof content === "string" ? content : "",
     anchorText:
-      typeof candidate?.anchorText === "string" &&
-      candidate.anchorText.trim().length > 0 &&
-      !hasControlChars(candidate.anchorText.trim())
-        ? candidate.anchorText.trim()
+      typeof anchorText === "string" &&
+      anchorText.trim().length > 0 &&
+      !hasControlChars(anchorText.trim())
+        ? anchorText.trim()
         : "No anchor text",
-    resolved: candidate?.resolved === true,
+    resolved: resolved === true,
   };
 }
 
@@ -155,5 +160,28 @@ function safeOnReply(onReply: unknown, parentCommentId: string, content: string)
     onReply(parentCommentId, content);
   } catch {
     return;
+  }
+}
+
+function readCommentField(
+  comment:
+    | {
+        id?: unknown;
+        userId?: unknown;
+        content?: unknown;
+        anchorText?: unknown;
+        resolved?: unknown;
+      }
+    | undefined,
+  key: "id" | "userId" | "content" | "anchorText" | "resolved",
+) {
+  if (!comment) {
+    return undefined;
+  }
+
+  try {
+    return comment[key];
+  } catch {
+    return undefined;
   }
 }
