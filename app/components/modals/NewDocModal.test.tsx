@@ -34,4 +34,27 @@ describe("NewDocModal", () => {
     await user.click(screen.getByRole("button", { name: "Create" }));
     await user.click(screen.getByRole("button", { name: "Cancel" }));
   });
+
+  it("does not throw when callbacks throw", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <NewDocModal
+        open
+        onOpenChange={() => {
+          throw new Error("onOpenChange failed");
+        }}
+        onCreateDocument={() => {
+          throw new Error("onCreateDocument failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Create" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Cancel" })),
+    ).resolves.toBeUndefined();
+  });
 });

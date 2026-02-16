@@ -29,22 +29,16 @@ export function NewDocModal({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (typeof onCreateDocument === "function") {
-      onCreateDocument(title);
-    }
+    safeCreateDocument(onCreateDocument, title);
     setTitle("");
-    if (typeof onOpenChange === "function") {
-      onOpenChange(false);
-    }
+    safeOnOpenChange(onOpenChange, false);
   };
 
   return (
     <Dialog
       open={normalizedOpen}
       onOpenChange={(nextOpen) => {
-        if (typeof onOpenChange === "function") {
-          onOpenChange(nextOpen);
-        }
+        safeOnOpenChange(onOpenChange, nextOpen);
       }}
     >
       <DialogContent>
@@ -66,9 +60,7 @@ export function NewDocModal({
               type="button"
               variant="secondary"
               onClick={() => {
-                if (typeof onOpenChange === "function") {
-                  onOpenChange(false);
-                }
+                safeOnOpenChange(onOpenChange, false);
               }}
             >
               Cancel
@@ -79,4 +71,28 @@ export function NewDocModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+function safeOnOpenChange(onOpenChange: unknown, nextOpen: boolean) {
+  if (typeof onOpenChange !== "function") {
+    return;
+  }
+
+  try {
+    onOpenChange(nextOpen);
+  } catch {
+    return;
+  }
+}
+
+function safeCreateDocument(onCreateDocument: unknown, title: string) {
+  if (typeof onCreateDocument !== "function") {
+    return;
+  }
+
+  try {
+    onCreateDocument(title);
+  } catch {
+    return;
+  }
 }
