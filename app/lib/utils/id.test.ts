@@ -42,6 +42,38 @@ describe("generateLocalId", () => {
     randomSpy.mockRestore();
   });
 
+  it("falls back to timestamp-random id when randomUUID getter throws", () => {
+    const cryptoLike = Object.create(null) as { randomUUID: unknown };
+    Object.defineProperty(cryptoLike, "randomUUID", {
+      get() {
+        throw new Error("randomUUID getter failed");
+      },
+    });
+    vi.stubGlobal("crypto", cryptoLike as unknown as Crypto);
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(12345);
+    const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.123456789);
+
+    expect(() => generateLocalId("local")).not.toThrow();
+    expect(generateLocalId("local")).toMatch(/^local-/);
+
+    nowSpy.mockRestore();
+    randomSpy.mockRestore();
+  });
+
+  it("falls back to safe random segment when Math.random throws", () => {
+    vi.stubGlobal("crypto", {} as unknown as Crypto);
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(12345);
+    const randomSpy = vi.spyOn(Math, "random").mockImplementation(() => {
+      throw new Error("Math.random failed");
+    });
+
+    const id = generateLocalId("local");
+
+    expect(id).toContain("fallback");
+    nowSpy.mockRestore();
+    randomSpy.mockRestore();
+  });
+
   it("falls back to zero timestamp segment when Date.now throws", () => {
     vi.stubGlobal("crypto", {} as unknown as Crypto);
     const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
