@@ -22,7 +22,59 @@ function loadState(): CommentState {
   if (!raw) return { comments: [] };
   try {
     const parsed = JSON.parse(raw) as CommentState;
-    return parsed.comments ? parsed : { comments: [] };
+    if (!parsed.comments) {
+      return { comments: [] };
+    }
+
+    return {
+      comments: parsed.comments.flatMap((comment) => {
+        const normalizedDocumentId = normalizeDocumentId(comment.documentId);
+        const normalizedCommentId = comment.id?.trim();
+        const normalizedContent = comment.content?.trim();
+        const normalizedAnchorText = comment.anchorText?.trim() || "Comment";
+        const normalizedParentCommentId = comment.parentCommentId?.trim() || undefined;
+        const normalizedUserId = comment.userId?.trim();
+        const safeUserId =
+          normalizedUserId &&
+          normalizedUserId.length <= MAX_USER_ID_LENGTH &&
+          !hasControlChars(normalizedUserId)
+            ? normalizedUserId
+            : DEFAULT_LOCAL_USER_ID;
+
+        if (
+          !normalizedCommentId ||
+          !isValidDocumentId(normalizedDocumentId) ||
+          !normalizedContent ||
+          typeof comment.createdAt !== "number" ||
+          !Number.isFinite(comment.createdAt) ||
+          typeof comment.updatedAt !== "number" ||
+          !Number.isFinite(comment.updatedAt)
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            ...comment,
+            id: normalizedCommentId,
+            documentId: normalizedDocumentId,
+            userId: safeUserId,
+            content: normalizedContent,
+            anchorText: normalizedAnchorText,
+            parentCommentId: normalizedParentCommentId,
+            resolved: Boolean(comment.resolved),
+            anchorFrom:
+              typeof comment.anchorFrom === "number" && Number.isFinite(comment.anchorFrom)
+                ? comment.anchorFrom
+                : 0,
+            anchorTo:
+              typeof comment.anchorTo === "number" && Number.isFinite(comment.anchorTo)
+                ? comment.anchorTo
+                : 0,
+          },
+        ];
+      }),
+    };
   } catch {
     return { comments: [] };
   }

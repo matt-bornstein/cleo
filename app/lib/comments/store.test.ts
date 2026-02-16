@@ -121,4 +121,65 @@ describe("comments store", () => {
     expect(comment?.anchorText).toBe("Comment");
     expect(comment?.parentCommentId).toBe("parent-1");
   });
+
+  it("filters malformed persisted comments and normalizes legacy entries", () => {
+    window.localStorage.setItem(
+      "plan00.comments.v1",
+      JSON.stringify({
+        comments: [
+          {
+            id: "  valid-comment  ",
+            documentId: "  doc-legacy  ",
+            userId: "  USER-1  ",
+            content: "  Legacy content  ",
+            anchorFrom: 0,
+            anchorTo: 5,
+            anchorText: "   ",
+            resolved: "yes",
+            parentCommentId: "  parent-1  ",
+            createdAt: 1,
+            updatedAt: 2,
+          },
+          {
+            id: "",
+            documentId: "doc-legacy",
+            userId: "user-2",
+            content: "Missing id",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: 3,
+            updatedAt: 3,
+          },
+          {
+            id: "bad-doc",
+            documentId: "doc-\ninvalid",
+            userId: "user-3",
+            content: "Bad doc",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: 4,
+            updatedAt: 4,
+          },
+        ],
+      }),
+    );
+
+    const comments = listComments("doc-legacy");
+    expect(comments).toHaveLength(1);
+    expect(comments[0]).toEqual(
+      expect.objectContaining({
+        id: "valid-comment",
+        documentId: "doc-legacy",
+        userId: "USER-1",
+        content: "Legacy content",
+        anchorText: "Comment",
+        parentCommentId: "parent-1",
+        resolved: true,
+      }),
+    );
+  });
 });
