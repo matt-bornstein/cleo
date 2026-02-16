@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { isValidElement } from "react";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProvider } from "convex/react";
 import { hasControlChars } from "@/lib/validators/controlChars";
@@ -43,16 +44,23 @@ export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
 }
 
 function toRenderableChildren(value: unknown) {
-  if (
-    value === null ||
-    value === undefined ||
-    typeof value === "boolean" ||
-    typeof value === "function" ||
-    typeof value === "symbol" ||
-    typeof value === "bigint"
-  ) {
+  if (value === null || value === undefined || typeof value === "boolean") {
     return null;
   }
 
-  return value as React.ReactNode;
+  if (typeof value === "string" || typeof value === "number") {
+    return value;
+  }
+
+  if (isValidElement(value)) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item, index) => (
+      <span key={`convex-child-${index}`}>{toRenderableChildren(item)}</span>
+    ));
+  }
+
+  return null;
 }
