@@ -275,6 +275,12 @@ describe("POST /api/ai/stream", () => {
       {
         ...createRequestBody(),
         messages: [
+          { role: "assistant", content: `bad${"\u0000"}content`, userId: "assistant" },
+        ],
+      },
+      {
+        ...createRequestBody(),
+        messages: [
           { role: "user", content: "hello", userId: "u".repeat(257) },
         ],
       },
@@ -341,6 +347,38 @@ describe("POST /api/ai/stream", () => {
     const response = await POST(request);
     expect(response.status).toBe(400);
     const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
+  it("accepts multiline prompts but rejects disallowed prompt control characters", async () => {
+    const multilineRequest = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        createRequestBody({
+          prompt: "Line one\nLine two",
+        }),
+      ),
+    });
+    const multilineResponse = await POST(multilineRequest);
+    expect(multilineResponse.status).toBe(200);
+
+    const invalidControlPromptRequest = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        createRequestBody({
+          prompt: `bad${"\u0000"}prompt`,
+        }),
+      ),
+    });
+    const invalidControlPromptResponse = await POST(invalidControlPromptRequest);
+    expect(invalidControlPromptResponse.status).toBe(400);
+    const payload = (await invalidControlPromptResponse.json()) as { error: string };
     expect(payload.error).toBe("Invalid request payload");
   });
 
