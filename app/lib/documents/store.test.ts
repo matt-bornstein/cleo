@@ -45,6 +45,34 @@ describe("document store", () => {
     expect(filtered[0].id).toBe(second.id);
   });
 
+  it("uses deterministic id tie-breaker for equal updatedAt timestamps", () => {
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({
+        documents: [
+          {
+            id: "doc-b",
+            title: "Doc B",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "owner@example.com",
+            createdAt: 1,
+            updatedAt: 10,
+          },
+          {
+            id: "doc-a",
+            title: "Doc A",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "owner@example.com",
+            createdAt: 1,
+            updatedAt: 10,
+          },
+        ],
+      }),
+    );
+
+    expect(listDocuments().map((document) => document.id)).toEqual(["doc-a", "doc-b"]);
+  });
+
   it("normalizes legacy stored owner emails when loading from storage", () => {
     window.localStorage.setItem(
       "plan00.documents.v1",

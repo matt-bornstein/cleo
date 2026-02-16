@@ -136,7 +136,11 @@ export function listDocuments(query?: string): AppDocument[] {
       if (!normalizedQuery) return true;
       return doc.title.toLowerCase().includes(normalizedQuery);
     })
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+    .sort((a, b) =>
+      b.updatedAt === a.updatedAt
+        ? a.id.localeCompare(b.id)
+        : b.updatedAt - a.updatedAt,
+    );
 }
 
 export function getDocumentById(documentId: string): AppDocument | undefined {

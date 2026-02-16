@@ -134,6 +134,37 @@ describe("presence store", () => {
     ]);
   });
 
+  it("uses visitor id tie-breaker for equal update timestamps", () => {
+    window.localStorage.setItem(
+      "plan00.presence.v1",
+      JSON.stringify({
+        presence: [
+          {
+            id: "presence-b",
+            documentId: "doc-order-tie",
+            visitorId: "visitor-b",
+            userId: "user-1",
+            data: {},
+            updatedAt: 1,
+          },
+          {
+            id: "presence-a",
+            documentId: "doc-order-tie",
+            visitorId: "visitor-a",
+            userId: "user-1",
+            data: {},
+            updatedAt: 1,
+          },
+        ],
+      }),
+    );
+
+    expect(listPresence("doc-order-tie").map((entry) => entry.id)).toEqual([
+      "presence-a",
+      "presence-b",
+    ]);
+  });
+
   it("normalizes non-serializable presence payload data", () => {
     const circular: { self?: unknown } = {};
     circular.self = circular;

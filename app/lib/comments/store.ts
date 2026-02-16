@@ -105,7 +105,11 @@ export function listComments(documentId: string) {
 
   return loadState()
     .comments.filter((comment) => comment.documentId === normalizedDocumentId)
-    .sort((a, b) => a.createdAt - b.createdAt);
+    .sort((a, b) =>
+      a.createdAt === b.createdAt
+        ? a.id.localeCompare(b.id)
+        : a.createdAt - b.createdAt,
+    );
 }
 
 export function addComment(params: {

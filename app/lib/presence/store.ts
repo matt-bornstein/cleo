@@ -122,7 +122,11 @@ export function listPresence(documentId: string) {
 
   return loadState()
     .presence.filter((entry) => entry.documentId === normalizedDocumentId)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+    .sort((a, b) =>
+      b.updatedAt === a.updatedAt
+        ? a.visitorId.localeCompare(b.visitorId)
+        : b.updatedAt - a.updatedAt,
+    );
 }
 
 export function resetPresenceForTests() {

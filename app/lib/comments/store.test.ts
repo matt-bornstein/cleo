@@ -134,6 +134,45 @@ describe("comments store", () => {
     expect(comment?.parentCommentId).toBeUndefined();
   });
 
+  it("uses deterministic id tie-breaker for same-timestamp comments", () => {
+    window.localStorage.setItem(
+      "plan00.comments.v1",
+      JSON.stringify({
+        comments: [
+          {
+            id: "comment-b",
+            documentId: "doc-tie",
+            userId: "user-1",
+            content: "Second",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          {
+            id: "comment-a",
+            documentId: "doc-tie",
+            userId: "user-1",
+            content: "First",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      }),
+    );
+
+    expect(listComments("doc-tie").map((comment) => comment.id)).toEqual([
+      "comment-a",
+      "comment-b",
+    ]);
+  });
+
   it("filters malformed persisted comments and normalizes legacy entries", () => {
     window.localStorage.setItem(
       "plan00.comments.v1",
