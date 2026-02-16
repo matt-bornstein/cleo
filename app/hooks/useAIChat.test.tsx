@@ -305,4 +305,48 @@ describe("useAIChat", () => {
     expect(getModelConfigMock).toHaveBeenCalledWith("unknown-model");
     expect(result.current.selectedModel).toBe("gpt-4o");
   });
+
+  it("clears visible errors when chat history is cleared", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse(
+          [
+            {
+              type: "error",
+              error: "Temporary failure",
+            },
+          ],
+          { trailingNewline: false },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onClearChat = vi.fn();
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-clear",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+        onClearChat,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger failure");
+    });
+    expect(result.current.error).toBe("Temporary failure");
+
+    await act(async () => {
+      result.current.clearChat();
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.messages).toEqual([]);
+    expect(onClearChat).toHaveBeenCalledTimes(1);
+
+    vi.unstubAllGlobals();
+  });
 });

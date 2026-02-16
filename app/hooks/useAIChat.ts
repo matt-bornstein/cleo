@@ -222,6 +222,7 @@ export function useAIChat({
     const clearedAt = Date.now();
     onClearChat?.(clearedAt);
     setMessages([]);
+    setError(null);
   }, [onClearChat]);
 
   return {
