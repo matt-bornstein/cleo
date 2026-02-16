@@ -23,13 +23,22 @@ const ALLOWED_MESSAGE_ROLES = new Set<AIMessage["role"]>([
   "system",
 ]);
 
-function canUseStorage() {
-  return typeof window !== "undefined" && !!window.localStorage;
+function getStorage() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function loadState(): AIMessageState {
-  if (!canUseStorage()) return inMemoryState;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const storage = getStorage();
+  if (!storage) return inMemoryState;
+  const raw = safeGetItem(storage, STORAGE_KEY);
   if (!raw) return { messages: [] };
   try {
     const parsed = JSON.parse(raw) as { messages?: unknown };
@@ -64,11 +73,12 @@ function loadState(): AIMessageState {
 }
 
 function persistState(state: AIMessageState) {
-  if (!canUseStorage()) {
-    inMemoryState.messages = state.messages;
+  inMemoryState.messages = [...state.messages];
+  const storage = getStorage();
+  if (!storage) {
     return;
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  safeSetItem(storage, STORAGE_KEY, JSON.stringify(state));
 }
 
 export function listMessagesByDocument(documentId: unknown, chatClearedAt?: unknown) {
@@ -119,6 +129,7 @@ export function saveMessage(message: unknown) {
 }
 
 export function resetMessagesForTests() {
+  inMemoryState.messages = [];
   persistState({ messages: [] });
 }
 
@@ -161,4 +172,20 @@ function normalizeMessage(message: unknown): AIMessage | null {
         ? getModelConfig(candidate.model.trim()).id
         : undefined,
   };
+}
+
+function safeGetItem(storage: Storage, key: string) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
 }

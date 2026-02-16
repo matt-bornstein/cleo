@@ -3,9 +3,19 @@ import {
   resetMessagesForTests,
   saveMessage,
 } from "@/lib/ai/chatStore";
+import { vi } from "vitest";
 
 describe("ai chat store", () => {
+  const localStorageDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    "localStorage",
+  );
+
   beforeEach(() => {
+    vi.restoreAllMocks();
+    if (localStorageDescriptor) {
+      Object.defineProperty(window, "localStorage", localStorageDescriptor);
+    }
     resetMessagesForTests();
     window.localStorage.clear();
   });
@@ -394,5 +404,70 @@ describe("ai chat store", () => {
         createdAt: 11,
       }),
     ]);
+  });
+
+  it("falls back to in-memory messages when localStorage getter throws", () => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("localStorage getter failed");
+      },
+    });
+
+    const saved = saveMessage({
+      id: "memory-message",
+      documentId: "doc-memory",
+      userId: "u-1",
+      role: "assistant",
+      content: "Memory content",
+      createdAt: 10,
+    });
+
+    expect(saved).not.toBeNull();
+    expect(listMessagesByDocument("doc-memory")).toEqual([
+      expect.objectContaining({
+        id: "memory-message",
+      }),
+    ]);
+  });
+
+  it("returns empty list when localStorage getItem throws", () => {
+    saveMessage({
+      id: "getitem-message",
+      documentId: "doc-getitem",
+      userId: "u-1",
+      role: "assistant",
+      content: "Stored content",
+      createdAt: 10,
+    });
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("getItem failed");
+    });
+
+    expect(listMessagesByDocument("doc-getitem")).toEqual([]);
+  });
+
+  it("returns normalized saves when localStorage setItem throws", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("setItem failed");
+    });
+
+    const saved = saveMessage({
+      id: " setitem-message ",
+      documentId: " doc-setitem ",
+      userId: "u-1",
+      role: "assistant",
+      content: "Stored content",
+      model: "unknown-model-id",
+      createdAt: 10,
+    });
+
+    expect(saved).toEqual(
+      expect.objectContaining({
+        id: "setitem-message",
+        documentId: "doc-setitem",
+        model: "gpt-4o",
+      }),
+    );
   });
 });
