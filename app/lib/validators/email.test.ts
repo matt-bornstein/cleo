@@ -13,5 +13,7 @@ describe("isValidEmail", () => {
     expect(isValidEmail("test @domain.com")).toBe(false);
     expect(isValidEmail(`bad${"\n"}email@example.com`)).toBe(false);
     expect(isValidEmail(`${"a".repeat(321)}@example.com`)).toBe(false);
+    expect(isValidEmail(123)).toBe(false);
+    expect(isValidEmail(null)).toBe(false);
   });
 });

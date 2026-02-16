@@ -13,6 +13,11 @@ describe("hasControlChars", () => {
     expect(hasControlChars("doc-123")).toBe(false);
     expect(hasControlChars("owner@example.com")).toBe(false);
   });
+
+  it("returns true for malformed non-string values", () => {
+    expect(hasControlChars(123)).toBe(true);
+    expect(hasControlChars(null)).toBe(true);
+  });
 });
 
 describe("hasDisallowedTextControlChars", () => {
@@ -24,5 +29,10 @@ describe("hasDisallowedTextControlChars", () => {
   it("allows typical text whitespace like newline and tab", () => {
     expect(hasDisallowedTextControlChars("line one\nline two")).toBe(false);
     expect(hasDisallowedTextControlChars("column\tvalue")).toBe(false);
+  });
+
+  it("returns true for malformed non-string values", () => {
+    expect(hasDisallowedTextControlChars(123)).toBe(true);
+    expect(hasDisallowedTextControlChars(undefined)).toBe(true);
   });
 });

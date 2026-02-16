@@ -2,8 +2,8 @@ import { hasControlChars } from "@/lib/validators/controlChars";
 
 const MAX_EMAIL_LENGTH = 320;
 
-export function isValidEmail(value: string) {
-  const normalized = value.trim();
+export function isValidEmail(value: unknown) {
+  const normalized = typeof value === "string" ? value.trim() : "";
   if (
     !normalized ||
     normalized.length > MAX_EMAIL_LENGTH ||
