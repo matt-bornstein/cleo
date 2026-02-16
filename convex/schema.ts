@@ -79,6 +79,15 @@ export default defineSchema({
     .index("by_document", ["documentId"])
     .index("by_parent", ["parentCommentId"]),
 
+  // --- User Settings ---
+  userSettings: defineTable({
+    userId: v.id("users"),
+    theme: v.optional(v.union(v.literal("light"), v.literal("dark"), v.literal("system"))),
+    defaultModel: v.optional(v.string()),
+    editorFontSize: v.optional(v.number()),
+    editorLineSpacing: v.optional(v.number()),
+  }).index("by_user", ["userId"]),
+
   // --- AI Chat Messages ---
   aiMessages: defineTable({
     documentId: v.id("documents"),
