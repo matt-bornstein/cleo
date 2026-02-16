@@ -115,6 +115,9 @@ describe("AILockManager", () => {
 
     const blocked = manager.acquire("doc-5", "bob", Number.NaN);
     expect(blocked.acquired).toBe(false);
+
+    const blockedFromString = manager.acquire("doc-5", "carol", "1000");
+    expect(blockedFromString.acquired).toBe(false);
     nowSpy.mockRestore();
   });
 

@@ -5,7 +5,7 @@ export type LockResult =
   | { acquired: true }
   | { acquired: false; reason: string };
 
-function normalizeStaleAfterMs(value: number | undefined, fallback = 120_000) {
+function normalizeStaleAfterMs(value: unknown, fallback = 120_000) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
     return fallback;
   }
@@ -16,7 +16,7 @@ function normalizeStaleAfterMs(value: number | undefined, fallback = 120_000) {
 export class AILockManager {
   private locks = new Map<string, { lockedBy: string; lockedAt: number }>();
 
-  acquire(documentId: string, userId: string, staleAfterMs = 120_000): LockResult {
+  acquire(documentId: string, userId: string, staleAfterMs: unknown = 120_000): LockResult {
     const normalizedDocumentId = normalizeDocumentId(documentId);
     if (!isValidDocumentId(normalizedDocumentId)) {
       return {
@@ -59,7 +59,7 @@ export class AILockManager {
     this.locks.delete(normalizedDocumentId);
   }
 
-  getStatus(documentId: string, staleAfterMs = 120_000) {
+  getStatus(documentId: string, staleAfterMs: unknown = 120_000) {
     const normalizedDocumentId = normalizeDocumentId(documentId);
     if (!isValidDocumentId(normalizedDocumentId)) {
       return { locked: false as const };
