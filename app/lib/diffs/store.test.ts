@@ -13,6 +13,7 @@ import {
   restoreVersion,
   triggerIdleSave,
 } from "@/lib/diffs/store";
+import * as aiModels from "@/lib/ai/models";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
@@ -86,6 +87,34 @@ describe("diff store triggerIdleSave", () => {
 
     expect(diff).not.toBeNull();
     expect(diff?.createdAt).toBe(0);
+    nowSpy.mockRestore();
+  });
+
+  it("falls back to zero timestamps when Date.now throws", () => {
+    const document = createDocument("Throwing clock doc");
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+    const changedSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "hello" }] }],
+    });
+
+    expect(() =>
+      createDiff({
+        documentId: document.id,
+        userId: "u-1",
+        snapshotAfter: changedSnapshot,
+        source: "manual",
+      }),
+    ).not.toThrow();
+    const idleResult = triggerIdleSave({
+      documentId: document.id,
+      snapshot: changedSnapshot,
+    });
+    expect(idleResult.skipped).toBe(true);
+    expect(["no_change", "missing_document"]).toContain(idleResult.reason);
+
     nowSpy.mockRestore();
   });
 
@@ -365,6 +394,25 @@ describe("diff store triggerIdleSave", () => {
     expect(multilinePrompt?.aiPrompt).toBe("Line one\nLine two");
     expect(unknownModel?.aiModel).toBe("gpt-4o");
     expect(controlCharModel).toBeNull();
+  });
+
+  it("drops ai model metadata when model config lookup throws", () => {
+    const document = createDocument("Model lookup throw doc");
+    const snapshot = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
+    vi.spyOn(aiModels, "getModelConfig").mockImplementation(() => {
+      throw new Error("model lookup failed");
+    });
+
+    const diff = createDiff({
+      documentId: document.id,
+      userId: "reviewer@example.com",
+      snapshotAfter: snapshot,
+      source: "manual",
+      aiModel: "gpt-4o",
+    });
+
+    expect(diff).not.toBeNull();
+    expect(diff?.aiModel).toBeUndefined();
   });
 
   it("falls back to local user id for invalid diff user ids", () => {

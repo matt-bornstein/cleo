@@ -211,7 +211,7 @@ export function createDiff(params: unknown) {
     source: normalizedSource,
     aiPrompt: normalizedMetadata.aiPrompt,
     aiModel: normalizedMetadata.aiModel,
-    createdAt: Math.max(0, Date.now()),
+    createdAt: safeNow(),
   };
 
   state.diffs = [diffRecord, ...state.diffs];
@@ -269,7 +269,7 @@ export function restoreVersion(params: {
     return { restored: false as const, reason: "missing_document" as const };
   }
 
-  const now = Math.max(0, Date.now());
+  const now = safeNow();
   const previousSnapshot = document.content;
   updateDocumentContent(normalizedDocumentId, params.snapshot);
   setDocumentLastDiffAt(normalizedDocumentId, now);
@@ -306,7 +306,7 @@ export function triggerIdleSave(params: {
     params.dedupWindowMs >= 0
       ? params.dedupWindowMs
       : 4000;
-  const now = Math.max(0, Date.now());
+  const now = safeNow();
   const document = getDocumentById(normalizedDocumentId);
   if (!document) {
     return { skipped: true, reason: "missing_document" as const };
@@ -361,7 +361,7 @@ function normalizeDiffMetadata(aiPrompt: unknown, aiModel: unknown) {
 
   return {
     aiPrompt: normalizedPrompt.length > 0 ? normalizedPrompt : undefined,
-    aiModel: normalizedModel.length > 0 ? getModelConfig(normalizedModel).id : undefined,
+    aiModel: normalizedModel.length > 0 ? safeNormalizeModelId(normalizedModel) : undefined,
   };
 }
 
@@ -434,5 +434,21 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
+  }
+}
+
+function safeNormalizeModelId(modelId: string) {
+  try {
+    return getModelConfig(modelId).id;
+  } catch {
+    return undefined;
   }
 }
