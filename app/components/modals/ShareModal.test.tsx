@@ -29,7 +29,9 @@ describe("ShareModal", () => {
     await user.click(screen.getByRole("button", { name: "Copy link" }));
     expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
     if (writeTextMock.mock.calls.length > 0) {
-      expect(writeTextMock).toHaveBeenCalledWith("http://localhost/editor/doc-copy");
+      expect(writeTextMock).toHaveBeenCalledWith(
+        "http://localhost/editor/doc-copy?share=viewer",
+      );
     }
   });
 
@@ -57,5 +59,22 @@ describe("ShareModal", () => {
 
     expect(screen.getByText("owner@example.com · owner")).toBeInTheDocument();
     expect(screen.getByText("Fixed")).toBeInTheDocument();
+  });
+
+  it("updates copied link role from selector", async () => {
+    const user = userEvent.setup();
+    render(
+      <ShareModal open onOpenChange={vi.fn()} documentId="doc-link-role" />,
+    );
+
+    const [linkRoleSelect] = screen.getAllByRole("combobox");
+    await user.selectOptions(linkRoleSelect, "editor");
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+
+    if (writeTextMock.mock.calls.length > 0) {
+      expect(writeTextMock).toHaveBeenCalledWith(
+        "http://localhost/editor/doc-link-role?share=editor",
+      );
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, vi } from "vitest";
 
@@ -9,12 +9,14 @@ import { upsertPermission } from "@/lib/permissions/store";
 import { saveSettings } from "@/lib/settings/store";
 
 const pushMock = vi.fn();
+let mockedSearchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: pushMock,
     refresh: vi.fn(),
   }),
+  useSearchParams: () => mockedSearchParams,
 }));
 
 vi.mock("@/hooks/useAILockStatus", () => ({
@@ -28,6 +30,7 @@ describe("EditorShell", () => {
     pushMock.mockReset();
     resetDocumentsForTests();
     window.localStorage.clear();
+    mockedSearchParams = new URLSearchParams();
     Object.defineProperty(window.navigator, "onLine", {
       configurable: true,
       get: () => true,
@@ -131,5 +134,19 @@ describe("EditorShell", () => {
 
     expect(screen.getAllByText("Renamed Doc").length).toBeGreaterThan(0);
     promptSpy.mockRestore();
+  });
+
+  it("grants role from share link query for non-owner user", async () => {
+    mockedSearchParams = new URLSearchParams("share=commenter");
+    saveSettings({
+      userEmail: "invitee@example.com",
+    });
+    const document = createDocument("Shared Link Doc");
+
+    render(<EditorShell documentId={document.id} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("commenter")).toBeInTheDocument();
+    });
   });
 });

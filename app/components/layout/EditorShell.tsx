@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AIPanel } from "@/components/ai/AIPanel";
 import { CommentsSidebar } from "@/components/comments/CommentsSidebar";
@@ -21,8 +21,9 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDocuments } from "@/hooks/useDocuments";
 import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
-import { getRoleForUser } from "@/lib/permissions/store";
+import { getRoleForUser, upsertPermission } from "@/lib/permissions/store";
 import { hasPermission } from "@/lib/permissions";
+import { sanitizeShareRole } from "@/lib/permissions/shareLink";
 
 type EditorShellProps = {
   documentId: string;
@@ -30,6 +31,7 @@ type EditorShellProps = {
 
 export function EditorShell({ documentId }: EditorShellProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     documents,
     create,
@@ -38,6 +40,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
     updateContent,
     setChatClearedAt,
     remove,
+    refresh: refreshDocuments,
   } = useDocuments();
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [openModalOpen, setOpenModalOpen] = useState(false);
@@ -62,6 +65,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const canEdit = hasPermission(myRole, "editor");
   const canComment = hasPermission(myRole, "commenter");
   const canShare = hasPermission(myRole, "owner");
+  const requestedShareRole = sanitizeShareRole(searchParams.get("share"));
   const content =
     currentDocument?.content ??
     JSON.stringify({
@@ -90,6 +94,15 @@ export function EditorShell({ documentId }: EditorShellProps) {
       document.documentElement.dataset.theme = settings.theme;
     }
   }, [settings.theme]);
+
+  useEffect(() => {
+    if (!requestedShareRole) return;
+    if (myRole === "owner") return;
+    if (myRole === requestedShareRole) return;
+
+    upsertPermission(documentId, currentUserEmail, requestedShareRole);
+    refreshDocuments();
+  }, [documentId, currentUserEmail, myRole, refreshDocuments, requestedShareRole]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {

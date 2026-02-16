@@ -35,13 +35,15 @@ export function ShareModal({
 }: ShareModalProps) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("editor");
+  const [linkRole, setLinkRole] = useState<"editor" | "commenter" | "viewer">("viewer");
   const [version, setVersion] = useState(0);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
 
   const shareableLink = useMemo(() => {
-    if (typeof window === "undefined") return `/editor/${documentId}`;
-    return `${window.location.origin}/editor/${documentId}`;
-  }, [documentId]);
+    const path = `/editor/${documentId}?share=${linkRole}`;
+    if (typeof window === "undefined") return path;
+    return `${window.location.origin}${path}`;
+  }, [documentId, linkRole]);
 
   const permissions = useMemo(() => {
     void version;
@@ -60,6 +62,20 @@ export function ShareModal({
         <div className="space-y-3 text-sm text-slate-600">
           <div className="space-y-1">
             <p className="text-xs font-medium text-slate-700">Shareable link</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-600">Link role</span>
+              <select
+                className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs"
+                value={linkRole}
+                onChange={(event) =>
+                  setLinkRole(event.target.value as "editor" | "commenter" | "viewer")
+                }
+              >
+                <option value="viewer">viewer</option>
+                <option value="commenter">commenter</option>
+                <option value="editor">editor</option>
+              </select>
+            </div>
             <div className="flex gap-2">
               <Input value={shareableLink} readOnly />
               <Button
