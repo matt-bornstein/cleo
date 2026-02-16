@@ -28,16 +28,32 @@ async function parseJsonBody(request: unknown) {
     return null;
   }
 
-  if (
-    !("json" in request) ||
-    typeof (request as { json?: unknown }).json !== "function"
-  ) {
+  const jsonFn = readJsonFunction(request);
+  if (!jsonFn) {
     return null;
   }
 
   try {
-    return await (request as { json: () => Promise<unknown> }).json();
+    return await jsonFn();
   } catch {
     return null;
+  }
+}
+
+function readJsonFunction(request: unknown) {
+  if (!request || typeof request !== "object" || !("json" in request)) {
+    return undefined;
+  }
+
+  try {
+    const candidate = (request as { json?: unknown }).json;
+    if (typeof candidate !== "function") {
+      return undefined;
+    }
+
+    const owner = request as { json: () => Promise<unknown> };
+    return () => Reflect.apply(candidate, owner, []);
+  } catch {
+    return undefined;
   }
 }
