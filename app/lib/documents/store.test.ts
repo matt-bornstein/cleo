@@ -66,6 +66,48 @@ describe("document store", () => {
     expect(documents[0]?.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
 
+  it("filters malformed persisted documents and normalizes legacy fields", () => {
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({
+        documents: [
+          {
+            id: "  doc-legacy  ",
+            title: "   ",
+            content: "not-json",
+            ownerEmail: " USER@EXAMPLE.COM ",
+            createdAt: "1",
+            updatedAt: 2,
+            lastDiffAt: "bad",
+            chatClearedAt: 10,
+          },
+          {
+            id: "doc-\ninvalid",
+            title: "Bad id",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "user@example.com",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      }),
+    );
+
+    const documents = listDocuments();
+    expect(documents).toHaveLength(1);
+    expect(documents[0]).toEqual(
+      expect.objectContaining({
+        id: "doc-legacy",
+        title: "Untitled",
+        ownerEmail: "user@example.com",
+        content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+        lastDiffAt: undefined,
+        chatClearedAt: 10,
+      }),
+    );
+    expect(documents[0].createdAt).toEqual(expect.any(Number));
+  });
+
   it("gets a document by id", () => {
     const created = createDocument("Roadmap");
 

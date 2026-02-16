@@ -1,4 +1,5 @@
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
+import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { normalizeEmailOrFallback } from "@/lib/user/email";
@@ -40,10 +41,48 @@ function loadState(): DocumentStoreState {
     }
 
     return {
-      documents: parsed.documents.map((doc) => ({
-        ...doc,
-        ownerEmail: normalizeOwnerEmail(doc.ownerEmail),
-      })),
+      documents: parsed.documents.flatMap((doc) => {
+        const normalizedDocumentId = normalizeDocumentId(doc.id);
+        if (!isValidDocumentId(normalizedDocumentId)) {
+          return [];
+        }
+
+        const normalizedTitle =
+          typeof doc.title === "string" && doc.title.trim().length > 0
+            ? doc.title.trim()
+            : "Untitled";
+        const now = Date.now();
+        const normalizedCreatedAt =
+          typeof doc.createdAt === "number" && Number.isFinite(doc.createdAt)
+            ? doc.createdAt
+            : now;
+        const normalizedUpdatedAt =
+          typeof doc.updatedAt === "number" && Number.isFinite(doc.updatedAt)
+            ? doc.updatedAt
+            : normalizedCreatedAt;
+
+        return [
+          {
+            ...doc,
+            id: normalizedDocumentId,
+            title: normalizedTitle,
+            content: isValidDocumentContentJson(doc.content)
+              ? doc.content
+              : EMPTY_EDITOR_DOC,
+            ownerEmail: normalizeOwnerEmail(doc.ownerEmail),
+            createdAt: normalizedCreatedAt,
+            updatedAt: normalizedUpdatedAt,
+            lastDiffAt:
+              typeof doc.lastDiffAt === "number" && Number.isFinite(doc.lastDiffAt)
+                ? doc.lastDiffAt
+                : undefined,
+            chatClearedAt:
+              typeof doc.chatClearedAt === "number" && Number.isFinite(doc.chatClearedAt)
+                ? doc.chatClearedAt
+                : undefined,
+          },
+        ];
+      }),
     };
   } catch {
     return { documents: [] };
