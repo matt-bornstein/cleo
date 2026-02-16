@@ -191,8 +191,13 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
     persistState(state);
     return permission;
   }
+  const existing = state.permissions[index];
+  if (existing.email === normalizedEmail && existing.role === role) {
+    return existing;
+  }
+
   state.permissions[index] = {
-    ...state.permissions[index],
+    ...existing,
     email: normalizedEmail,
     role,
   };

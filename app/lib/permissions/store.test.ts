@@ -25,6 +25,22 @@ describe("permissions store", () => {
     expect(updated!.role).toBe("editor");
   });
 
+  it("avoids persisting when collaborator role update is unchanged", () => {
+    upsertPermission("doc-1", "user@example.com", "viewer");
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+    const baselineCalls = setItemSpy.mock.calls.length;
+
+    const unchanged = upsertPermission("doc-1", "user@example.com", "viewer");
+
+    expect(unchanged).toEqual(
+      expect.objectContaining({
+        email: "user@example.com",
+        role: "viewer",
+      }),
+    );
+    expect(setItemSpy.mock.calls.length).toBe(baselineCalls);
+  });
+
   it("lists collaborators sorted by normalized email", () => {
     upsertPermission("doc-order", "zeta@example.com", "viewer");
     upsertPermission("doc-order", "alpha@example.com", "viewer");
@@ -45,11 +61,12 @@ describe("permissions store", () => {
 
   it("returns false when removing unknown permission id", () => {
     const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+    const baselineCalls = setItemSpy.mock.calls.length;
 
     expect(removePermission("missing-id")).toBe(false);
     expect(removePermission("   ")).toBe(false);
     expect(removePermission("bad\nid")).toBe(false);
-    expect(setItemSpy).not.toHaveBeenCalled();
+    expect(setItemSpy.mock.calls.length).toBe(baselineCalls);
   });
 
   it("returns owner role for document owner and viewer by default otherwise", () => {
