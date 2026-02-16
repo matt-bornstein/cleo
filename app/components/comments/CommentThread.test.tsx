@@ -93,4 +93,23 @@ describe("CommentThread", () => {
     expect(screen.getByText("By: Unknown user")).toBeInTheDocument();
     expect(screen.getByText("↳ Unknown user: Needs clarification")).toBeInTheDocument();
   });
+
+  it("does not throw when comment payload and callbacks are malformed", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <CommentThread
+        comment={123}
+        replies={[null, { id: "reply-3", content: 123 }]}
+        onResolve={123}
+        onReply={123}
+        canComment={0}
+      />,
+    );
+
+    expect(screen.getByText("Anchor: No anchor text")).toBeInTheDocument();
+    expect(screen.getByText("By: Unknown user")).toBeInTheDocument();
+    expect(screen.getByText("Open")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+  });
 });
