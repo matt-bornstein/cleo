@@ -86,47 +86,15 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     };
   }
 
-  if (!Array.isArray(rawMessages)) return null;
-  if (rawMessages.length > MAX_MESSAGE_COUNT) return null;
-  const messages = rawMessages.map((message) => {
-    if (!message || typeof message !== "object") return null;
-    const item = message as Record<string, unknown>;
-    const role = safeReadProperty(item, "role");
-    if (role !== "user" && role !== "assistant" && role !== "system") return null;
-    const content = safeReadProperty(item, "content");
-    if (!hasText(content)) return null;
-    if (content.length > MAX_MESSAGE_CONTENT_LENGTH) return null;
-    if (hasDisallowedTextControlChars(content)) return null;
-    const userId = safeReadProperty(item, "userId");
-    if (userId !== undefined && !hasText(userId)) return null;
-    if (
-      typeof userId === "string" &&
-      userId.trim().length > MAX_USER_ID_LENGTH
-    ) {
-      return null;
-    }
-    if (
-      typeof userId === "string" &&
-      hasControlChars(userId.trim())
-    ) {
-      return null;
-    }
-
-    return {
-      role,
-      content,
-      userId: typeof userId === "string" ? userId.trim() : undefined,
-    };
-  });
-
-  if (messages.some((message) => message === null)) return null;
+  const messages = normalizeMessageHistory(rawMessages);
+  if (!messages) return null;
 
   return {
     documentId,
     model,
     prompt,
     documentContent: rawDocumentContent,
-    messages: messages as StreamRequestPayload["messages"],
+    messages,
   };
 }
 
@@ -391,4 +359,85 @@ function safeReadProperty(record: Record<string, unknown>, key: string) {
   } catch {
     return undefined;
   }
+}
+
+function normalizeMessageHistory(rawMessages: unknown) {
+  if (!Array.isArray(rawMessages)) {
+    return null;
+  }
+
+  let messageCount = 0;
+  try {
+    messageCount = rawMessages.length;
+  } catch {
+    return null;
+  }
+  if (messageCount > MAX_MESSAGE_COUNT) {
+    return null;
+  }
+
+  const normalizedMessages: StreamRequestPayload["messages"] = [];
+  for (let index = 0; index < messageCount; index++) {
+    let message: unknown;
+    try {
+      message = rawMessages[index];
+    } catch {
+      return null;
+    }
+
+    const normalizedMessage = normalizeMessageEntry(message);
+    if (!normalizedMessage) {
+      return null;
+    }
+    normalizedMessages.push(normalizedMessage);
+  }
+
+  return normalizedMessages;
+}
+
+function normalizeMessageEntry(message: unknown) {
+  if (!message || typeof message !== "object") {
+    return null;
+  }
+
+  const item = message as Record<string, unknown>;
+  const role = safeReadProperty(item, "role");
+  if (role !== "user" && role !== "assistant" && role !== "system") {
+    return null;
+  }
+  const normalizedRole: "user" | "assistant" | "system" = role;
+
+  const content = safeReadProperty(item, "content");
+  if (!hasText(content)) {
+    return null;
+  }
+  if (content.length > MAX_MESSAGE_CONTENT_LENGTH) {
+    return null;
+  }
+  if (hasDisallowedTextControlChars(content)) {
+    return null;
+  }
+
+  const userId = safeReadProperty(item, "userId");
+  if (userId !== undefined && !hasText(userId)) {
+    return null;
+  }
+  if (
+    typeof userId === "string" &&
+    userId.trim().length > MAX_USER_ID_LENGTH
+  ) {
+    return null;
+  }
+  if (
+    typeof userId === "string" &&
+    hasControlChars(userId.trim())
+  ) {
+    return null;
+  }
+
+  return {
+    role: normalizedRole,
+    content,
+    userId: typeof userId === "string" ? userId.trim() : undefined,
+  };
 }

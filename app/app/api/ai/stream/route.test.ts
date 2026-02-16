@@ -543,6 +543,53 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toBe("Invalid request payload");
   });
 
+  it("returns bad request when message array index getter throws", async () => {
+    const messages = [{}] as unknown[];
+    Object.defineProperty(messages, "0", {
+      get() {
+        throw new Error("message index getter failed");
+      },
+    });
+
+    const malformedRequest = {
+      json: async () =>
+        createRequestBody({
+          documentId: "doc-throw-message-index",
+          messages,
+        }),
+    } as unknown as Request;
+
+    const response = await POST(malformedRequest);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
+  it("returns bad request when message array length getter throws", async () => {
+    const messages = new Proxy([], {
+      get(target, prop, receiver) {
+        if (prop === "length") {
+          throw new Error("messages length getter failed");
+        }
+
+        return Reflect.get(target, prop, receiver);
+      },
+    });
+
+    const malformedRequest = {
+      json: async () =>
+        createRequestBody({
+          documentId: "doc-throw-message-length",
+          messages,
+        }),
+    } as unknown as Request;
+
+    const response = await POST(malformedRequest);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
   it("normalizes trimmed fields before lock lookup", async () => {
     aiLockManager.acquire("doc-trim", "alice");
 
