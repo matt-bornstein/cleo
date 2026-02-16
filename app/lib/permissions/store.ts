@@ -143,8 +143,10 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
 
 export function removePermission(permissionId: string) {
   const state = loadState();
+  const beforeCount = state.permissions.length;
   state.permissions = state.permissions.filter((entry) => entry.id !== permissionId);
   persistState(state);
+  return state.permissions.length !== beforeCount;
 }
 
 export function resetPermissionsForTests() {

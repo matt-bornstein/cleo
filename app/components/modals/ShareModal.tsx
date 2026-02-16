@@ -223,8 +223,10 @@ export function ShareModal({
                       `Remove ${permission.email} from this document?`,
                     );
                     if (!confirmed) return;
-                    removePermission(permission.id);
-                    setVersion((value) => value + 1);
+                    const removed = removePermission(permission.id);
+                    if (removed) {
+                      setVersion((value) => value + 1);
+                    }
                   }}
                 >
                   Remove

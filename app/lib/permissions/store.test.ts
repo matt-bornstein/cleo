@@ -27,8 +27,13 @@ describe("permissions store", () => {
   it("removes collaborator permission", () => {
     const created = upsertPermission("doc-1", "user@example.com", "commenter");
     expect(created).not.toBeNull();
-    removePermission(created!.id);
+    const removed = removePermission(created!.id);
+    expect(removed).toBe(true);
     expect(listPermissions("doc-1")).toHaveLength(0);
+  });
+
+  it("returns false when removing unknown permission id", () => {
+    expect(removePermission("missing-id")).toBe(false);
   });
 
   it("returns owner role for document owner and viewer by default otherwise", () => {
