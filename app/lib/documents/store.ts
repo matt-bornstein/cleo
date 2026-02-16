@@ -1,3 +1,4 @@
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { AppDocument } from "@/lib/types";
 
 const STORAGE_KEY = "plan00.documents.v1";
@@ -86,16 +87,22 @@ export function listDocuments(query?: string): AppDocument[] {
 }
 
 export function getDocumentById(documentId: string): AppDocument | undefined {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return undefined;
+
   const state = loadState();
-  return state.documents.find((doc) => doc.id === documentId);
+  return state.documents.find((doc) => doc.id === normalizedDocumentId);
 }
 
 export function updateDocumentContent(
   documentId: string,
   content: string,
 ): AppDocument | undefined {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return undefined;
+
   const state = loadState();
-  const index = state.documents.findIndex((doc) => doc.id === documentId);
+  const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
 
   const existing = state.documents[index];
@@ -113,8 +120,11 @@ export function updateDocumentTitle(
   documentId: string,
   title: string,
 ): AppDocument | undefined {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return undefined;
+
   const state = loadState();
-  const index = state.documents.findIndex((doc) => doc.id === documentId);
+  const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
 
   const normalizedTitle = title.trim() || "Untitled";
@@ -132,8 +142,11 @@ export function setDocumentLastDiffAt(
   documentId: string,
   timestamp: number,
 ): AppDocument | undefined {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return undefined;
+
   const state = loadState();
-  const index = state.documents.findIndex((doc) => doc.id === documentId);
+  const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
   const updated: AppDocument = {
     ...state.documents[index],
@@ -148,8 +161,11 @@ export function setDocumentChatClearedAt(
   documentId: string,
   timestamp: number,
 ): AppDocument | undefined {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return undefined;
+
   const state = loadState();
-  const index = state.documents.findIndex((doc) => doc.id === documentId);
+  const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
   const updated: AppDocument = {
     ...state.documents[index],
@@ -161,9 +177,12 @@ export function setDocumentChatClearedAt(
 }
 
 export function deleteDocument(documentId: string) {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return false;
+
   const state = loadState();
   const beforeCount = state.documents.length;
-  state.documents = state.documents.filter((doc) => doc.id !== documentId);
+  state.documents = state.documents.filter((doc) => doc.id !== normalizedDocumentId);
   persistState(state);
   return state.documents.length !== beforeCount;
 }

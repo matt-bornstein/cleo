@@ -41,6 +41,9 @@ describe("document store", () => {
 
     const fetched = getDocumentById(created.id);
     expect(fetched?.title).toBe("Roadmap");
+
+    const padded = getDocumentById(`  ${created.id}  `);
+    expect(padded?.id).toBe(created.id);
   });
 
   it("updates document chatClearedAt timestamp", () => {
@@ -56,6 +59,13 @@ describe("document store", () => {
     const removed = deleteDocument(created.id);
     expect(removed).toBe(true);
     expect(getDocumentById(created.id)).toBeUndefined();
+  });
+
+  it("rejects invalid document ids for document operations", () => {
+    expect(getDocumentById("   ")).toBeUndefined();
+    expect(updateDocumentTitle("   ", "Ignored")).toBeUndefined();
+    expect(setDocumentChatClearedAt("doc-\ninvalid", 123)).toBeUndefined();
+    expect(deleteDocument("doc-\ninvalid")).toBe(false);
   });
 
   it("updates document title and normalizes empty title", () => {
