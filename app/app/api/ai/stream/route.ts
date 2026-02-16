@@ -41,8 +41,13 @@ function hasValidDocumentJson(value: unknown): value is string {
   }
 
   try {
-    const parsed = JSON.parse(value) as unknown;
-    return typeof parsed === "object" && parsed !== null;
+    const parsed = JSON.parse(value) as { type?: unknown } | unknown;
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "type" in parsed &&
+      (parsed as { type?: unknown }).type === "doc"
+    );
   } catch {
     return false;
   }

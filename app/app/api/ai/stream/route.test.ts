@@ -200,6 +200,7 @@ describe("POST /api/ai/stream", () => {
       createRequestBody({ documentContent: "" }),
       createRequestBody({ documentContent: "not-json" }),
       createRequestBody({ documentContent: JSON.stringify("not-an-object") }),
+      createRequestBody({ documentContent: JSON.stringify({ type: "paragraph" }) }),
     ];
 
     for (const body of invalidBodies) {
