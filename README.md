@@ -81,16 +81,33 @@ A real-time collaborative rich text editor built with **Next.js 16**, **Convex**
 
 5. Open http://localhost:3000
 
-### Environment Variables
+### Authentication Setup
 
-Set these as Convex environment variables:
+Generate JWT keys (required for auth to work):
 
 ```bash
-# Google OAuth (required for authentication)
-npx convex env set AUTH_GOOGLE_ID <your-google-client-id>
-npx convex env set AUTH_GOOGLE_SECRET <your-google-client-secret>
+node scripts/setup-auth-keys.mjs
+```
 
-# AI API Keys (set the ones you want to use)
+Set the site URL for OAuth redirects:
+
+```bash
+npx convex env set SITE_URL http://localhost:3000
+```
+
+The app supports two auth methods:
+- **Email/Password** — works immediately, no external setup needed
+- **Google OAuth** — requires Google Cloud credentials:
+  ```bash
+  npx convex env set AUTH_GOOGLE_ID <your-google-client-id>
+  npx convex env set AUTH_GOOGLE_SECRET <your-google-client-secret>
+  ```
+
+### AI API Keys
+
+Set one or more as Convex environment variables:
+
+```bash
 npx convex env set OPENAI_API_KEY <your-key>
 npx convex env set ANTHROPIC_API_KEY <your-key>
 npx convex env set GEMINI_API_KEY <your-key>
