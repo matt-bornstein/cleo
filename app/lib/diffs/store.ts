@@ -59,20 +59,29 @@ function loadState(): DiffStoreState {
         return [];
       }
       const candidate = diff as Partial<DiffRecord>;
+      const documentId = safeReadPersistedDiffField(candidate, "documentId");
+      const id = safeReadPersistedDiffField(candidate, "id");
+      const aiPrompt = safeReadPersistedDiffField(candidate, "aiPrompt");
+      const aiModel = safeReadPersistedDiffField(candidate, "aiModel");
+      const source = safeReadPersistedDiffField(candidate, "source");
+      const patch = safeReadPersistedDiffField(candidate, "patch");
+      const snapshotAfter = safeReadPersistedDiffField(candidate, "snapshotAfter");
+      const createdAt = safeReadPersistedDiffField(candidate, "createdAt");
+      const userId = safeReadPersistedDiffField(candidate, "userId");
 
-      const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
-      const normalizedDiffId = normalizeDiffReferenceId(candidate.id);
-      const normalizedMetadata = normalizeDiffMetadata(candidate.aiPrompt, candidate.aiModel);
+      const normalizedDocumentId = normalizeDocumentId(documentId);
+      const normalizedDiffId = normalizeDiffReferenceId(id);
+      const normalizedMetadata = normalizeDiffMetadata(aiPrompt, aiModel);
       if (
         !normalizedDiffId ||
         !isValidDocumentId(normalizedDocumentId) ||
-        !ALLOWED_SOURCES.has(candidate.source as DiffSource) ||
+        !ALLOWED_SOURCES.has(source as DiffSource) ||
         !normalizedMetadata ||
-        typeof candidate.patch !== "string" ||
-        !isValidDocumentContentJson(candidate.snapshotAfter) ||
-        typeof candidate.createdAt !== "number" ||
-        !Number.isFinite(candidate.createdAt) ||
-        candidate.createdAt < 0
+        typeof patch !== "string" ||
+        !isValidDocumentContentJson(snapshotAfter) ||
+        typeof createdAt !== "number" ||
+        !Number.isFinite(createdAt) ||
+        createdAt < 0
       ) {
         return [];
       }
@@ -82,11 +91,11 @@ function loadState(): DiffStoreState {
           ...candidate,
           id: normalizedDiffId,
           documentId: normalizedDocumentId,
-          source: candidate.source as DiffSource,
-          patch: candidate.patch,
-          snapshotAfter: candidate.snapshotAfter,
-          createdAt: candidate.createdAt,
-          userId: normalizeDiffUserId(candidate.userId),
+          source: source as DiffSource,
+          patch,
+          snapshotAfter,
+          createdAt,
+          userId: normalizeDiffUserId(userId),
           aiPrompt: normalizedMetadata.aiPrompt,
           aiModel: normalizedMetadata.aiModel,
         },
@@ -441,6 +450,26 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeReadPersistedDiffField(
+  diff: Partial<DiffRecord>,
+  key:
+    | "id"
+    | "documentId"
+    | "userId"
+    | "patch"
+    | "snapshotAfter"
+    | "source"
+    | "createdAt"
+    | "aiPrompt"
+    | "aiModel",
+) {
+  try {
+    return diff[key];
+  } catch {
+    return undefined;
   }
 }
 

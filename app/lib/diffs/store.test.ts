@@ -642,6 +642,42 @@ describe("diff store triggerIdleSave", () => {
     );
   });
 
+  it("skips persisted diffs when field getters throw during load", () => {
+    const diffWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(diffWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(diffWithThrowingGetters, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+    Object.defineProperty(diffWithThrowingGetters, "source", {
+      get() {
+        throw new Error("source getter failed");
+      },
+    });
+    Object.defineProperty(diffWithThrowingGetters, "snapshotAfter", {
+      get() {
+        throw new Error("snapshotAfter getter failed");
+      },
+    });
+    Object.defineProperty(diffWithThrowingGetters, "createdAt", {
+      get() {
+        throw new Error("createdAt getter failed");
+      },
+    });
+
+    window.localStorage.setItem("plan00.diffs.v1", "{}");
+    vi.spyOn(JSON, "parse").mockReturnValue({
+      diffs: [diffWithThrowingGetters],
+    });
+
+    expect(listDiffsByDocument("doc-legacy")).toEqual([]);
+  });
+
   it("returns empty when persisted diffs container is non-array", () => {
     window.localStorage.setItem(
       "plan00.diffs.v1",
