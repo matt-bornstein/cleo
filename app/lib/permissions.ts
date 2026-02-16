@@ -7,8 +7,17 @@ const roleRank: Record<Role, number> = {
   owner: 3,
 };
 
-export function hasPermission(userRole: Role | undefined, minimumRole: Role) {
-  if (!userRole) return false;
-  return roleRank[userRole] >= roleRank[minimumRole];
+export function hasPermission(userRole: unknown, minimumRole: unknown) {
+  const normalizedUserRole = normalizeRole(userRole);
+  const normalizedMinimumRole = normalizeRole(minimumRole);
+  if (!normalizedUserRole || !normalizedMinimumRole) return false;
+  return roleRank[normalizedUserRole] >= roleRank[normalizedMinimumRole];
 }
 
+function normalizeRole(value: unknown): Role | undefined {
+  if (value === "viewer") return "viewer";
+  if (value === "commenter") return "commenter";
+  if (value === "editor") return "editor";
+  if (value === "owner") return "owner";
+  return undefined;
+}

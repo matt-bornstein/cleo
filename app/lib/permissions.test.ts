@@ -10,5 +10,7 @@ describe("hasPermission", () => {
   it("returns false when user role is lower than required or missing", () => {
     expect(hasPermission("viewer", "editor")).toBe(false);
     expect(hasPermission(undefined, "viewer")).toBe(false);
+    expect(hasPermission("owner", "admin")).toBe(false);
+    expect(hasPermission(123, "viewer")).toBe(false);
   });
 });
