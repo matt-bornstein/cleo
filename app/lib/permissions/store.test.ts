@@ -146,10 +146,41 @@ describe("permissions store", () => {
 
     expect(listPermissions("doc-valid")).toEqual([
       {
-        id: "duplicate",
+        id: "valid-id",
         documentId: "doc-valid",
         email: "user@example.com",
-        role: "editor",
+        role: "viewer",
+      },
+    ]);
+  });
+
+  it("uses stable id tie-breaker for duplicate persisted roles", () => {
+    window.localStorage.setItem(
+      "plan00.permissions.v1",
+      JSON.stringify({
+        permissions: [
+          {
+            id: "perm-z",
+            documentId: "doc-tie",
+            email: "user@example.com",
+            role: "viewer",
+          },
+          {
+            id: "perm-a",
+            documentId: "doc-tie",
+            email: "user@example.com",
+            role: "viewer",
+          },
+        ],
+      }),
+    );
+
+    expect(listPermissions("doc-tie")).toEqual([
+      {
+        id: "perm-a",
+        documentId: "doc-tie",
+        email: "user@example.com",
+        role: "viewer",
       },
     ]);
   });

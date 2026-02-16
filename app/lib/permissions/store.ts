@@ -4,6 +4,12 @@ import { normalizeEmailOrUndefined } from "@/lib/user/email";
 
 const STORAGE_KEY = "plan00.permissions.v1";
 const ALLOWED_ROLES = new Set<Role>(["owner", "editor", "commenter", "viewer"]);
+const ROLE_PRIORITY: Record<Role, number> = {
+  viewer: 0,
+  commenter: 1,
+  editor: 2,
+  owner: 3,
+};
 
 export type PermissionEntry = {
   id: string;
@@ -57,10 +63,23 @@ function loadState(): PermissionState {
 
     const dedupedByDocumentAndEmail = new Map<string, PermissionState["permissions"][number]>();
     for (const permission of sanitizedPermissions) {
-      dedupedByDocumentAndEmail.set(
-        `${permission.documentId}::${permission.email}`,
-        permission,
-      );
+      const key = `${permission.documentId}::${permission.email}`;
+      const existing = dedupedByDocumentAndEmail.get(key);
+      if (!existing) {
+        dedupedByDocumentAndEmail.set(key, permission);
+        continue;
+      }
+
+      const existingPriority = ROLE_PRIORITY[existing.role];
+      const nextPriority = ROLE_PRIORITY[permission.role];
+      if (nextPriority < existingPriority) {
+        dedupedByDocumentAndEmail.set(key, permission);
+        continue;
+      }
+
+      if (nextPriority === existingPriority && permission.id.localeCompare(existing.id) < 0) {
+        dedupedByDocumentAndEmail.set(key, permission);
+      }
     }
 
     return {
