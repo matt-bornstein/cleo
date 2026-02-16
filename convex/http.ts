@@ -67,18 +67,18 @@ http.route({
 
       // Build messages for the AI
       const systemPrompt = getSystemPrompt();
-      const chatHistory = (messages || []).map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content,
+      const chatHistory = (messages || []).slice(-5).map((m: { role: string; content: string; userName?: string }) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        // Prefix user messages with their name for multi-user context
+        content: m.role === "user" && m.userName
+          ? `[${m.userName}]: ${m.content}`
+          : m.content,
       }));
 
       const aiMessages = [
         { role: "system", content: systemPrompt },
         { role: "user", content: `Here is the current document:\n\n\`\`\`html\n${documentHtml}\n\`\`\`` },
-        ...chatHistory.slice(-5).map((m: { role: string; content: string }) => ({
-          role: m.role === "assistant" ? "assistant" : "user",
-          content: m.content,
-        })),
+        ...chatHistory,
         { role: "user", content: prompt },
       ];
 

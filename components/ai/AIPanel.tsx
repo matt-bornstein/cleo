@@ -92,6 +92,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
               content={msg.content}
               userName={msg.userName}
               model={msg.model ?? undefined}
+              diffId={msg.diffId ?? undefined}
             />
           ))}
 
