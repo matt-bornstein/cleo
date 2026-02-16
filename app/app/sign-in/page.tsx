@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { sanitizeNextPath } from "@/lib/auth/nextPath";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -11,8 +12,7 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nextPath = useMemo(() => {
-    const raw = searchParams.get("next");
-    return raw && raw.startsWith("/") ? raw : "/editor";
+    return sanitizeNextPath(searchParams.get("next"));
   }, [searchParams]);
 
   const handleLocalSignIn = async () => {
