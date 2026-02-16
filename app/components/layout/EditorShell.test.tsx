@@ -167,4 +167,10 @@ describe("EditorShell", () => {
       screen.getByText("You do not have permission to open this document."),
     ).toBeInTheDocument();
   });
+
+  it("handles malformed non-string document ids safely", () => {
+    render(<EditorShell documentId={123} />);
+
+    expect(screen.getByText("Access required")).toBeInTheDocument();
+  });
 });

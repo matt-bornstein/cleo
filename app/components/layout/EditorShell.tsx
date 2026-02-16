@@ -14,6 +14,7 @@ import { ExportModal } from "@/components/modals/ExportModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
+import { normalizeDocumentId } from "@/lib/ai/documentId";
 import { ensureCreatedDiff, restoreVersion, triggerIdleSave } from "@/lib/diffs/store";
 import { useComments } from "@/hooks/useComments";
 import { useIdleSave } from "@/hooks/useIdleSave";
@@ -31,10 +32,11 @@ import { sanitizeShareRole } from "@/lib/permissions/shareLink";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 type EditorShellProps = {
-  documentId: string;
+  documentId: unknown;
 };
 
 export function EditorShell({ documentId }: EditorShellProps) {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings, refreshSettings } = useSettings();
@@ -57,21 +59,21 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [saveStateLabel, setSaveStateLabel] = useState("Saved");
   const isOnline = useOnlineStatus();
-  const { others, updateMyPresence } = usePresence(documentId);
+  const { others, updateMyPresence } = usePresence(normalizedDocumentId);
   const { comments, createComment, createReply, markResolved } = useComments(
-    documentId,
+    normalizedDocumentId,
     currentUserEmail,
   );
 
-  const currentDocument = getById(documentId);
+  const currentDocument = getById(normalizedDocumentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
   const myRole = getRoleForUser(
-    documentId,
+    normalizedDocumentId,
     currentUserEmail,
     currentDocument?.ownerEmail,
   );
   const hasAccess = hasDocumentAccess(
-    documentId,
+    normalizedDocumentId,
     currentUserEmail,
     currentDocument?.ownerEmail,
   );
@@ -88,10 +90,10 @@ export function EditorShell({ documentId }: EditorShellProps) {
 
   const { scheduleIdleSave } = useIdleSave({
     onIdle: () => {
-      const latestDocument = getById(documentId);
+      const latestDocument = getById(normalizedDocumentId);
       if (!latestDocument) return;
       const result = triggerIdleSave({
-        documentId,
+        documentId: normalizedDocumentId,
         snapshot: latestDocument.content,
       });
       if (result.skipped) {
@@ -112,9 +114,15 @@ export function EditorShell({ documentId }: EditorShellProps) {
     if (!requestedShareRole) return;
     if (myRole === "owner" || myRole === requestedShareRole) return;
 
-    upsertPermission(documentId, currentUserEmail, requestedShareRole);
+    upsertPermission(normalizedDocumentId, currentUserEmail, requestedShareRole);
     refreshDocuments();
-  }, [documentId, currentUserEmail, myRole, refreshDocuments, requestedShareRole]);
+  }, [
+    normalizedDocumentId,
+    currentUserEmail,
+    myRole,
+    refreshDocuments,
+    requestedShareRole,
+  ]);
 
   useEffect(() => {
     if (!requestedShareRole) return;
@@ -123,9 +131,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("share");
     const cleaned = params.toString();
-    const nextPath = cleaned ? `/editor/${documentId}?${cleaned}` : `/editor/${documentId}`;
+    const nextPath = cleaned
+      ? `/editor/${normalizedDocumentId}?${cleaned}`
+      : `/editor/${normalizedDocumentId}`;
     router.replace(nextPath);
-  }, [documentId, myRole, requestedShareRole, router, searchParams]);
+  }, [normalizedDocumentId, myRole, requestedShareRole, router, searchParams]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -178,7 +188,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
         documentTitle={documentTitle}
         roleLabel={myRole}
         onRenameDocument={(nextTitle: string) => {
-          updateTitle(documentId, nextTitle);
+          updateTitle(normalizedDocumentId, nextTitle);
         }}
         onNewDocument={() => setNewModalOpen(true)}
         onOpenDocument={() => setOpenModalOpen(true)}
@@ -203,8 +213,8 @@ export function EditorShell({ documentId }: EditorShellProps) {
           <div className="flex h-full">
             <div className="flex-1">
               <EditorPanel
-                key={documentId}
-                documentId={documentId}
+                key={normalizedDocumentId}
+                documentId={normalizedDocumentId}
                 title={documentTitle}
                 content={content}
                 otherPresence={others}
@@ -214,7 +224,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
                 readOnly={!canEdit}
                 onContentChange={(nextContent: string) => {
                   if (!canEdit) return;
-                  updateContent(documentId, nextContent);
+                  updateContent(normalizedDocumentId, nextContent);
                 }}
                 onLocalUpdate={() => {
                   if (!canEdit) return;
@@ -240,18 +250,18 @@ export function EditorShell({ documentId }: EditorShellProps) {
         }
         aiPanel={
           <AIPanel
-            documentId={documentId}
+            documentId={normalizedDocumentId}
             currentDocumentContent={content}
             currentUserId={currentUserEmail}
             defaultModel={settings.defaultModel}
             canEdit={canEdit}
             chatClearedAt={currentDocument?.chatClearedAt}
             onClearChat={(clearedAt: number) => {
-              setChatClearedAt(documentId, clearedAt);
+              setChatClearedAt(normalizedDocumentId, clearedAt);
             }}
             onApplyContent={(nextContent: string) => {
               if (!canEdit) return;
-              updateContent(documentId, nextContent);
+              updateContent(normalizedDocumentId, nextContent);
               setSaveStateLabel("Saved");
             }}
           />
@@ -279,7 +289,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onDeleteDocument={(targetDocumentId: string) => {
           const removed = remove(targetDocumentId);
           if (!removed) return;
-          if (targetDocumentId === documentId) {
+          if (targetDocumentId === normalizedDocumentId) {
             router.push("/editor");
           }
         }}
@@ -287,14 +297,14 @@ export function EditorShell({ documentId }: EditorShellProps) {
       <VersionHistoryModal
         open={historyModalOpen}
         onOpenChange={setHistoryModalOpen}
-        documentId={documentId}
+        documentId={normalizedDocumentId}
         onRestoreSnapshot={(snapshot: string) => {
           const result = restoreVersion({
-            documentId,
+            documentId: normalizedDocumentId,
             snapshot,
           });
           if (result.restored) {
-            updateContent(documentId, snapshot);
+            updateContent(normalizedDocumentId, snapshot);
             setSaveStateLabel("Saved");
           }
         }}
@@ -308,7 +318,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
       <ShareModal
         open={shareModalOpen}
         onOpenChange={setShareModalOpen}
-        documentId={documentId}
+        documentId={normalizedDocumentId}
         ownerEmail={currentDocument?.ownerEmail}
       />
       <SettingsModal
