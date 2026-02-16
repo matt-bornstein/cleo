@@ -29,6 +29,19 @@ function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function hasValidDocumentJson(value: unknown): value is string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return typeof parsed === "object" && parsed !== null;
+  } catch {
+    return false;
+  }
+}
+
 function normalizeUserId(value: string | null) {
   const normalized = value?.trim();
   return normalized ? normalized : "local-dev-user";
@@ -42,7 +55,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     !hasText(candidate.documentId) ||
     !hasText(candidate.model) ||
     !hasText(candidate.prompt) ||
-    typeof candidate.documentContent !== "string"
+    !hasValidDocumentJson(candidate.documentContent)
   ) {
     return null;
   }
