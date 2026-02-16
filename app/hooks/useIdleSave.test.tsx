@@ -4,6 +4,10 @@ import { vi } from "vitest";
 import { useIdleSave } from "@/hooks/useIdleSave";
 
 describe("useIdleSave", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("debounces onIdle callbacks", () => {
     vi.useFakeTimers();
     const onIdle = vi.fn();
@@ -48,5 +52,35 @@ describe("useIdleSave", () => {
     }).not.toThrow();
 
     vi.useRealTimers();
+  });
+
+  it("does not throw when setTimeout throws at runtime", () => {
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(() => {
+      throw new Error("setTimeout failed");
+    });
+    const onIdle = vi.fn();
+    const { result } = renderHook(() => useIdleSave({ delayMs: 10, onIdle }));
+
+    expect(() => {
+      result.current.scheduleIdleSave();
+    }).not.toThrow();
+    expect(onIdle).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when clearTimeout throws at runtime", () => {
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockReturnValue(123 as unknown as ReturnType<typeof setTimeout>);
+    vi.spyOn(globalThis, "clearTimeout").mockImplementation(() => {
+      throw new Error("clearTimeout failed");
+    });
+    const onIdle = vi.fn();
+    const { result } = renderHook(() => useIdleSave({ delayMs: 10, onIdle }));
+
+    expect(() => {
+      result.current.scheduleIdleSave();
+      result.current.scheduleIdleSave();
+    }).not.toThrow();
+    expect(setTimeoutSpy).toHaveBeenCalledTimes(2);
   });
 });

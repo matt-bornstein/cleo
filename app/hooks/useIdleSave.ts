@@ -16,9 +16,9 @@ export function useIdleSave({ delayMs = 5000, onIdle }: UseIdleSaveArgs) {
 
   const scheduleIdleSave = useCallback(() => {
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+      safeClearTimeout(timeoutRef.current);
     }
-    timeoutRef.current = setTimeout(() => {
+    timeoutRef.current = safeSetTimeout(() => {
       if (typeof onIdle === "function") {
         onIdle();
       }
@@ -28,10 +28,26 @@ export function useIdleSave({ delayMs = 5000, onIdle }: UseIdleSaveArgs) {
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+        safeClearTimeout(timeoutRef.current);
       }
     };
   }, []);
 
   return { scheduleIdleSave };
+}
+
+function safeSetTimeout(callback: () => void, delayMs: number) {
+  try {
+    return setTimeout(callback, delayMs);
+  } catch {
+    return null;
+  }
+}
+
+function safeClearTimeout(timer: ReturnType<typeof setTimeout>) {
+  try {
+    clearTimeout(timer);
+  } catch {
+    return;
+  }
 }
