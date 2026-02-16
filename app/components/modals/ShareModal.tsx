@@ -11,6 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { normalizeDocumentId } from "@/lib/ai/documentId";
+import { sanitizeShareRole } from "@/lib/permissions/shareLink";
 import {
   listPermissions,
   removePermission,
@@ -21,10 +23,10 @@ import { normalizeEmailOrUndefined } from "@/lib/user/email";
 import { isValidEmail } from "@/lib/validators/email";
 
 type ShareModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  documentId: string;
-  ownerEmail?: string;
+  open: unknown;
+  onOpenChange: unknown;
+  documentId: unknown;
+  ownerEmail?: unknown;
 };
 
 const roleOptions: Role[] = ["editor", "commenter", "viewer"];
@@ -35,6 +37,9 @@ export function ShareModal({
   documentId,
   ownerEmail,
 }: ShareModalProps) {
+  const normalizedOpen = open === true;
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  const normalizedOwnerEmail = normalizeEmailOrUndefined(ownerEmail);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("editor");
   const [linkRole, setLinkRole] = useState<"editor" | "commenter" | "viewer">("viewer");
@@ -44,15 +49,15 @@ export function ShareModal({
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shareableLink = useMemo(() => {
-    const path = `/editor/${documentId}?share=${linkRole}`;
+    const path = `/editor/${normalizedDocumentId}?share=${linkRole}`;
     if (typeof window === "undefined") return path;
     return `${window.location.origin}${path}`;
-  }, [documentId, linkRole]);
+  }, [linkRole, normalizedDocumentId]);
 
   const permissions = useMemo(() => {
     void version;
-    return listPermissions(documentId);
-  }, [documentId, version]);
+    return listPermissions(normalizedDocumentId);
+  }, [normalizedDocumentId, version]);
   const isAddDisabled = email.trim().length === 0;
 
   useEffect(() => {
@@ -90,13 +95,15 @@ export function ShareModal({
       if (!nextOpen) {
         resetTransientState();
       }
-      onOpenChange(nextOpen);
+      if (typeof onOpenChange === "function") {
+        onOpenChange(nextOpen);
+      }
     },
     [onOpenChange, resetTransientState],
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={normalizedOpen} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Share document</DialogTitle>
@@ -113,7 +120,14 @@ export function ShareModal({
                 className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs"
                 value={linkRole}
                 onChange={(event) => {
-                  setLinkRole(event.target.value as "editor" | "commenter" | "viewer");
+                  const nextRole = sanitizeShareRole(event.target.value);
+                  if (
+                    nextRole === "editor" ||
+                    nextRole === "commenter" ||
+                    nextRole === "viewer"
+                  ) {
+                    setLinkRole(nextRole);
+                  }
                   if (copyState !== "idle") {
                     setCopyState("idle");
                   }
@@ -163,7 +177,16 @@ export function ShareModal({
             <select
               className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
               value={role}
-              onChange={(event) => setRole(event.target.value as Role)}
+              onChange={(event) => {
+                const nextRole = sanitizeShareRole(event.target.value);
+                setRole(
+                  nextRole === "editor" ||
+                    nextRole === "commenter" ||
+                    nextRole === "viewer"
+                    ? nextRole
+                    : "editor",
+                );
+              }}
             >
               {roleOptions.map((option) => (
                 <option key={option} value={option}>
@@ -180,7 +203,6 @@ export function ShareModal({
                   return;
                 }
 
-                const normalizedOwnerEmail = normalizeEmailOrUndefined(ownerEmail);
                 if (normalizedOwnerEmail && normalizedEmail === normalizedOwnerEmail) {
                   setAddError("Owner access is fixed and cannot be re-added.");
                   return;
@@ -189,7 +211,11 @@ export function ShareModal({
                 const existing = permissions.find(
                   (permission) => permission.email === normalizedEmail,
                 );
-                const upserted = upsertPermission(documentId, normalizedEmail, role);
+                const upserted = upsertPermission(
+                  normalizedDocumentId,
+                  normalizedEmail,
+                  role,
+                );
                 if (!upserted) {
                   setAddError("Unable to add collaborator.");
                   return;
@@ -211,9 +237,11 @@ export function ShareModal({
             </p>
           ) : null}
           <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
-            {ownerEmail ? (
+            {normalizedOwnerEmail ? (
               <div className="flex items-center justify-between rounded-md bg-white px-2 py-1">
-                <span className="text-xs text-slate-700">{ownerEmail} · owner</span>
+                <span className="text-xs text-slate-700">
+                  {normalizedOwnerEmail} · owner
+                </span>
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                   Fixed
                 </span>

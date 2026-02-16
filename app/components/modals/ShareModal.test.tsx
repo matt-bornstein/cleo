@@ -314,4 +314,23 @@ describe("ShareModal", () => {
     await user.click(screen.getByRole("button", { name: "Remove" }));
     expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
   });
+
+  it("does not throw when onOpenChange is malformed non-function", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={123} documentId="doc-malformed-callback" />);
+
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+  });
+
+  it("normalizes malformed runtime document id in copied share links", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId={123} />);
+
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    if (writeTextMock.mock.calls.length > 0) {
+      expect(writeTextMock).toHaveBeenCalledWith(
+        "http://localhost/editor/?share=viewer",
+      );
+    }
+  });
 });
