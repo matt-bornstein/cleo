@@ -17,6 +17,14 @@ import * as aiModels from "@/lib/ai/models";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("diff store triggerIdleSave", () => {
   const localStorageDescriptor = Object.getOwnPropertyDescriptor(
     window,
@@ -30,7 +38,7 @@ describe("diff store triggerIdleSave", () => {
     }
     resetDocumentsForTests();
     resetDiffsForTests();
-    window.localStorage.clear();
+    safeClearLocalStorage();
   });
 
   it("skips when there are no changes", () => {

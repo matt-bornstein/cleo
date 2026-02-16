@@ -6,6 +6,14 @@ import {
 } from "@/lib/comments/store";
 import { vi } from "vitest";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("comments store", () => {
   const localStorageDescriptor = Object.getOwnPropertyDescriptor(
     window,
@@ -18,7 +26,7 @@ describe("comments store", () => {
       Object.defineProperty(window, "localStorage", localStorageDescriptor);
     }
     resetCommentsForTests();
-    window.localStorage.clear();
+    safeClearLocalStorage();
   });
 
   it("creates and lists comments by document", () => {

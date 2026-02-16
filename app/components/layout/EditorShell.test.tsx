@@ -10,6 +10,14 @@ import { upsertPermission } from "@/lib/permissions/store";
 import * as permissionsStore from "@/lib/permissions/store";
 import { saveSettings } from "@/lib/settings/store";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
 const refreshMock = vi.fn();
@@ -38,7 +46,7 @@ describe("EditorShell", () => {
     replaceMock.mockReset();
     refreshMock.mockReset();
     resetDocumentsForTests();
-    window.localStorage.clear();
+    safeClearLocalStorage();
     mockedSearchParams = new URLSearchParams();
     mockedRouter = {
       push: pushMock,

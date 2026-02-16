@@ -7,13 +7,21 @@ import { ShareModal } from "@/components/modals/ShareModal";
 import { resetPermissionsForTests } from "@/lib/permissions/store";
 import * as permissionsStore from "@/lib/permissions/store";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("ShareModal", () => {
   const writeTextMock = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     vi.restoreAllMocks();
     resetPermissionsForTests();
-    window.localStorage.clear();
+    safeClearLocalStorage();
     writeTextMock.mockReset();
     writeTextMock.mockResolvedValue(undefined);
     vi.spyOn(window, "confirm").mockReturnValue(true);

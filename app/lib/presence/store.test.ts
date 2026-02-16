@@ -6,6 +6,14 @@ import {
 } from "@/lib/presence/store";
 import { vi } from "vitest";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("presence store", () => {
   const localStorageDescriptor = Object.getOwnPropertyDescriptor(
     window,
@@ -18,7 +26,7 @@ describe("presence store", () => {
       Object.defineProperty(window, "localStorage", localStorageDescriptor);
     }
     resetPresenceForTests();
-    window.localStorage.clear();
+    safeClearLocalStorage();
   });
 
   it("normalizes document and visitor ids while storing presence", () => {

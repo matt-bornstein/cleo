@@ -2,6 +2,14 @@ import { getSettings, saveSettings } from "@/lib/settings/store";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("settings store", () => {
   const localStorageDescriptor = Object.getOwnPropertyDescriptor(
     window,
@@ -13,7 +21,7 @@ describe("settings store", () => {
     if (localStorageDescriptor) {
       Object.defineProperty(window, "localStorage", localStorageDescriptor);
     }
-    window.localStorage.clear();
+    safeClearLocalStorage();
   });
 
   it("returns defaults when unset", () => {

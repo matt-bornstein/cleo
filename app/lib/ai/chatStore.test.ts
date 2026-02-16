@@ -6,6 +6,14 @@ import {
 import * as aiModels from "@/lib/ai/models";
 import { vi } from "vitest";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("ai chat store", () => {
   const localStorageDescriptor = Object.getOwnPropertyDescriptor(
     window,
@@ -18,7 +26,7 @@ describe("ai chat store", () => {
       Object.defineProperty(window, "localStorage", localStorageDescriptor);
     }
     resetMessagesForTests();
-    window.localStorage.clear();
+    safeClearLocalStorage();
   });
 
   it("saves and lists document-scoped messages", () => {

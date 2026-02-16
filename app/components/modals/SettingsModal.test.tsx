@@ -7,10 +7,18 @@ import { getSettings } from "@/lib/settings/store";
 import * as settingsStore from "@/lib/settings/store";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("SettingsModal", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    window.localStorage.clear();
+    safeClearLocalStorage();
   });
 
   it("saves settings and triggers onSaved callback", async () => {

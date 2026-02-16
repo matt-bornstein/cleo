@@ -8,6 +8,14 @@ import {
 } from "@/lib/permissions/store";
 import { vi } from "vitest";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("permissions store", () => {
   const localStorageDescriptor = Object.getOwnPropertyDescriptor(
     window,
@@ -20,7 +28,7 @@ describe("permissions store", () => {
       Object.defineProperty(window, "localStorage", localStorageDescriptor);
     }
     resetPermissionsForTests();
-    window.localStorage.clear();
+    safeClearLocalStorage();
   });
 
   it("adds and updates a collaborator role by email", () => {

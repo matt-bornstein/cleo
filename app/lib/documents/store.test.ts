@@ -12,6 +12,14 @@ import {
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
+function safeClearLocalStorage() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    return;
+  }
+}
+
 describe("document store", () => {
   const localStorageDescriptor = Object.getOwnPropertyDescriptor(
     window,
@@ -24,7 +32,7 @@ describe("document store", () => {
       Object.defineProperty(window, "localStorage", localStorageDescriptor);
     }
     resetDocumentsForTests();
-    window.localStorage.clear();
+    safeClearLocalStorage();
   });
 
   it("creates documents with normalized titles", () => {
