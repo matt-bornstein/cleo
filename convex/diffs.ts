@@ -1,6 +1,20 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { prosemirrorJsonToHtml } from "./lib/htmlSerializer";
+import { computeHtmlPatch } from "./lib/diffing";
+
+/**
+ * Convert ProseMirror JSON string to HTML for diffing.
+ */
+function contentToHtml(contentJson: string): string {
+  try {
+    const doc = JSON.parse(contentJson);
+    return prosemirrorJsonToHtml(doc);
+  } catch {
+    return contentJson;
+  }
+}
 
 export const triggerIdleSave = mutation({
   args: {
@@ -47,13 +61,16 @@ export const triggerIdleSave = mutation({
       return;
     }
 
-    // Content changed - save a diff record
-    // For now, store a simple "changed" patch - HTML-level diffing will be added
-    // when we have server-side HTML serialization (Phase 3)
+    // Compute HTML-level diff using diff-match-patch
+    const oldHtml = contentToHtml(previousContent);
+    const newHtml = contentToHtml(args.content);
+    const patch = computeHtmlPatch(oldHtml, newHtml);
+
+    // Save diff record with the actual patch
     await ctx.db.insert("diffs", {
       documentId: args.documentId,
       userId,
-      patch: "content_changed", // Placeholder - will be replaced with diff-match-patch in Phase 3
+      patch,
       snapshotAfter: args.content,
       source: "manual",
       createdAt: now,
@@ -79,11 +96,20 @@ export const createAiDiff = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    // Get previous content for diffing
+    const doc = await ctx.db.get(args.documentId);
+    const previousContent = doc?.content ?? "";
+
+    // Compute HTML-level diff
+    const oldHtml = contentToHtml(previousContent);
+    const newHtml = contentToHtml(args.content);
+    const patch = computeHtmlPatch(oldHtml, newHtml);
+
     const now = Date.now();
     const diffId = await ctx.db.insert("diffs", {
       documentId: args.documentId,
       userId,
-      patch: "ai_edit",
+      patch,
       snapshotAfter: args.content,
       source: "ai",
       aiPrompt: args.aiPrompt,
@@ -181,11 +207,18 @@ export const restore = mutation({
 
     const now = Date.now();
 
+    // Compute a diff for the restore operation
+    const doc = await ctx.db.get(args.documentId);
+    const previousContent = doc?.content ?? "";
+    const oldHtml = contentToHtml(previousContent);
+    const newHtml = contentToHtml(diff.snapshotAfter);
+    const patch = computeHtmlPatch(oldHtml, newHtml);
+
     // Create a new diff record for the restore
     await ctx.db.insert("diffs", {
       documentId: args.documentId,
       userId,
-      patch: "restored",
+      patch,
       snapshotAfter: diff.snapshotAfter,
       source: "manual",
       createdAt: now,
