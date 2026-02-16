@@ -4,8 +4,13 @@ import { vi } from "vitest";
 
 import { RichTextEditor } from "@/components/editor/RichTextEditor";
 
-const { triggerUpdate } = vi.hoisted(() => ({
+const { triggerUpdate, useOptionalTiptapSyncMock } = vi.hoisted(() => ({
   triggerUpdate: { current: null as null | (() => void) },
+  useOptionalTiptapSyncMock: vi.fn(() => ({
+    extension: null,
+    initialContent: null,
+    isLoading: false,
+  })),
 }));
 
 vi.mock("@tiptap/react", () => ({
@@ -38,14 +43,15 @@ vi.mock("@/lib/editor/extensions", () => ({
 }));
 
 vi.mock("@/hooks/useOptionalTiptapSync", () => ({
-  useOptionalTiptapSync: () => ({
-    extension: null,
-    initialContent: null,
-    isLoading: false,
-  }),
+  useOptionalTiptapSync: useOptionalTiptapSyncMock,
 }));
 
 describe("RichTextEditor", () => {
+  beforeEach(() => {
+    delete process.env.NEXT_PUBLIC_CONVEX_URL;
+    useOptionalTiptapSyncMock.mockClear();
+  });
+
   it("propagates editor updates and invokes onLocalUpdate callbacks", async () => {
     const user = userEvent.setup();
     const onContentChange = vi.fn();
@@ -69,6 +75,7 @@ describe("RichTextEditor", () => {
       }),
     );
     expect(onLocalUpdate).toHaveBeenCalledTimes(1);
+    expect(useOptionalTiptapSyncMock).not.toHaveBeenCalled();
   });
 
   it("does not throw when onLocalUpdate is malformed non-function", async () => {
@@ -86,6 +93,7 @@ describe("RichTextEditor", () => {
 
     await user.click(screen.getByRole("button", { name: "Trigger update" }));
     expect(onContentChange).toHaveBeenCalledTimes(1);
+    expect(useOptionalTiptapSyncMock).not.toHaveBeenCalled();
   });
 
   it("handles malformed non-string editor content payloads safely", async () => {
@@ -107,5 +115,24 @@ describe("RichTextEditor", () => {
         content: [{ type: "paragraph" }],
       }),
     );
+    expect(useOptionalTiptapSyncMock).not.toHaveBeenCalled();
+  });
+
+  it("passes malformed document ids to optional sync hook only in convex mode", async () => {
+    const user = userEvent.setup();
+    const onContentChange = vi.fn();
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.convex.cloud";
+
+    render(
+      <RichTextEditor
+        documentId={123}
+        content='{"type":"doc","content":[]}'
+        onContentChange={onContentChange}
+      />,
+    );
+
+    expect(useOptionalTiptapSyncMock).toHaveBeenCalledWith(123);
+    await user.click(screen.getByRole("button", { name: "Trigger update" }));
+    expect(onContentChange).toHaveBeenCalledTimes(1);
   });
 });

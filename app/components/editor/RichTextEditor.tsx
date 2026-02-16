@@ -9,7 +9,7 @@ import { editorExtensions } from "@/lib/editor/extensions";
 import { useOptionalTiptapSync } from "@/hooks/useOptionalTiptapSync";
 
 type RichTextEditorProps = {
-  documentId: string;
+  documentId: unknown;
   content: unknown;
   onContentChange: (content: string) => void;
   onLocalUpdate?: unknown;
