@@ -39,6 +39,9 @@ describe("permissions store", () => {
   it("returns owner role for document owner and viewer by default otherwise", () => {
     expect(getRoleForUser("doc-2", "me@local.dev", "me@local.dev")).toBe("owner");
     expect(getRoleForUser("doc-2", "other@local.dev", "me@local.dev")).toBe("viewer");
+    expect(getRoleForUser("doc-2", "other@local.dev", "owner\n@local.dev")).toBe(
+      "viewer",
+    );
     upsertPermission("doc-2", "other@local.dev", "commenter");
     expect(getRoleForUser("doc-2", "other@local.dev", "me@local.dev")).toBe(
       "commenter",
@@ -52,6 +55,9 @@ describe("permissions store", () => {
     expect(hasDocumentAccess("doc-3", "viewer@example.com", "owner@example.com")).toBe(
       false,
     );
+    expect(
+      hasDocumentAccess("doc-3", "owner@example.com", "owner@\nexample.com"),
+    ).toBe(false);
 
     upsertPermission("doc-3", "viewer@example.com", "viewer");
     expect(hasDocumentAccess("doc-3", "viewer@example.com", "owner@example.com")).toBe(

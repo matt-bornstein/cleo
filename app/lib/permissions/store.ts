@@ -64,7 +64,11 @@ export function getRoleForUser(
   if (!normalizedEmail || hasControlChars(normalizedEmail)) {
     return "viewer";
   }
-  const normalizedOwnerEmail = ownerEmail?.trim().toLowerCase();
+  const normalizedOwnerEmailRaw = ownerEmail?.trim().toLowerCase();
+  const normalizedOwnerEmail =
+    normalizedOwnerEmailRaw && !hasControlChars(normalizedOwnerEmailRaw)
+      ? normalizedOwnerEmailRaw
+      : undefined;
 
   if (normalizedOwnerEmail && normalizedEmail === normalizedOwnerEmail) {
     return "owner";
@@ -92,7 +96,11 @@ export function hasDocumentAccess(
   if (!normalizedEmail || hasControlChars(normalizedEmail)) {
     return false;
   }
-  const normalizedOwnerEmail = ownerEmail?.trim().toLowerCase();
+  const normalizedOwnerEmailRaw = ownerEmail?.trim().toLowerCase();
+  const normalizedOwnerEmail =
+    normalizedOwnerEmailRaw && !hasControlChars(normalizedOwnerEmailRaw)
+      ? normalizedOwnerEmailRaw
+      : undefined;
   if (normalizedOwnerEmail && normalizedOwnerEmail === normalizedEmail) {
     return true;
   }
