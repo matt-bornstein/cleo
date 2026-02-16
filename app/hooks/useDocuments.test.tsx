@@ -78,6 +78,11 @@ describe("useDocuments", () => {
     expect(result.current.documents[0]?.id).toBe("doc-allowed");
   });
 
+  it("normalizes malformed non-string search values before listing documents", () => {
+    renderHook(() => useDocuments(123 as unknown as string, "me@example.com"));
+    expect(listDocumentsMock).toHaveBeenCalledWith(undefined);
+  });
+
   it("falls back to default email for malformed current user identities", () => {
     listDocumentsMock.mockReturnValue([
       {

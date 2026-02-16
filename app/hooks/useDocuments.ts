@@ -18,7 +18,7 @@ import { normalizeEmailOrUndefined } from "@/lib/user/email";
 import { isValidEmail } from "@/lib/validators/email";
 
 export function useDocuments(
-  search?: string,
+  search?: unknown,
   currentUserEmail: unknown = DEFAULT_LOCAL_USER_EMAIL,
 ) {
   const normalizedCurrentUserEmailCandidate =
@@ -29,6 +29,7 @@ export function useDocuments(
       ? normalizedCurrentUserEmailCandidate
       : DEFAULT_LOCAL_USER_EMAIL;
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const normalizedSearch = typeof search === "string" ? search : undefined;
 
   const refresh = useCallback(() => {
     setRefreshCounter((value) => value + 1);
@@ -36,14 +37,14 @@ export function useDocuments(
 
   const documents = useMemo(() => {
     void refreshCounter;
-    return listDocuments(search).filter((document) =>
+    return listDocuments(normalizedSearch).filter((document) =>
       hasDocumentAccess(
         document.id,
         normalizedCurrentUserEmail,
         document.ownerEmail,
       ),
     );
-  }, [normalizedCurrentUserEmail, refreshCounter, search]);
+  }, [normalizedCurrentUserEmail, normalizedSearch, refreshCounter]);
 
   const create = useCallback(
     (title: string, ownerEmail?: string) => {

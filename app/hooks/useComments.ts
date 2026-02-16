@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { addComment, listComments, resolveComment } from "@/lib/comments/store";
 
-export function useComments(documentId: string, currentUserId?: unknown) {
+export function useComments(documentId: unknown, currentUserId?: unknown) {
   const [version, setVersion] = useState(0);
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);

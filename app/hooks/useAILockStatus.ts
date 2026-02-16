@@ -11,7 +11,7 @@ type LockStatus = {
   lockedAt?: number;
 };
 
-export function useAILockStatus(documentId: string) {
+export function useAILockStatus(documentId: unknown) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
   const [state, setState] = useState<{

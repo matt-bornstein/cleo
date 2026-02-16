@@ -52,7 +52,7 @@ export function filterStalePresence<
   );
 }
 
-export function usePresence(documentId: string) {
+export function usePresence(documentId: unknown) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
   const [visitorId] = useState(createVisitorId);

@@ -181,6 +181,24 @@ describe("useComments", () => {
     expect(resolveCommentMock).not.toHaveBeenCalled();
   });
 
+  it("short-circuits comment operations for malformed non-string document ids", () => {
+    const { result } = renderHook(() =>
+      useComments(123 as unknown as string, "reviewer@example.com"),
+    );
+
+    expect(result.current.comments).toEqual([]);
+    expect(listCommentsMock).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.createComment("Ignored", "Anchor");
+      result.current.createReply("parent-1", "Ignored reply");
+      result.current.markResolved("parent-1");
+    });
+
+    expect(addCommentMock).not.toHaveBeenCalled();
+    expect(resolveCommentMock).not.toHaveBeenCalled();
+  });
+
   it("refreshes when marking an unresolved comment as resolved", () => {
     listCommentsMock.mockReturnValue([
       {
