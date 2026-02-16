@@ -133,4 +133,20 @@ describe("presence store", () => {
       "first",
     ]);
   });
+
+  it("normalizes non-serializable presence payload data", () => {
+    const circular: { self?: unknown } = {};
+    circular.self = circular;
+
+    const updated = updatePresence({
+      documentId: "doc-serializable",
+      visitorId: "visitor-circular",
+      userId: "user-1",
+      data: circular,
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated?.data).toBeNull();
+    expect(listPresence("doc-serializable")[0]?.data).toBeNull();
+  });
 });

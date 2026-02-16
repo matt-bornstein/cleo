@@ -84,11 +84,13 @@ export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">)
   const existingIndex = state.presence.findIndex(
     (entry) => entry.visitorId === normalizedVisitorId,
   );
+  const normalizedData = normalizePresenceData(record.data);
   const nextRecord: PresenceRecord = {
     ...record,
     documentId: normalizedDocumentId,
     visitorId: normalizedVisitorId,
     userId: normalizePresenceUserId(record.userId),
+    data: normalizedData,
     id: existingIndex === -1 ? crypto.randomUUID() : state.presence[existingIndex].id,
     updatedAt: now,
   };
@@ -151,4 +153,16 @@ function normalizePresenceUserId(value: string | undefined) {
   }
 
   return normalizedValue;
+}
+
+function normalizePresenceData(value: unknown) {
+  try {
+    const serialized = JSON.stringify(value);
+    if (serialized === undefined) {
+      return null;
+    }
+    return JSON.parse(serialized) as unknown;
+  } catch {
+    return null;
+  }
 }
