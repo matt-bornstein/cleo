@@ -110,6 +110,17 @@ describe("ShareModal", () => {
     expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
   });
 
+  it("disables add action until collaborator email has content", async () => {
+    const user = userEvent.setup();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-add-disabled" />);
+
+    const addButton = screen.getByRole("button", { name: "Add" });
+    expect(addButton).toBeDisabled();
+
+    await user.type(screen.getByPlaceholderText("user@example.com"), "person@example.com");
+    expect(addButton).not.toBeDisabled();
+  });
+
   it("renders owner row when owner email is provided", () => {
     render(
       <ShareModal

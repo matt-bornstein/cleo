@@ -52,6 +52,7 @@ export function ShareModal({
     void version;
     return listPermissions(documentId);
   }, [documentId, version]);
+  const isAddDisabled = email.trim().length === 0;
 
   useEffect(() => {
     return () => {
@@ -168,6 +169,7 @@ export function ShareModal({
               ))}
             </select>
             <Button
+              disabled={isAddDisabled}
               onClick={() => {
                 const normalizedEmail = email.trim().toLowerCase();
                 if (!isValidEmail(normalizedEmail)) {
