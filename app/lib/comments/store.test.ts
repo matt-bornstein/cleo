@@ -506,6 +506,42 @@ describe("comments store", () => {
     );
   });
 
+  it("skips persisted comments when field getters throw during load", () => {
+    const commentWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(commentWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "content", {
+      get() {
+        throw new Error("content getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "createdAt", {
+      get() {
+        throw new Error("createdAt getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "updatedAt", {
+      get() {
+        throw new Error("updatedAt getter failed");
+      },
+    });
+
+    window.localStorage.setItem("plan00.comments.v1", "{}");
+    vi.spyOn(JSON, "parse").mockReturnValue({
+      comments: [commentWithThrowingGetters],
+    });
+
+    expect(listComments("doc-legacy")).toEqual([]);
+  });
+
   it("returns empty when persisted comments container is non-array", () => {
     window.localStorage.setItem(
       "plan00.comments.v1",

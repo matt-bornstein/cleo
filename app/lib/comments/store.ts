@@ -44,17 +44,26 @@ function loadState(): CommentState {
         return [];
       }
       const candidate = comment as Partial<CommentRecord>;
+      const documentId = safeReadPersistedCommentField(candidate, "documentId");
+      const commentId = safeReadPersistedCommentField(candidate, "id");
+      const content = safeReadPersistedCommentField(candidate, "content");
+      const anchorText = safeReadPersistedCommentField(candidate, "anchorText");
+      const parentCommentId = safeReadPersistedCommentField(candidate, "parentCommentId");
+      const userId = safeReadPersistedCommentField(candidate, "userId");
+      const anchorFrom = safeReadPersistedCommentField(candidate, "anchorFrom");
+      const anchorTo = safeReadPersistedCommentField(candidate, "anchorTo");
+      const createdAt = safeReadPersistedCommentField(candidate, "createdAt");
+      const updatedAt = safeReadPersistedCommentField(candidate, "updatedAt");
+      const resolved = safeReadPersistedCommentField(candidate, "resolved");
 
-      const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
-      const normalizedCommentId = normalizeCommentReferenceId(candidate.id);
+      const normalizedDocumentId = normalizeDocumentId(documentId);
+      const normalizedCommentId = normalizeCommentReferenceId(commentId);
       const normalizedContent =
-        typeof candidate.content === "string" ? candidate.content.trim() : undefined;
-      const normalizedAnchorText = normalizeAnchorText(candidate.anchorText);
-      const normalizedParentCommentId = normalizeCommentReferenceId(
-        candidate.parentCommentId,
-      );
+        typeof content === "string" ? content.trim() : undefined;
+      const normalizedAnchorText = normalizeAnchorText(anchorText);
+      const normalizedParentCommentId = normalizeCommentReferenceId(parentCommentId);
       const normalizedUserId =
-        typeof candidate.userId === "string" ? candidate.userId.trim() : undefined;
+        typeof userId === "string" ? userId.trim() : undefined;
       const safeUserId =
         normalizedUserId &&
         normalizedUserId.length <= MAX_USER_ID_LENGTH &&
@@ -62,12 +71,12 @@ function loadState(): CommentState {
           ? normalizedUserId
           : DEFAULT_LOCAL_USER_ID;
       const normalizedAnchorFrom =
-        typeof candidate.anchorFrom === "number" && Number.isFinite(candidate.anchorFrom)
-          ? Math.max(0, candidate.anchorFrom)
+        typeof anchorFrom === "number" && Number.isFinite(anchorFrom)
+          ? Math.max(0, anchorFrom)
           : 0;
       const normalizedAnchorTo =
-        typeof candidate.anchorTo === "number" && Number.isFinite(candidate.anchorTo)
-          ? Math.max(normalizedAnchorFrom, candidate.anchorTo)
+        typeof anchorTo === "number" && Number.isFinite(anchorTo)
+          ? Math.max(normalizedAnchorFrom, anchorTo)
           : normalizedAnchorFrom;
 
       if (
@@ -75,18 +84,18 @@ function loadState(): CommentState {
         !isValidDocumentId(normalizedDocumentId) ||
         !normalizedContent ||
         hasDisallowedTextControlChars(normalizedContent) ||
-        typeof candidate.createdAt !== "number" ||
-        !Number.isFinite(candidate.createdAt) ||
-        candidate.createdAt < 0 ||
-        typeof candidate.updatedAt !== "number" ||
-        !Number.isFinite(candidate.updatedAt) ||
-        candidate.updatedAt < 0
+        typeof createdAt !== "number" ||
+        !Number.isFinite(createdAt) ||
+        createdAt < 0 ||
+        typeof updatedAt !== "number" ||
+        !Number.isFinite(updatedAt) ||
+        updatedAt < 0
       ) {
         return [];
       }
 
-      const normalizedCreatedAt = candidate.createdAt;
-      const normalizedUpdatedAt = Math.max(candidate.updatedAt, normalizedCreatedAt);
+      const normalizedCreatedAt = createdAt;
+      const normalizedUpdatedAt = Math.max(updatedAt, normalizedCreatedAt);
 
       return [
         {
@@ -101,7 +110,7 @@ function loadState(): CommentState {
             normalizedParentCommentId !== normalizedCommentId
               ? normalizedParentCommentId
               : undefined,
-          resolved: Boolean(candidate.resolved),
+          resolved: Boolean(resolved),
           anchorFrom: normalizedAnchorFrom,
           anchorTo: normalizedAnchorTo,
           createdAt: normalizedCreatedAt,
@@ -342,6 +351,28 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeReadPersistedCommentField(
+  comment: Partial<CommentRecord>,
+  key:
+    | "id"
+    | "documentId"
+    | "userId"
+    | "content"
+    | "anchorFrom"
+    | "anchorTo"
+    | "anchorText"
+    | "resolved"
+    | "createdAt"
+    | "updatedAt"
+    | "parentCommentId",
+) {
+  try {
+    return comment[key];
+  } catch {
+    return undefined;
   }
 }
 
