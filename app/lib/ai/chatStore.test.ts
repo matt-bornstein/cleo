@@ -307,4 +307,42 @@ describe("ai chat store", () => {
       }),
     );
   });
+
+  it("dedupes duplicate message ids on save by newest timestamp", () => {
+    const first = saveMessage({
+      id: "msg-dedupe",
+      documentId: "doc-dedupe",
+      userId: "u-1",
+      role: "assistant",
+      content: "First",
+      createdAt: 10,
+    });
+    const stale = saveMessage({
+      id: "msg-dedupe",
+      documentId: "doc-dedupe",
+      userId: "u-1",
+      role: "assistant",
+      content: "Stale",
+      createdAt: 9,
+    });
+    const newer = saveMessage({
+      id: "msg-dedupe",
+      documentId: "doc-dedupe",
+      userId: "u-1",
+      role: "assistant",
+      content: "Newer",
+      createdAt: 11,
+    });
+
+    expect(first?.content).toBe("First");
+    expect(stale?.content).toBe("First");
+    expect(newer?.content).toBe("Newer");
+    expect(listMessagesByDocument("doc-dedupe")).toEqual([
+      expect.objectContaining({
+        id: "msg-dedupe",
+        content: "Newer",
+        createdAt: 11,
+      }),
+    ]);
+  });
 });

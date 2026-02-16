@@ -96,9 +96,23 @@ export function saveMessage(message: AIMessage) {
   }
 
   const state = loadState();
-  state.messages = [...state.messages, normalized];
+  const existingIndex = state.messages.findIndex(
+    (entry) => entry.id === normalized.id,
+  );
+  if (existingIndex === -1) {
+    state.messages = [...state.messages, normalized];
+    persistState(state);
+    return state.messages[state.messages.length - 1];
+  }
+
+  const existing = state.messages[existingIndex];
+  if (existing.createdAt >= normalized.createdAt) {
+    return existing;
+  }
+
+  state.messages[existingIndex] = normalized;
   persistState(state);
-  return state.messages[state.messages.length - 1];
+  return state.messages[existingIndex];
 }
 
 export function resetMessagesForTests() {
