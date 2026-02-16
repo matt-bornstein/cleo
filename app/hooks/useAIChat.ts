@@ -38,6 +38,11 @@ function createMessage(
   };
 }
 
+function normalizeModelId(modelId?: string) {
+  if (!modelId) return DEFAULT_MODEL;
+  return getModelConfig(modelId).id;
+}
+
 function updateMessageContent(messages: AIMessage[], messageId: string, content: string) {
   return messages.map((message) =>
     message.id === messageId ? { ...message, content } : message,
@@ -54,7 +59,9 @@ export function useAIChat({
   onClearChat,
 }: UseAIChatArgs) {
   const [messages, setMessages] = useState<AIMessage[]>([]);
-  const [selectedModel, setSelectedModel] = useState(defaultModel ?? DEFAULT_MODEL);
+  const [selectedModel, setSelectedModel] = useState(() =>
+    normalizeModelId(defaultModel),
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,7 +71,7 @@ export function useAIChat({
 
   useEffect(() => {
     if (defaultModel) {
-      setSelectedModel(defaultModel);
+      setSelectedModel(normalizeModelId(defaultModel));
     }
   }, [defaultModel]);
 

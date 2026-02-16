@@ -12,7 +12,7 @@ const {
   listMessagesByDocumentMock: vi.fn(),
   saveMessageMock: vi.fn(),
   createDiffMock: vi.fn(),
-  getModelConfigMock: vi.fn(() => ({ id: "gpt-4o", label: "GPT-4o" })),
+  getModelConfigMock: vi.fn(),
 }));
 
 vi.mock("@/lib/ai/chatStore", () => ({
@@ -57,7 +57,17 @@ describe("useAIChat", () => {
     listMessagesByDocumentMock.mockReset();
     saveMessageMock.mockReset();
     createDiffMock.mockReset();
-    getModelConfigMock.mockClear();
+    getModelConfigMock.mockReset();
+    getModelConfigMock.mockImplementation((modelId: string) => {
+      if (modelId === "unknown-model") {
+        return { id: "gpt-4o", label: "GPT-4o" };
+      }
+
+      return {
+        id: modelId || "gpt-4o",
+        label: modelId || "GPT-4o",
+      };
+    });
   });
 
   it("submits request with user context and stores ai diff attribution", async () => {
@@ -270,5 +280,22 @@ describe("useAIChat", () => {
     expect(saveMessageMock).toHaveBeenCalledTimes(1);
 
     vi.unstubAllGlobals();
+  });
+
+  it("normalizes unknown default model ids to known model config ids", () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-model",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+        defaultModel: "unknown-model",
+      }),
+    );
+
+    expect(getModelConfigMock).toHaveBeenCalledWith("unknown-model");
+    expect(result.current.selectedModel).toBe("gpt-4o");
   });
 });
