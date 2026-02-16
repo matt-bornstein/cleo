@@ -113,6 +113,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
     <div className="min-h-screen bg-slate-100">
       <Toolbar
         documentTitle={documentTitle}
+        roleLabel={myRole}
         onNewDocument={() => setNewModalOpen(true)}
         onOpenDocument={() => setOpenModalOpen(true)}
         onHistory={() => setHistoryModalOpen(true)}

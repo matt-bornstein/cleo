@@ -42,6 +42,7 @@ describe("EditorShell", () => {
     expect(screen.getAllByText("Phase 1 Doc")).toHaveLength(2);
     expect(screen.getByText(/AI Assistant/)).toBeInTheDocument();
     expect(screen.getByText("Saved")).toBeInTheDocument();
+    expect(screen.getByText("owner")).toBeInTheDocument();
   });
 
   it("creates a document from New modal and navigates to it", async () => {
@@ -105,6 +106,7 @@ describe("EditorShell", () => {
     expect(screen.getByText("Read-only mode. You have view/comment access only.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share" })).toBeDisabled();
     expect(screen.getByText("AI edits are disabled for your current role.")).toBeInTheDocument();
+    expect(screen.getByText("viewer")).toBeInTheDocument();
   });
 
   it("shows offline banner when browser is offline", () => {

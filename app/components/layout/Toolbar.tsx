@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 
 type ToolbarProps = {
   documentTitle: string;
+  roleLabel?: string;
   onNewDocument: () => void;
   onOpenDocument: () => void;
   onHistory: () => void;
@@ -15,6 +16,7 @@ type ToolbarProps = {
 
 export function Toolbar({
   documentTitle,
+  roleLabel,
   onNewDocument,
   onOpenDocument,
   onHistory,
@@ -47,6 +49,13 @@ export function Toolbar({
       </div>
       <div className="max-w-[300px] truncate text-sm font-semibold text-slate-700">
         {documentTitle}
+      </div>
+      <div className="hidden items-center gap-2 text-xs text-slate-600 sm:flex">
+        {roleLabel ? (
+          <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 uppercase tracking-wide">
+            {roleLabel}
+          </span>
+        ) : null}
       </div>
     </header>
   );
