@@ -22,7 +22,36 @@ function loadState(): AIMessageState {
   if (!raw) return { messages: [] };
   try {
     const parsed = JSON.parse(raw) as AIMessageState;
-    return parsed.messages ? { messages: parsed.messages } : { messages: [] };
+    if (!parsed.messages) {
+      return { messages: [] };
+    }
+
+    return {
+      messages: parsed.messages.flatMap((message) => {
+        const normalizedDocumentId = normalizeDocumentId(message.documentId);
+        if (
+          typeof message.id !== "string" ||
+          message.id.trim().length === 0 ||
+          !isValidDocumentId(normalizedDocumentId) ||
+          (message.role !== "user" &&
+            message.role !== "assistant" &&
+            message.role !== "system") ||
+          typeof message.content !== "string" ||
+          typeof message.createdAt !== "number" ||
+          !Number.isFinite(message.createdAt)
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            ...message,
+            documentId: normalizedDocumentId,
+            userId: normalizeAIUserId(message.userId),
+          },
+        ];
+      }),
+    };
   } catch {
     return { messages: [] };
   }

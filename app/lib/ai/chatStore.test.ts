@@ -78,4 +78,56 @@ describe("ai chat store", () => {
     expect(rejected).toBeNull();
     expect(listMessagesByDocument("   ")).toEqual([]);
   });
+
+  it("filters malformed persisted messages on load", () => {
+    window.localStorage.setItem(
+      "plan00.aiMessages.v1",
+      JSON.stringify({
+        messages: [
+          {
+            id: "valid",
+            documentId: "  doc-legacy  ",
+            userId: "  USER@example.com  ",
+            role: "assistant",
+            content: "Hello",
+            createdAt: 1,
+          },
+          {
+            id: "",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            role: "assistant",
+            content: "Bad id",
+            createdAt: 2,
+          },
+          {
+            id: "bad-doc",
+            documentId: "doc-\ninvalid",
+            userId: "u-1",
+            role: "assistant",
+            content: "Bad doc",
+            createdAt: 3,
+          },
+          {
+            id: "bad-role",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            role: "moderator",
+            content: "Bad role",
+            createdAt: 4,
+          },
+        ],
+      }),
+    );
+
+    const messages = listMessagesByDocument("doc-legacy");
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toEqual(
+      expect.objectContaining({
+        id: "valid",
+        documentId: "doc-legacy",
+        userId: "USER@example.com",
+      }),
+    );
+  });
 });
