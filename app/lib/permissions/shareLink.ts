@@ -4,7 +4,9 @@ const allowedShareRoles: Role[] = ["editor", "commenter", "viewer"];
 
 export function sanitizeShareRole(rawRole: string | null | undefined) {
   if (!rawRole) return undefined;
-  return allowedShareRoles.includes(rawRole as Role)
-    ? (rawRole as Role)
+  const normalizedRole = rawRole.trim().toLowerCase();
+  if (!normalizedRole) return undefined;
+  return allowedShareRoles.includes(normalizedRole as Role)
+    ? (normalizedRole as Role)
     : undefined;
 }
