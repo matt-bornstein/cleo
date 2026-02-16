@@ -6,21 +6,41 @@ import { Button } from "@/components/ui/button";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useSettings } from "@/hooks/useSettings";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 export default function EditorIndexPage() {
   const router = useRouter();
   const { settings } = useSettings();
   const currentUserEmail = settings.userEmail ?? DEFAULT_LOCAL_USER_EMAIL;
   const { documents, create } = useDocuments(undefined, currentUserEmail);
+  const normalizedDocuments = Array.isArray(documents)
+    ? documents.filter((document) => {
+        const normalizedId =
+          typeof document?.id === "string" ? document.id.trim() : undefined;
+        return !!normalizedId && !hasControlChars(normalizedId);
+      })
+    : [];
 
   const handleContinue = () => {
-    if (documents.length > 0) {
-      router.push(`/editor/${documents[0].id}`);
+    const existingDocumentId = normalizedDocuments[0]?.id;
+    if (
+      typeof existingDocumentId === "string" &&
+      existingDocumentId.trim().length > 0
+    ) {
+      router.push(`/editor/${existingDocumentId}`);
       return;
     }
 
     const document = create("Untitled", currentUserEmail);
-    router.push(`/editor/${document.id}`);
+    const nextDocumentId =
+      document &&
+      typeof document === "object" &&
+      typeof (document as { id?: unknown }).id === "string" &&
+      (document as { id: string }).id.trim().length > 0 &&
+      !hasControlChars((document as { id: string }).id.trim())
+        ? (document as { id: string }).id.trim()
+        : undefined;
+    router.push(nextDocumentId ? `/editor/${nextDocumentId}` : "/editor");
   };
 
   return (
