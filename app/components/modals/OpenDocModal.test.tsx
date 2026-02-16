@@ -119,6 +119,45 @@ describe("OpenDocModal", () => {
     await user.click(screen.getByRole("button", { name: /Open Target/i }));
   });
 
+  it("does not throw when callbacks throw", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <OpenDocModal
+        open
+        onOpenChange={() => {
+          throw new Error("onOpenChange failed");
+        }}
+        documents={[
+          {
+            id: "doc-1",
+            title: "Open Target",
+            content: "{}",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ]}
+        onOpenDocument={() => {
+          throw new Error("onOpenDocument failed");
+        }}
+        onDeleteDocument={() => {
+          throw new Error("onDeleteDocument failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Delete" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: /Open Target/i })),
+    ).resolves.toBeUndefined();
+    const closeButtons = screen.getAllByRole("button", { name: "Close" });
+    await expect(
+      user.click(closeButtons[0]),
+    ).resolves.toBeUndefined();
+  });
+
   it("filters malformed runtime document entries safely", () => {
     render(
       <OpenDocModal

@@ -103,9 +103,7 @@ export function OpenDocModal({
         if (nextOpen) {
           setPage(1);
         }
-        if (typeof onOpenChange === "function") {
-          onOpenChange(nextOpen);
-        }
+        safeOnOpenChange(onOpenChange, nextOpen);
       }}
     >
       <DialogContent>
@@ -134,12 +132,8 @@ export function OpenDocModal({
                   type="button"
                   className="min-w-0 flex-1 text-left text-sm hover:text-blue-700"
                   onClick={() => {
-                    if (typeof onOpenDocument === "function") {
-                      onOpenDocument(document.id);
-                    }
-                    if (typeof onOpenChange === "function") {
-                      onOpenChange(false);
-                    }
+                    safeOnOpenDocument(onOpenDocument, document.id);
+                    safeOnOpenChange(onOpenChange, false);
                   }}
                 >
                   <div className="truncate font-medium text-slate-700">{document.title}</div>
@@ -155,9 +149,7 @@ export function OpenDocModal({
                       `Delete "${document.title}"? This action cannot be undone.`,
                     );
                     if (!confirmed) return;
-                    if (typeof onDeleteDocument === "function") {
-                      onDeleteDocument(document.id);
-                    }
+                    safeOnDeleteDocument(onDeleteDocument, document.id);
                   }}
                 >
                   Delete
@@ -197,9 +189,7 @@ export function OpenDocModal({
             <Button
               variant="secondary"
               onClick={() => {
-                if (typeof onOpenChange === "function") {
-                  onOpenChange(false);
-                }
+                safeOnOpenChange(onOpenChange, false);
               }}
             >
               Close
@@ -220,5 +210,41 @@ function safeConfirm(message: string) {
     return window.confirm(message);
   } catch {
     return false;
+  }
+}
+
+function safeOnOpenChange(onOpenChange: unknown, nextOpen: boolean) {
+  if (typeof onOpenChange !== "function") {
+    return;
+  }
+
+  try {
+    onOpenChange(nextOpen);
+  } catch {
+    return;
+  }
+}
+
+function safeOnOpenDocument(onOpenDocument: unknown, documentId: string) {
+  if (typeof onOpenDocument !== "function") {
+    return;
+  }
+
+  try {
+    onOpenDocument(documentId);
+  } catch {
+    return;
+  }
+}
+
+function safeOnDeleteDocument(onDeleteDocument: unknown, documentId: string) {
+  if (typeof onDeleteDocument !== "function") {
+    return;
+  }
+
+  try {
+    onDeleteDocument(documentId);
+  } catch {
+    return;
   }
 }
