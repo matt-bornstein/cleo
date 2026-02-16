@@ -50,8 +50,9 @@ export function ShareModal({
 
   const shareableLink = useMemo(() => {
     const path = `/editor/${normalizedDocumentId}?share=${linkRole}`;
-    if (typeof window === "undefined") return path;
-    return `${window.location.origin}${path}`;
+    const origin = getWindowOrigin();
+    if (!origin) return path;
+    return `${origin}${path}`;
   }, [linkRole, normalizedDocumentId]);
 
   const permissions = useMemo(() => {
@@ -63,14 +64,14 @@ export function ShareModal({
   useEffect(() => {
     return () => {
       if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current);
+        safeClearTimeout(copyTimeoutRef.current);
       }
     };
   }, []);
 
   const resetTransientState = useCallback(() => {
     if (copyTimeoutRef.current) {
-      clearTimeout(copyTimeoutRef.current);
+      safeClearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = null;
     }
     setRole("editor");
@@ -82,9 +83,9 @@ export function ShareModal({
 
   const scheduleCopyStateReset = useCallback((delayMs = 1500) => {
     if (copyTimeoutRef.current) {
-      clearTimeout(copyTimeoutRef.current);
+      safeClearTimeout(copyTimeoutRef.current);
     }
-    copyTimeoutRef.current = setTimeout(() => {
+    copyTimeoutRef.current = safeSetTimeout(() => {
       setCopyState("idle");
       copyTimeoutRef.current = null;
     }, delayMs);
@@ -259,7 +260,7 @@ export function ShareModal({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const confirmed = window.confirm(
+                    const confirmed = safeConfirm(
                       `Remove ${permission.email} from this document?`,
                     );
                     if (!confirmed) return;
@@ -288,4 +289,44 @@ export function ShareModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+function getWindowOrigin() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.location.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeConfirm(message: string) {
+  if (typeof window === "undefined" || typeof window.confirm !== "function") {
+    return false;
+  }
+
+  try {
+    return window.confirm(message);
+  } catch {
+    return false;
+  }
+}
+
+function safeSetTimeout(callback: () => void, delayMs: number) {
+  try {
+    return setTimeout(callback, delayMs);
+  } catch {
+    return null;
+  }
+}
+
+function safeClearTimeout(timer: ReturnType<typeof setTimeout>) {
+  try {
+    clearTimeout(timer);
+  } catch {
+    return;
+  }
 }

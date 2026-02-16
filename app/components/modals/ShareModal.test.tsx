@@ -315,6 +315,21 @@ describe("ShareModal", () => {
     expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
   });
 
+  it("keeps collaborator when remove confirmation throws", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockImplementation(() => {
+      throw new Error("confirm unavailable");
+    });
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-remove-throw" />);
+
+    await user.type(screen.getByPlaceholderText("user@example.com"), "person@example.com");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(screen.getByText("person@example.com · editor")).toBeInTheDocument();
+  });
+
   it("does not throw when onOpenChange is malformed non-function", async () => {
     const user = userEvent.setup();
     render(<ShareModal open onOpenChange={123} documentId="doc-malformed-callback" />);
