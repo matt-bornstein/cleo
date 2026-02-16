@@ -77,4 +77,35 @@ describe("ShareModal", () => {
       );
     }
   });
+
+  it("shows validation error for invalid collaborator email", async () => {
+    const user = userEvent.setup();
+    render(
+      <ShareModal open onOpenChange={vi.fn()} documentId="doc-invalid-email" />,
+    );
+
+    await user.type(screen.getByPlaceholderText("user@example.com"), "not-an-email");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+  });
+
+  it("blocks adding the owner email as collaborator", async () => {
+    const user = userEvent.setup();
+    render(
+      <ShareModal
+        open
+        onOpenChange={vi.fn()}
+        documentId="doc-owner-block"
+        ownerEmail="owner@example.com"
+      />,
+    );
+
+    await user.type(screen.getByPlaceholderText("user@example.com"), "owner@example.com");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(
+      screen.getByText("Owner access is fixed and cannot be re-added."),
+    ).toBeInTheDocument();
+  });
 });

@@ -17,6 +17,7 @@ import {
   upsertPermission,
 } from "@/lib/permissions/store";
 import type { Role } from "@/lib/types";
+import { isValidEmail } from "@/lib/validators/email";
 
 type ShareModalProps = {
   open: boolean;
@@ -38,6 +39,7 @@ export function ShareModal({
   const [linkRole, setLinkRole] = useState<"editor" | "commenter" | "viewer">("viewer");
   const [version, setVersion] = useState(0);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [addError, setAddError] = useState<string | null>(null);
 
   const shareableLink = useMemo(() => {
     const path = `/editor/${documentId}?share=${linkRole}`;
@@ -109,15 +111,31 @@ export function ShareModal({
             </select>
             <Button
               onClick={() => {
-                if (!email.trim()) return;
-                upsertPermission(documentId, email, role);
+                const normalizedEmail = email.trim().toLowerCase();
+                if (!isValidEmail(normalizedEmail)) {
+                  setAddError("Enter a valid email address.");
+                  return;
+                }
+
+                if (ownerEmail && normalizedEmail === ownerEmail.toLowerCase()) {
+                  setAddError("Owner access is fixed and cannot be re-added.");
+                  return;
+                }
+
+                upsertPermission(documentId, normalizedEmail, role);
                 setEmail("");
+                setAddError(null);
                 setVersion((value) => value + 1);
               }}
             >
               Add
             </Button>
           </div>
+          {addError ? (
+            <p className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+              {addError}
+            </p>
+          ) : null}
           <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-2">
             {ownerEmail ? (
               <div className="flex items-center justify-between rounded-md bg-white px-2 py-1">
