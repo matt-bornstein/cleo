@@ -9,12 +9,14 @@ import type { CommentRecord } from "@/lib/types";
 type CommentsSidebarProps = {
   comments: CommentRecord[];
   onCreateComment: (content: string) => void;
+  onReplyComment: (parentCommentId: string, content: string) => void;
   onResolveComment: (commentId: string) => void;
 };
 
 export function CommentsSidebar({
   comments,
   onCreateComment,
+  onReplyComment,
   onResolveComment,
 }: CommentsSidebarProps) {
   const rootComments = useMemo(
@@ -44,6 +46,7 @@ export function CommentsSidebar({
             comment={comment}
             replies={repliesByParentId[comment.id] ?? []}
             onResolve={onResolveComment}
+            onReply={onReplyComment}
           />
         ))}
         {rootComments.length === 0 ? (

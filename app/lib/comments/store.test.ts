@@ -37,4 +37,22 @@ describe("comments store", () => {
     const resolved = resolveComment(comment.id);
     expect(resolved?.resolved).toBe(true);
   });
+
+  it("stores replies with parent comment id", () => {
+    const parent = addComment({
+      documentId: "doc-1",
+      content: "Parent",
+      anchorText: "Anchor",
+    });
+    addComment({
+      documentId: "doc-1",
+      content: "Reply",
+      anchorText: "Anchor",
+      parentCommentId: parent.id,
+    });
+
+    const comments = listComments("doc-1");
+    const reply = comments.find((comment) => comment.parentCommentId === parent.id);
+    expect(reply?.content).toBe("Reply");
+  });
 });

@@ -37,7 +37,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const [saveStateLabel, setSaveStateLabel] = useState("Saved");
   const { settings, refreshSettings } = useSettings();
   const { others, updateMyPresence } = usePresence(documentId);
-  const { comments, createComment, markResolved } = useComments(documentId);
+  const { comments, createComment, createReply, markResolved } = useComments(documentId);
 
   const currentDocument = getById(documentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
@@ -136,6 +136,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
               onCreateComment={(commentText) =>
                 createComment(commentText, "Document selection")
               }
+              onReplyComment={createReply}
               onResolveComment={markResolved}
             />
           </div>

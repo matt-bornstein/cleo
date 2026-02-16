@@ -34,9 +34,26 @@ export function useComments(documentId: string) {
     [refresh],
   );
 
+  const createReply = useCallback(
+    (parentCommentId: string, content: string) => {
+      const parent = comments.find((comment) => comment.id === parentCommentId);
+      const anchorText = parent?.anchorText ?? "Reply";
+      const reply = addComment({
+        documentId,
+        content,
+        anchorText,
+        parentCommentId,
+      });
+      refresh();
+      return reply;
+    },
+    [comments, documentId, refresh],
+  );
+
   return {
     comments,
     createComment,
+    createReply,
     markResolved,
   };
 }
