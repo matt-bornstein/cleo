@@ -159,7 +159,7 @@ function persistState(state: CommentState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function listComments(documentId: string) {
+export function listComments(documentId: unknown) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) return [];
 
@@ -172,27 +172,37 @@ export function listComments(documentId: string) {
     );
 }
 
-export function addComment(params: {
-  documentId: string;
-  content: string;
-  anchorText: string;
-  parentCommentId?: string;
-  userId?: string;
-}) {
-  const normalizedDocumentId = normalizeDocumentId(params.documentId);
+export function addComment(
+  params: unknown,
+) {
+  const candidate =
+    params && typeof params === "object"
+      ? (params as {
+          documentId?: unknown;
+          content?: unknown;
+          anchorText?: unknown;
+          parentCommentId?: unknown;
+          userId?: unknown;
+        })
+      : undefined;
+  if (!candidate) {
+    return null;
+  }
+
+  const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
   if (!isValidDocumentId(normalizedDocumentId)) {
     return null;
   }
   const normalizedContent =
-    typeof params.content === "string" ? params.content.trim() : "";
+    typeof candidate.content === "string" ? candidate.content.trim() : "";
   if (
     !normalizedContent ||
     hasDisallowedTextControlChars(normalizedContent)
   ) {
     return null;
   }
-  const normalizedAnchorText = normalizeAnchorText(params.anchorText);
-  const normalizedParentCommentId = normalizeCommentReferenceId(params.parentCommentId);
+  const normalizedAnchorText = normalizeAnchorText(candidate.anchorText);
+  const normalizedParentCommentId = normalizeCommentReferenceId(candidate.parentCommentId);
 
   const state = loadState();
   const safeParentCommentId =
@@ -206,7 +216,7 @@ export function addComment(params: {
       : undefined;
   const now = Math.max(0, Date.now());
   const normalizedUserId =
-    typeof params.userId === "string" ? params.userId.trim() : undefined;
+    typeof candidate.userId === "string" ? candidate.userId.trim() : undefined;
   const comment: CommentRecord = {
     id: generateLocalId(),
     documentId: normalizedDocumentId,
@@ -230,7 +240,7 @@ export function addComment(params: {
   return comment;
 }
 
-export function resolveComment(commentId: string) {
+export function resolveComment(commentId: unknown) {
   const normalizedCommentId = normalizeCommentReferenceId(commentId);
   if (!normalizedCommentId) return null;
 

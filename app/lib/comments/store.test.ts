@@ -197,6 +197,12 @@ describe("comments store", () => {
     expect(comment).toBeNull();
   });
 
+  it("rejects comment creation when params payload is malformed non-object", () => {
+    const comment = addComment(123 as unknown as never);
+
+    expect(comment).toBeNull();
+  });
+
   it("falls back anchor text when runtime anchor input is non-string", () => {
     const comment = addComment({
       documentId: "doc-anchor-type",
@@ -404,6 +410,18 @@ describe("comments store", () => {
     );
 
     expect(listComments("doc-legacy")).toEqual([]);
+  });
+
+  it("handles malformed non-string ids in list and resolve operations safely", () => {
+    const comment = addComment({
+      documentId: "doc-malformed-comment-id",
+      content: "Hello",
+      anchorText: "Anchor",
+    });
+    expect(comment).not.toBeNull();
+
+    expect(listComments(123 as unknown as string)).toEqual([]);
+    expect(resolveComment(123 as unknown as string)).toBeNull();
   });
 
   it("normalizes malformed anchor ranges in persisted comments", () => {
