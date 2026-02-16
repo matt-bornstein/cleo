@@ -5,6 +5,7 @@ import { beforeEach, vi } from "vitest";
 import { EditorShell } from "@/components/layout/EditorShell";
 import { createDocument, resetDocumentsForTests } from "@/lib/documents/store";
 import { triggerIdleSave } from "@/lib/diffs/store";
+import * as diffsStore from "@/lib/diffs/store";
 import { upsertPermission } from "@/lib/permissions/store";
 import * as permissionsStore from "@/lib/permissions/store";
 import { saveSettings } from "@/lib/settings/store";
@@ -32,6 +33,7 @@ vi.mock("@/hooks/useAILockStatus", () => ({
 
 describe("EditorShell", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     pushMock.mockReset();
     replaceMock.mockReset();
     refreshMock.mockReset();
@@ -224,6 +226,47 @@ describe("EditorShell", () => {
 
     expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
     expect(screen.getByText("Applying shared access permissions...")).toBeInTheDocument();
+  });
+
+  it("does not throw when diff creation throws for new documents", async () => {
+    const user = userEvent.setup();
+    const current = createDocument("Current");
+    vi.spyOn(diffsStore, "ensureCreatedDiff").mockImplementation(() => {
+      throw new Error("ensureCreatedDiff failed");
+    });
+
+    render(<EditorShell documentId={current.id} />);
+
+    await user.click(screen.getByRole("button", { name: "New" }));
+    await user.type(screen.getByPlaceholderText("Untitled document"), "New Draft");
+    await expect(
+      user.click(screen.getByRole("button", { name: "Create" })),
+    ).resolves.toBeUndefined();
+    expect(pushMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not throw when restoreVersion throws", async () => {
+    const user = userEvent.setup();
+    const document = createDocument("Versioned Doc");
+    const changedSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "updated" }] }],
+    });
+    triggerIdleSave({
+      documentId: document.id,
+      snapshot: changedSnapshot,
+      dedupWindowMs: 0,
+    });
+    vi.spyOn(diffsStore, "restoreVersion").mockImplementation(() => {
+      throw new Error("restoreVersion failed");
+    });
+
+    render(<EditorShell documentId={document.id} />);
+    await user.keyboard("{Control>}h{/Control}");
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Restore selected version" })),
+    ).resolves.toBeUndefined();
   });
 
 });

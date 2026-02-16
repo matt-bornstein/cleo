@@ -96,12 +96,18 @@ export function EditorShell({ documentId }: EditorShellProps) {
     onIdle: () => {
       const latestDocument = getById(normalizedDocumentId);
       if (!latestDocument) return;
-      const result = triggerIdleSave({
+      const result = safeTriggerIdleSave({
         documentId: normalizedDocumentId,
         snapshot: latestDocument.content,
       });
-      if (result.skipped) {
-        setSaveStateLabel(result.reason === "dedup_window" ? "Saving..." : "Saved");
+      if (
+        result &&
+        typeof result === "object" &&
+        "skipped" in result &&
+        result.skipped === true
+      ) {
+        const reason = "reason" in result ? result.reason : undefined;
+        setSaveStateLabel(reason === "dedup_window" ? "Saving..." : "Saved");
         return;
       }
       setSaveStateLabel("Saved");
@@ -300,7 +306,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
             safeRouterPush(router, "/editor");
             return;
           }
-          ensureCreatedDiff({
+          safeEnsureCreatedDiff({
             documentId: newDocumentId,
             snapshot: newDocumentContent,
           });
@@ -327,11 +333,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenChange={setHistoryModalOpen}
         documentId={normalizedDocumentId}
         onRestoreSnapshot={(snapshot: string) => {
-          const result = restoreVersion({
+          const result = safeRestoreVersion({
             documentId: normalizedDocumentId,
             snapshot,
           });
-          if (result.restored) {
+          if (result?.restored) {
             updateContent(normalizedDocumentId, snapshot);
             setSaveStateLabel("Saved");
           }
@@ -464,6 +470,30 @@ function safeUpsertPermission(
 ) {
   try {
     return upsertPermission(documentId, email, role);
+  } catch {
+    return null;
+  }
+}
+
+function safeTriggerIdleSave(payload: Parameters<typeof triggerIdleSave>[0]) {
+  try {
+    return triggerIdleSave(payload);
+  } catch {
+    return null;
+  }
+}
+
+function safeEnsureCreatedDiff(payload: Parameters<typeof ensureCreatedDiff>[0]) {
+  try {
+    ensureCreatedDiff(payload);
+  } catch {
+    return;
+  }
+}
+
+function safeRestoreVersion(payload: Parameters<typeof restoreVersion>[0]) {
+  try {
+    return restoreVersion(payload);
   } catch {
     return null;
   }
