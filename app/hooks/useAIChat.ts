@@ -8,6 +8,7 @@ import {
   listMessagesByDocument,
   saveMessage,
 } from "@/lib/ai/chatStore";
+import { getRecentMessages } from "@/lib/ai/history";
 import { createDiff } from "@/lib/diffs/store";
 import type { AIMessage } from "@/lib/types";
 
@@ -82,7 +83,7 @@ export function useAIChat({
             prompt,
             model: selectedModel,
             documentContent: currentDocumentContent,
-            messages: messages.slice(-5),
+            messages: getRecentMessages(listMessagesByDocument(documentId)),
           }),
         });
 
@@ -162,7 +163,6 @@ export function useAIChat({
     [
       currentDocumentContent,
       documentId,
-      messages,
       onApplyContent,
       selectedModel,
     ],
