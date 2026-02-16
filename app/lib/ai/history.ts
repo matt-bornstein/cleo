@@ -1,6 +1,9 @@
 import type { AIMessage } from "@/lib/types";
 
 export function getRecentMessages(messages: AIMessage[], limit = 5) {
+  if (!Array.isArray(messages)) {
+    return [];
+  }
   const safeLimit = Number.isFinite(limit) ? Math.floor(limit) : 0;
   if (safeLimit <= 0) return [];
 

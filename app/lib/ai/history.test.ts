@@ -2,6 +2,11 @@ import type { AIMessage } from "@/lib/types";
 import { getRecentMessages } from "@/lib/ai/history";
 
 describe("getRecentMessages", () => {
+  it("returns empty for malformed non-array message containers", () => {
+    expect(getRecentMessages(undefined as unknown as AIMessage[], 3)).toEqual([]);
+    expect(getRecentMessages("oops" as unknown as AIMessage[], 3)).toEqual([]);
+  });
+
   it("returns the most recent messages ordered by createdAt", () => {
     const messages: AIMessage[] = [
       {
