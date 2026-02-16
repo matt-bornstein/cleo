@@ -53,7 +53,7 @@ function loadState(): DocumentStoreState {
       return { documents: [] };
     }
 
-    const fallbackNow = Math.max(0, Date.now());
+    const fallbackNow = safeNow();
     const sanitizedDocuments = parsed.documents.flatMap((doc) => {
         if (!doc || typeof doc !== "object") {
           return [];
@@ -183,7 +183,7 @@ export function createDocument(
   title: unknown,
   ownerEmail: unknown = DEFAULT_OWNER_EMAIL,
 ): AppDocument {
-  const now = Math.max(0, Date.now());
+  const now = safeNow();
   const normalizedTitle = normalizeDocumentTitle(title);
   const state = loadState();
   const document: AppDocument = {
@@ -248,7 +248,7 @@ export function updateDocumentContent(
   const updated: AppDocument = {
     ...existing,
     content,
-    updatedAt: Math.max(Math.max(0, Date.now()), existing.updatedAt),
+    updatedAt: Math.max(safeNow(), existing.updatedAt),
   };
   state.documents[index] = updated;
   persistState(state);
@@ -274,7 +274,7 @@ export function updateDocumentTitle(
   const updated: AppDocument = {
     ...existing,
     title: normalizedTitle,
-    updatedAt: Math.max(Math.max(0, Date.now()), existing.updatedAt),
+    updatedAt: Math.max(safeNow(), existing.updatedAt),
   };
   state.documents[index] = updated;
   persistState(state);
@@ -399,6 +399,14 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeNow() {
+  try {
+    return Math.max(0, Date.now());
+  } catch {
+    return 0;
   }
 }
 

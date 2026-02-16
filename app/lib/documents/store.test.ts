@@ -48,6 +48,19 @@ describe("document store", () => {
     nowSpy.mockRestore();
   });
 
+  it("falls back to zero timestamps when Date.now throws during creation", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+
+    expect(() => createDocument("Throwing clock")).not.toThrow();
+    const document = listDocuments()[0];
+    expect(document?.createdAt).toBe(0);
+    expect(document?.updatedAt).toBe(0);
+
+    nowSpy.mockRestore();
+  });
+
   it("falls back to default owner email for invalid owner input", () => {
     const blankOwner = createDocument("Blank owner", "   ");
     expect(blankOwner.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
@@ -213,6 +226,38 @@ describe("document store", () => {
     const documents = listDocuments();
     expect(documents.map((document) => document.createdAt)).toEqual([100, 100]);
     expect(documents.map((document) => document.updatedAt)).toEqual([100, 100]);
+    nowSpy.mockRestore();
+  });
+
+  it("falls back to zero persisted timestamps when Date.now throws", () => {
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({
+        documents: [
+          {
+            id: "doc-throw-clock",
+            title: "Throw clock",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "owner@example.com",
+            createdAt: "bad",
+            updatedAt: "bad",
+          },
+        ],
+      }),
+    );
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      throw new Error("Date.now failed");
+    });
+
+    const documents = listDocuments();
+    expect(documents[0]).toEqual(
+      expect.objectContaining({
+        id: "doc-throw-clock",
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
     nowSpy.mockRestore();
   });
 
