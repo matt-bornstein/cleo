@@ -66,4 +66,37 @@ describe("useSettings", () => {
       userEmail: DEFAULT_LOCAL_USER_EMAIL,
     });
   });
+
+  it("normalizes malformed settings payloads and getter traps", () => {
+    const settingsWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(settingsWithThrowingGetters, "theme", {
+      get() {
+        throw new Error("theme getter failed");
+      },
+    });
+    Object.defineProperty(settingsWithThrowingGetters, "defaultModel", {
+      value: "  ",
+    });
+    Object.defineProperty(settingsWithThrowingGetters, "editorFontSize", {
+      value: Number.NaN,
+    });
+    Object.defineProperty(settingsWithThrowingGetters, "editorLineSpacing", {
+      value: -1,
+    });
+    Object.defineProperty(settingsWithThrowingGetters, "userEmail", {
+      get() {
+        throw new Error("userEmail getter failed");
+      },
+    });
+    getSettingsMock.mockReturnValue(settingsWithThrowingGetters);
+
+    const { result } = renderHook(() => useSettings());
+    expect(result.current.settings).toEqual({
+      theme: "system",
+      defaultModel: "gpt-4o",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: DEFAULT_LOCAL_USER_EMAIL,
+    });
+  });
 });
