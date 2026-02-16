@@ -24,7 +24,7 @@ type UseAIChatArgs = {
   currentUserId: unknown;
   defaultModel?: unknown;
   chatClearedAt?: unknown;
-  onClearChat?: (clearedAt: number) => void;
+  onClearChat?: unknown;
 };
 
 type AIStreamPayload =
@@ -166,7 +166,7 @@ export function useAIChat({
   }, []);
 
   const sendPrompt = useCallback(
-    async (prompt: string) => {
+    async (prompt: unknown) => {
       if (isSendingRef.current) return;
       if (!hasValidDocumentId) {
         setError("Document is unavailable.");
