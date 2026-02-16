@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { MAX_DOCUMENT_ID_LENGTH } from "@/lib/ai/constraints";
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 
 type LockStatus = {
   locked: boolean;
@@ -11,10 +11,8 @@ type LockStatus = {
 };
 
 export function useAILockStatus(documentId: string) {
-  const normalizedDocumentId = documentId.trim();
-  const hasValidDocumentId =
-    normalizedDocumentId.length > 0 &&
-    normalizedDocumentId.length <= MAX_DOCUMENT_ID_LENGTH;
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  const hasValidDocumentId = isValidDocumentId(documentId);
   const [state, setState] = useState<{
     documentId: string;
     status: LockStatus;

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  MAX_DOCUMENT_ID_LENGTH,
   MAX_PROMPT_LENGTH,
 } from "@/lib/ai/constraints";
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { getModelConfig } from "@/lib/ai/models";
 import { listMessagesByDocument, saveMessage } from "@/lib/ai/chatStore";
 import { getRecentMessages } from "@/lib/ai/history";
@@ -70,10 +70,14 @@ export function useAIChat({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isSendingRef = useRef(false);
-  const normalizedDocumentId = useMemo(() => documentId.trim(), [documentId]);
-  const hasValidDocumentId =
-    normalizedDocumentId.length > 0 &&
-    normalizedDocumentId.length <= MAX_DOCUMENT_ID_LENGTH;
+  const normalizedDocumentId = useMemo(
+    () => normalizeDocumentId(documentId),
+    [documentId],
+  );
+  const hasValidDocumentId = useMemo(
+    () => isValidDocumentId(documentId),
+    [documentId],
+  );
   const normalizedCurrentUserId = useMemo(
     () => normalizeAIUserId(currentUserId),
     [currentUserId],

@@ -4,12 +4,12 @@ import OpenAI from "openai";
 
 import {
   MAX_DOCUMENT_CONTENT_LENGTH,
-  MAX_DOCUMENT_ID_LENGTH,
   MAX_MESSAGE_CONTENT_LENGTH,
   MAX_MESSAGE_COUNT,
   MAX_PROMPT_LENGTH,
   MAX_USER_ID_LENGTH,
 } from "@/lib/ai/constraints";
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { aiLockManager } from "@/lib/ai/lock";
 import { normalizeAIUserId } from "@/lib/ai/identity";
 import { getModelConfig, isSupportedModel } from "@/lib/ai/models";
@@ -74,8 +74,8 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
   }
 
   const rawMessages = candidate.messages;
-  const documentId = candidate.documentId.trim();
-  if (documentId.length > MAX_DOCUMENT_ID_LENGTH) {
+  const documentId = normalizeDocumentId(candidate.documentId);
+  if (!isValidDocumentId(documentId)) {
     return null;
   }
   const model = candidate.model.trim();
@@ -134,8 +134,8 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const documentId = searchParams.get("documentId")?.trim();
-  if (!documentId || documentId.length > MAX_DOCUMENT_ID_LENGTH) {
+  const documentId = normalizeDocumentId(searchParams.get("documentId") ?? "");
+  if (!isValidDocumentId(documentId)) {
     return Response.json({ error: "documentId is required" }, { status: 400 });
   }
 

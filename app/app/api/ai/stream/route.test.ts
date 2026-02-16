@@ -114,22 +114,26 @@ describe("POST /api/ai/stream", () => {
   });
 
   it("returns bad request for oversized document id in payload", async () => {
-    const request = new Request("http://localhost/api/ai/stream", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(
-        createRequestBody({
-          documentId: "d".repeat(257),
-        }),
-      ),
-    });
+    const invalidDocumentIds = ["d".repeat(257), "doc-\ninvalid"];
 
-    const response = await POST(request);
-    expect(response.status).toBe(400);
-    const payload = (await response.json()) as { error: string };
-    expect(payload.error).toBe("Invalid request payload");
+    for (const documentId of invalidDocumentIds) {
+      const request = new Request("http://localhost/api/ai/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(
+          createRequestBody({
+            documentId,
+          }),
+        ),
+      });
+
+      const response = await POST(request);
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: string };
+      expect(payload.error).toBe("Invalid request payload");
+    }
   });
 
   it("accepts payloads without messages array", async () => {
@@ -442,12 +446,18 @@ describe("GET /api/ai/stream", () => {
   });
 
   it("rejects oversized documentId query parameter", async () => {
-    const response = await GET(
-      new Request(`http://localhost/api/ai/stream?documentId=${"d".repeat(257)}`),
-    );
-    expect(response.status).toBe(400);
-    const payload = (await response.json()) as { error: string };
-    expect(payload.error).toBe("documentId is required");
+    const invalidQueryDocumentIds = ["d".repeat(257), "doc-\ninvalid"];
+
+    for (const documentId of invalidQueryDocumentIds) {
+      const response = await GET(
+        new Request(
+          `http://localhost/api/ai/stream?documentId=${encodeURIComponent(documentId)}`,
+        ),
+      );
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: string };
+      expect(payload.error).toBe("documentId is required");
+    }
   });
 
   it("returns unlocked status by default", async () => {
