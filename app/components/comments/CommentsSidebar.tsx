@@ -83,9 +83,7 @@ export function CommentsSidebar({
       {normalizedCanComment ? (
         <CommentInput
           onSubmit={(content: string) => {
-            if (typeof onCreateComment === "function") {
-              onCreateComment(content);
-            }
+            safeOnCreateComment(onCreateComment, content);
           }}
           placeholder="Comment on this doc"
         />
@@ -101,14 +99,10 @@ export function CommentsSidebar({
             comment={comment}
             replies={repliesByParentId[comment.id] ?? []}
             onResolve={(commentId: string) => {
-              if (typeof onResolveComment === "function") {
-                onResolveComment(commentId);
-              }
+              safeOnResolveComment(onResolveComment, commentId);
             }}
             onReply={(parentCommentId: string, content: string) => {
-              if (typeof onReplyComment === "function") {
-                onReplyComment(parentCommentId, content);
-              }
+              safeOnReplyComment(onReplyComment, parentCommentId, content);
             }}
             canComment={normalizedCanComment}
           />
@@ -121,4 +115,44 @@ export function CommentsSidebar({
       </div>
     </section>
   );
+}
+
+function safeOnCreateComment(onCreateComment: unknown, content: string) {
+  if (typeof onCreateComment !== "function") {
+    return;
+  }
+
+  try {
+    onCreateComment(content);
+  } catch {
+    return;
+  }
+}
+
+function safeOnResolveComment(onResolveComment: unknown, commentId: string) {
+  if (typeof onResolveComment !== "function") {
+    return;
+  }
+
+  try {
+    onResolveComment(commentId);
+  } catch {
+    return;
+  }
+}
+
+function safeOnReplyComment(
+  onReplyComment: unknown,
+  parentCommentId: string,
+  content: string,
+) {
+  if (typeof onReplyComment !== "function") {
+    return;
+  }
+
+  try {
+    onReplyComment(parentCommentId, content);
+  } catch {
+    return;
+  }
 }

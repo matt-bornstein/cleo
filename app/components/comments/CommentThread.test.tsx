@@ -112,4 +112,31 @@ describe("CommentThread", () => {
     expect(screen.getByText("Open")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Reply" }));
   });
+
+  it("does not throw when resolve and reply callbacks throw", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <CommentThread
+        comment={baseComment}
+        replies={[]}
+        onResolve={() => {
+          throw new Error("resolve failed");
+        }}
+        onReply={() => {
+          throw new Error("reply failed");
+        }}
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "Resolve" })),
+    ).resolves.toBeUndefined();
+
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+    await user.type(screen.getByPlaceholderText("Reply to comment"), "Follow-up");
+    await expect(
+      user.click(screen.getByRole("button", { name: "Add" })),
+    ).resolves.toBeUndefined();
+  });
 });

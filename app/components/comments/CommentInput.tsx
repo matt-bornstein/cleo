@@ -16,10 +16,10 @@ export function CommentInput({ placeholder, onSubmit }: CommentInputProps) {
     event.preventDefault();
     const normalized = value.trim();
     if (!normalized) return;
-    if (typeof onSubmit !== "function") {
+    const submitted = safeSubmit(onSubmit, normalized);
+    if (!submitted) {
       return;
     }
-    onSubmit(normalized);
     setValue("");
   };
 
@@ -38,4 +38,17 @@ export function CommentInput({ placeholder, onSubmit }: CommentInputProps) {
       </div>
     </form>
   );
+}
+
+function safeSubmit(onSubmit: unknown, value: string) {
+  if (typeof onSubmit !== "function") {
+    return false;
+  }
+
+  try {
+    onSubmit(value);
+    return true;
+  } catch {
+    return false;
+  }
 }

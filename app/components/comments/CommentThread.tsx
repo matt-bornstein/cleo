@@ -101,9 +101,7 @@ export function CommentThread({
                 size="sm"
                 variant="secondary"
                 onClick={() => {
-                  if (typeof onResolve === "function") {
-                    onResolve(normalizedComment.id);
-                  }
+                  safeOnResolve(onResolve, normalizedComment.id);
                 }}
               >
                 Resolve
@@ -117,9 +115,7 @@ export function CommentThread({
           <CommentInput
             placeholder="Reply to comment"
             onSubmit={(value: string) => {
-              if (typeof onReply === "function") {
-                onReply(normalizedComment.id, value);
-              }
+              safeOnReply(onReply, normalizedComment.id, value);
               setIsReplying(false);
             }}
           />
@@ -136,4 +132,28 @@ export function CommentThread({
       ) : null}
     </article>
   );
+}
+
+function safeOnResolve(onResolve: unknown, commentId: string) {
+  if (typeof onResolve !== "function") {
+    return;
+  }
+
+  try {
+    onResolve(commentId);
+  } catch {
+    return;
+  }
+}
+
+function safeOnReply(onReply: unknown, parentCommentId: string, content: string) {
+  if (typeof onReply !== "function") {
+    return;
+  }
+
+  try {
+    onReply(parentCommentId, content);
+  } catch {
+    return;
+  }
 }

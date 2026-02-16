@@ -66,4 +66,37 @@ describe("CommentsSidebar", () => {
     await user.click(screen.getByRole("button", { name: "Add" }));
     await user.click(screen.getByRole("button", { name: "Resolve" }));
   });
+
+  it("does not throw when callbacks throw", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <CommentsSidebar
+        comments={[baseComment]}
+        onCreateComment={() => {
+          throw new Error("create failed");
+        }}
+        onReplyComment={() => {
+          throw new Error("reply failed");
+        }}
+        onResolveComment={() => {
+          throw new Error("resolve failed");
+        }}
+      />,
+    );
+
+    await user.type(screen.getByPlaceholderText("Comment on this doc"), "Draft");
+    await expect(
+      user.click(screen.getByRole("button", { name: "Add" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Resolve" })),
+    ).resolves.toBeUndefined();
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+    await user.type(screen.getByPlaceholderText("Reply to comment"), "Follow up");
+    const addButtons = screen.getAllByRole("button", { name: "Add" });
+    await expect(
+      user.click(addButtons[1]),
+    ).resolves.toBeUndefined();
+  });
 });

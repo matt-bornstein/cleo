@@ -42,4 +42,24 @@ describe("CommentInput", () => {
 
     expect((textarea as HTMLTextAreaElement).value).toBe("Keep this draft");
   });
+
+  it("does not throw when submit handler throws", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <CommentInput
+        onSubmit={() => {
+          throw new Error("submit failed");
+        }}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText("Write a comment");
+    await user.type(textarea, "Keep this draft");
+    await expect(
+      user.click(screen.getByRole("button", { name: "Add" })),
+    ).resolves.toBeUndefined();
+
+    expect((textarea as HTMLTextAreaElement).value).toBe("Keep this draft");
+  });
 });
