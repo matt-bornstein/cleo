@@ -96,9 +96,7 @@ export function ShareModal({
       if (!nextOpen) {
         resetTransientState();
       }
-      if (typeof onOpenChange === "function") {
-        onOpenChange(nextOpen);
-      }
+      safeOnOpenChange(onOpenChange, nextOpen);
     },
     [onOpenChange, resetTransientState],
   );
@@ -326,6 +324,18 @@ function safeSetTimeout(callback: () => void, delayMs: number) {
 function safeClearTimeout(timer: ReturnType<typeof setTimeout>) {
   try {
     clearTimeout(timer);
+  } catch {
+    return;
+  }
+}
+
+function safeOnOpenChange(onOpenChange: unknown, nextOpen: boolean) {
+  if (typeof onOpenChange !== "function") {
+    return;
+  }
+
+  try {
+    onOpenChange(nextOpen);
   } catch {
     return;
   }

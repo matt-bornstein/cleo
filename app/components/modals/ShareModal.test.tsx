@@ -337,6 +337,22 @@ describe("ShareModal", () => {
     await user.click(screen.getByRole("button", { name: "Copy link" }));
   });
 
+  it("does not throw when onOpenChange callback throws", async () => {
+    const user = userEvent.setup();
+    render(
+      <ShareModal
+        open
+        onOpenChange={() => {
+          throw new Error("onOpenChange failed");
+        }}
+        documentId="doc-throwing-callback"
+      />,
+    );
+
+    const closeButtons = screen.getAllByRole("button", { name: "Close" });
+    await expect(user.click(closeButtons[0])).resolves.toBeUndefined();
+  });
+
   it("normalizes malformed runtime document id in copied share links", async () => {
     const user = userEvent.setup();
     render(<ShareModal open onOpenChange={vi.fn()} documentId={123} />);
