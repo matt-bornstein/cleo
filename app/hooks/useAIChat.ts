@@ -27,6 +27,11 @@ type UseAIChatArgs = {
   onClearChat?: (clearedAt: number) => void;
 };
 
+type AIStreamPayload =
+  | { type: "token"; text: string }
+  | { type: "done"; assistantMessage: string; nextContent: string }
+  | { type: "error"; error: string };
+
 function createMessage(
   documentId: string,
   userId: string,
@@ -54,6 +59,48 @@ function updateMessageContent(messages: AIMessage[], messageId: string, content:
   return messages.map((message) =>
     message.id === messageId ? { ...message, content } : message,
   );
+}
+
+function parseAIStreamPayload(raw: string): AIStreamPayload | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+
+  const candidate = parsed as Record<string, unknown>;
+  if (candidate.type === "token" && typeof candidate.text === "string") {
+    return {
+      type: "token",
+      text: candidate.text,
+    };
+  }
+
+  if (
+    candidate.type === "done" &&
+    typeof candidate.assistantMessage === "string" &&
+    typeof candidate.nextContent === "string"
+  ) {
+    return {
+      type: "done",
+      assistantMessage: candidate.assistantMessage,
+      nextContent: candidate.nextContent,
+    };
+  }
+
+  if (candidate.type === "error" && typeof candidate.error === "string") {
+    return {
+      type: "error",
+      error: candidate.error,
+    };
+  }
+
+  return null;
 }
 
 export function useAIChat({
@@ -174,12 +221,7 @@ export function useAIChat({
         const decoder = new TextDecoder();
         let buffer = "";
         let assistantContent = "";
-        const applyStreamPayload = (
-          payload:
-            | { type: "token"; text: string }
-            | { type: "done"; assistantMessage: string; nextContent: string }
-            | { type: "error"; error: string },
-        ) => {
+        const applyStreamPayload = (payload: AIStreamPayload) => {
           if (payload.type === "token") {
             assistantContent += payload.text;
             setMessages((prev) =>
@@ -226,22 +268,20 @@ export function useAIChat({
 
           for (const line of lines) {
             if (!line.trim()) continue;
-            applyStreamPayload(
-              JSON.parse(line) as
-                | { type: "token"; text: string }
-                | { type: "done"; assistantMessage: string; nextContent: string }
-                | { type: "error"; error: string },
-            );
+            const payload = parseAIStreamPayload(line);
+            if (!payload) {
+              throw new Error("Malformed AI stream event.");
+            }
+            applyStreamPayload(payload);
           }
         }
 
         if (buffer.trim()) {
-          applyStreamPayload(
-            JSON.parse(buffer) as
-              | { type: "token"; text: string }
-              | { type: "done"; assistantMessage: string; nextContent: string }
-              | { type: "error"; error: string },
-          );
+          const payload = parseAIStreamPayload(buffer);
+          if (!payload) {
+            throw new Error("Malformed AI stream event.");
+          }
+          applyStreamPayload(payload);
         }
       } catch (requestError) {
         const message =

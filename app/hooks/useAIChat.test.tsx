@@ -51,6 +51,20 @@ function createStreamResponse(
   return new Response(stream, { status: 200 });
 }
 
+function createRawStreamResponse(lines: string[]) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      lines.forEach((line) => {
+        controller.enqueue(encoder.encode(line));
+      });
+      controller.close();
+    },
+  });
+
+  return new Response(stream, { status: 200 });
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((resolveFn) => {
@@ -294,6 +308,72 @@ describe("useAIChat", () => {
         content: "Error: Model failed",
       }),
     );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("surfaces malformed stream payload errors", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(createRawStreamResponse(["{\"type\":\"done\"}\n"]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-malformed-stream-payload",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger malformed payload");
+    });
+
+    expect(result.current.error).toBe("Malformed AI stream event.");
+    expect(result.current.messages.at(-1)).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "Error: Malformed AI stream event.",
+      }),
+    );
+    expect(createDiffMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).toHaveBeenCalledTimes(2);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("surfaces malformed stream json errors", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(createRawStreamResponse(["not-json\n"]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-malformed-stream-json",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Trigger malformed json");
+    });
+
+    expect(result.current.error).toBe("Malformed AI stream event.");
+    expect(result.current.messages.at(-1)).toEqual(
+      expect.objectContaining({
+        role: "assistant",
+        content: "Error: Malformed AI stream event.",
+      }),
+    );
+    expect(createDiffMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).toHaveBeenCalledTimes(2);
 
     vi.unstubAllGlobals();
   });
