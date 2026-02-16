@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type FormattingToolbarProps = {
-  editor: Editor | null;
+  editor: unknown;
 };
 
 type ToolbarButton = {
@@ -30,7 +30,9 @@ function ToolbarAction({ label, onClick, isActive }: ToolbarButton) {
 }
 
 export function FormattingToolbar({ editor }: FormattingToolbarProps) {
-  if (!editor) {
+  const normalizedEditor = isEditorLike(editor) ? editor : null;
+
+  if (!normalizedEditor) {
     return (
       <div className="border-b border-slate-200 px-4 py-2 text-xs text-slate-500">
         Loading editor...
@@ -42,81 +44,149 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
     <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-white px-3 py-2">
       <ToolbarAction
         label="B"
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        isActive={editor.isActive("bold")}
+        onClick={() =>
+          runToolbarAction(() => normalizedEditor.chain().focus().toggleBold().run())
+        }
+        isActive={normalizedEditor.isActive("bold")}
       />
       <ToolbarAction
         label="I"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        isActive={editor.isActive("italic")}
+        onClick={() =>
+          runToolbarAction(() => normalizedEditor.chain().focus().toggleItalic().run())
+        }
+        isActive={normalizedEditor.isActive("italic")}
       />
       <ToolbarAction
         label="U"
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-        isActive={editor.isActive("underline")}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleUnderline().run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("underline")}
       />
       <ToolbarAction
         label="S"
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        isActive={editor.isActive("strike")}
+        onClick={() =>
+          runToolbarAction(() => normalizedEditor.chain().focus().toggleStrike().run())
+        }
+        isActive={normalizedEditor.isActive("strike")}
       />
       <span className="mx-1 h-4 w-px bg-slate-200" />
       <ToolbarAction
         label="H1"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        isActive={editor.isActive("heading", { level: 1 })}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleHeading({ level: 1 }).run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("heading", { level: 1 })}
       />
       <ToolbarAction
         label="H2"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        isActive={editor.isActive("heading", { level: 2 })}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleHeading({ level: 2 }).run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("heading", { level: 2 })}
       />
       <ToolbarAction
         label="H3"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        isActive={editor.isActive("heading", { level: 3 })}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleHeading({ level: 3 }).run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("heading", { level: 3 })}
       />
       <span className="mx-1 h-4 w-px bg-slate-200" />
       <ToolbarAction
         label="• List"
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        isActive={editor.isActive("bulletList")}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleBulletList().run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("bulletList")}
       />
       <ToolbarAction
         label="1. List"
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        isActive={editor.isActive("orderedList")}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleOrderedList().run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("orderedList")}
       />
       <ToolbarAction
         label="Task"
-        onClick={() => editor.chain().focus().toggleTaskList().run()}
-        isActive={editor.isActive("taskList")}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleTaskList().run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("taskList")}
       />
       <span className="mx-1 h-4 w-px bg-slate-200" />
       <ToolbarAction
         label="Code"
-        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        isActive={editor.isActive("codeBlock")}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleCodeBlock().run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("codeBlock")}
       />
       <ToolbarAction
         label="Quote"
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        isActive={editor.isActive("blockquote")}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().toggleBlockquote().run(),
+          )
+        }
+        isActive={normalizedEditor.isActive("blockquote")}
       />
       <ToolbarAction
         label="Rule"
-        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        onClick={() =>
+          runToolbarAction(() =>
+            normalizedEditor.chain().focus().setHorizontalRule().run(),
+          )
+        }
       />
       <ToolbarAction
         label="Table"
         onClick={() =>
-          editor
-            .chain()
-            .focus()
-            .insertTable({ rows: 2, cols: 2, withHeaderRow: true })
-            .run()
+          runToolbarAction(() =>
+            normalizedEditor
+              .chain()
+              .focus()
+              .insertTable({ rows: 2, cols: 2, withHeaderRow: true })
+              .run(),
+          )
         }
       />
     </div>
   );
+}
+
+function runToolbarAction(action: () => void) {
+  try {
+    action();
+  } catch {
+    // Ignore malformed editor command wiring at runtime.
+  }
+}
+
+function isEditorLike(value: unknown): value is Editor {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as {
+    chain?: unknown;
+    isActive?: unknown;
+  };
+  return typeof candidate.chain === "function" && typeof candidate.isActive === "function";
 }
