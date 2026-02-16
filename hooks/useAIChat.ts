@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 
 interface StreamEvent {
-  type: "token" | "done" | "error";
+  type: "token" | "done" | "error" | "changes_applied";
   content: string;
 }
 
@@ -87,6 +87,9 @@ export function useAIChat(documentId: Id<"documents">) {
                   break;
                 case "done":
                   // AI message is saved server-side
+                  break;
+                case "changes_applied":
+                  // Document was updated by the AI
                   break;
                 case "error":
                   setError(event.content);

@@ -3,6 +3,7 @@ import { auth } from "./auth";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
 import { prosemirrorJsonToHtml } from "./lib/htmlSerializer";
+import { htmlToProsemirrorJson } from "./lib/htmlToJson";
 
 const http = httpRouter();
 
@@ -126,6 +127,33 @@ http.route({
             }
           } catch (e) {
             console.error("Failed to save AI message:", e);
+          }
+
+          // Try to apply AI edits to the document
+          try {
+            if (fullResponse && documentHtml) {
+              const newHtml = applyAIEdits(fullResponse, documentHtml);
+              if (newHtml && newHtml !== documentHtml) {
+                // Convert new HTML to ProseMirror JSON
+                const newDoc = htmlToProsemirrorJson(newHtml);
+                const newContent = JSON.stringify(newDoc);
+
+                // Update the document content cache
+                await ctx.runMutation(api.documents.updateContent, {
+                  id: documentId,
+                  content: newContent,
+                });
+
+                // Notify client that changes were applied
+                await writer.write(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ type: "changes_applied", content: "Document updated" })}\n\n`
+                  )
+                );
+              }
+            }
+          } catch (e) {
+            console.error("Failed to apply AI edits:", e);
           }
 
           // Release the lock
@@ -418,6 +446,55 @@ async function callGoogle(
   }
 
   return fullContent;
+}
+
+/**
+ * Apply AI edits from the response to the document HTML.
+ * Supports search/replace blocks and full HTML replacement.
+ */
+function applyAIEdits(response: string, originalHtml: string): string | null {
+  // Try search/replace blocks first
+  const blocks = extractSearchReplaceBlocks(response);
+  if (blocks.length > 0) {
+    let html = originalHtml;
+    let applied = false;
+    for (const block of blocks) {
+      if (html.includes(block.search)) {
+        html = html.replace(block.search, block.replace);
+        applied = true;
+      }
+    }
+    return applied ? html : null;
+  }
+
+  // Try full HTML
+  const fullHtml = extractFullHtmlFromResponse(response);
+  if (fullHtml) {
+    return fullHtml;
+  }
+
+  return null;
+}
+
+function extractSearchReplaceBlocks(
+  response: string
+): { search: string; replace: string }[] {
+  const blocks: { search: string; replace: string }[] = [];
+  const regex = /<<<SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)\n>>>/g;
+  let match;
+  while ((match = regex.exec(response)) !== null) {
+    blocks.push({
+      search: match[1].trim(),
+      replace: match[2].trim(),
+    });
+  }
+  return blocks;
+}
+
+function extractFullHtmlFromResponse(response: string): string | null {
+  const regex = /```html\n([\s\S]*?)\n```/;
+  const match = regex.exec(response);
+  return match ? match[1].trim() : null;
 }
 
 export default http;
