@@ -62,6 +62,9 @@ function loadState(): CommentState {
         return [];
       }
 
+      const normalizedCreatedAt = comment.createdAt;
+      const normalizedUpdatedAt = Math.max(comment.updatedAt, normalizedCreatedAt);
+
       return [
         {
           ...comment,
@@ -78,6 +81,8 @@ function loadState(): CommentState {
           resolved: Boolean(comment.resolved),
           anchorFrom: normalizedAnchorFrom,
           anchorTo: normalizedAnchorTo,
+          createdAt: normalizedCreatedAt,
+          updatedAt: normalizedUpdatedAt,
         },
       ];
     });

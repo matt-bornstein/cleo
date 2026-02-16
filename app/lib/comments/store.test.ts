@@ -309,4 +309,34 @@ describe("comments store", () => {
       }),
     ]);
   });
+
+  it("normalizes persisted comment timestamps to keep updatedAt >= createdAt", () => {
+    window.localStorage.setItem(
+      "plan00.comments.v1",
+      JSON.stringify({
+        comments: [
+          {
+            id: "time-comment",
+            documentId: "doc-times",
+            userId: "user-1",
+            content: "Time comment",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: 10,
+            updatedAt: 5,
+          },
+        ],
+      }),
+    );
+
+    expect(listComments("doc-times")).toEqual([
+      expect.objectContaining({
+        id: "time-comment",
+        createdAt: 10,
+        updatedAt: 10,
+      }),
+    ]);
+  });
 });
