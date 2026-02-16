@@ -16,8 +16,13 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
     event.preventDefault();
     const normalizedPrompt = prompt.trim();
     if (!normalizedPrompt) return;
+    const previousPrompt = prompt;
     setPrompt("");
-    await onSubmit(normalizedPrompt);
+    try {
+      await onSubmit(normalizedPrompt);
+    } catch {
+      setPrompt(previousPrompt);
+    }
   };
 
   return (

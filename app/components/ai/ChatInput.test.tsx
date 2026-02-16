@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
@@ -37,5 +37,20 @@ describe("ChatInput", () => {
 
     expect(screen.getByPlaceholderText("Ask AI to edit this document...")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Working..." })).toBeDisabled();
+  });
+
+  it("restores prompt text when submit handler rejects", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockRejectedValue(new Error("request failed"));
+
+    render(<ChatInput onSubmit={onSubmit} />);
+    const textarea = screen.getByPlaceholderText("Ask AI to edit this document...");
+
+    await user.type(textarea, "retry me");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => {
+      expect((textarea as HTMLTextAreaElement).value).toBe("retry me");
+    });
   });
 });
