@@ -87,6 +87,27 @@ describe("EditorIndexPage", () => {
     expect(pushMock).toHaveBeenCalledWith("/editor");
   });
 
+  it("falls back to /editor when created document id getter throws", async () => {
+    const user = userEvent.setup();
+    const createdDocument = Object.create(null) as { id: unknown };
+    Object.defineProperty(createdDocument, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    const create = vi.fn().mockReturnValue(createdDocument);
+    useDocumentsMock.mockReturnValue({
+      documents: [],
+      create,
+    });
+
+    render(<EditorIndexPage />);
+    await expect(
+      user.click(screen.getByRole("button", { name: "Open editor" })),
+    ).resolves.toBeUndefined();
+    expect(pushMock).toHaveBeenCalledWith("/editor");
+  });
+
   it("falls back to default local email when settings email is malformed", async () => {
     const user = userEvent.setup();
     const create = vi.fn().mockReturnValue({ id: "doc-created" });

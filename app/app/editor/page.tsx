@@ -28,13 +28,7 @@ export default function EditorIndexPage() {
     }
 
     const document = create("Untitled", currentUserEmail);
-    const nextDocumentId = normalizeDocumentId(
-      document &&
-        typeof document === "object" &&
-        "id" in document
-        ? (document as { id?: unknown }).id
-        : undefined,
-    );
+    const nextDocumentId = normalizeDocumentId(readCreatedDocumentId(document));
     safeNavigate(router, nextDocumentId ? `/editor/${nextDocumentId}` : "/editor");
   };
 
@@ -81,4 +75,16 @@ function normalizeDocumentId(value: unknown) {
   }
 
   return normalized;
+}
+
+function readCreatedDocumentId(document: unknown) {
+  if (!document || typeof document !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (document as { id?: unknown }).id;
+  } catch {
+    return undefined;
+  }
 }
