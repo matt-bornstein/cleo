@@ -234,6 +234,18 @@ describe("comments store", () => {
             updatedAt: 4,
           },
           {
+            id: "bad-time",
+            documentId: "doc-legacy",
+            userId: "user-3",
+            content: "Bad time",
+            anchorFrom: 0,
+            anchorTo: 0,
+            anchorText: "Anchor",
+            resolved: false,
+            createdAt: -1,
+            updatedAt: 4,
+          },
+          {
             id: "valid-comment",
             documentId: "doc-legacy",
             userId: "user-2",

@@ -112,8 +112,8 @@ describe("document store", () => {
             ownerEmail: " USER@EXAMPLE.COM ",
             createdAt: "1",
             updatedAt: 2,
-            lastDiffAt: "bad",
-            chatClearedAt: 10,
+            lastDiffAt: -5,
+            chatClearedAt: -10,
           },
           {
             id: "doc-\ninvalid",
@@ -228,8 +228,10 @@ describe("document store", () => {
     expect(getDocumentById("   ")).toBeUndefined();
     expect(updateDocumentTitle("   ", "Ignored")).toBeUndefined();
     expect(setDocumentLastDiffAt("doc-valid", Number.NaN)).toBeUndefined();
+    expect(setDocumentLastDiffAt("doc-valid", -1)).toBeUndefined();
     expect(setDocumentChatClearedAt("doc-\ninvalid", 123)).toBeUndefined();
     expect(setDocumentChatClearedAt("doc-valid", Number.NaN)).toBeUndefined();
+    expect(setDocumentChatClearedAt("doc-valid", -1)).toBeUndefined();
     expect(deleteDocument("doc-\ninvalid")).toBe(false);
   });
 

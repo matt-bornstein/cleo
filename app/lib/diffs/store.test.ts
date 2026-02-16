@@ -295,6 +295,15 @@ describe("diff store triggerIdleSave", () => {
             createdAt: 4,
           },
           {
+            id: "bad-time",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            patch: "@@ -0,0 +1 @@\n+text",
+            snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            source: "manual",
+            createdAt: -1,
+          },
+          {
             id: "bad-metadata",
             documentId: "doc-legacy",
             userId: "u-1",

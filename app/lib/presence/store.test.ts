@@ -97,6 +97,14 @@ describe("presence store", () => {
             updatedAt: 3,
           },
           {
+            id: "bad-time",
+            documentId: "doc-valid",
+            visitorId: "visitor-4",
+            userId: "user-3",
+            data: {},
+            updatedAt: -1,
+          },
+          {
             id: "duplicate-visitor",
             documentId: "doc-valid",
             visitorId: "visitor-1",

@@ -35,7 +35,8 @@ function loadState(): PresenceState {
           !normalizedVisitorId ||
           !isValidDocumentId(normalizedDocumentId) ||
           typeof entry.updatedAt !== "number" ||
-          !Number.isFinite(entry.updatedAt)
+          !Number.isFinite(entry.updatedAt) ||
+          entry.updatedAt < 0
         ) {
           return [];
         }

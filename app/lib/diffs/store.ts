@@ -54,7 +54,8 @@ function loadState(): DiffStoreState {
         typeof diff.patch !== "string" ||
         !isValidDocumentContentJson(diff.snapshotAfter) ||
         typeof diff.createdAt !== "number" ||
-        !Number.isFinite(diff.createdAt)
+        !Number.isFinite(diff.createdAt) ||
+        diff.createdAt < 0
       ) {
         return [];
       }

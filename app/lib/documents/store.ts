@@ -53,9 +53,13 @@ function loadState(): DocumentStoreState {
             : "Untitled";
         const now = Date.now();
         const hasValidCreatedAt =
-          typeof doc.createdAt === "number" && Number.isFinite(doc.createdAt);
+          typeof doc.createdAt === "number" &&
+          Number.isFinite(doc.createdAt) &&
+          doc.createdAt >= 0;
         const hasValidUpdatedAt =
-          typeof doc.updatedAt === "number" && Number.isFinite(doc.updatedAt);
+          typeof doc.updatedAt === "number" &&
+          Number.isFinite(doc.updatedAt) &&
+          doc.updatedAt >= 0;
         const normalizedCreatedAt =
           hasValidCreatedAt ? doc.createdAt : now;
         const normalizedUpdatedAt =
@@ -76,11 +80,15 @@ function loadState(): DocumentStoreState {
               createdAt: normalizedCreatedAt,
               updatedAt: normalizedUpdatedAt,
               lastDiffAt:
-                typeof doc.lastDiffAt === "number" && Number.isFinite(doc.lastDiffAt)
+                typeof doc.lastDiffAt === "number" &&
+                Number.isFinite(doc.lastDiffAt) &&
+                doc.lastDiffAt >= 0
                   ? doc.lastDiffAt
                   : undefined,
               chatClearedAt:
-                typeof doc.chatClearedAt === "number" && Number.isFinite(doc.chatClearedAt)
+                typeof doc.chatClearedAt === "number" &&
+                Number.isFinite(doc.chatClearedAt) &&
+                doc.chatClearedAt >= 0
                   ? doc.chatClearedAt
                   : undefined,
             },
@@ -240,7 +248,8 @@ export function setDocumentLastDiffAt(
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (
     !isValidDocumentId(normalizedDocumentId) ||
-    !Number.isFinite(timestamp)
+    !Number.isFinite(timestamp) ||
+    timestamp < 0
   ) {
     return undefined;
   }
@@ -271,7 +280,8 @@ export function setDocumentChatClearedAt(
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (
     !isValidDocumentId(normalizedDocumentId) ||
-    !Number.isFinite(timestamp)
+    !Number.isFinite(timestamp) ||
+    timestamp < 0
   ) {
     return undefined;
   }

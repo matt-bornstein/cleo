@@ -56,8 +56,10 @@ function loadState(): CommentState {
         !normalizedContent ||
         typeof comment.createdAt !== "number" ||
         !Number.isFinite(comment.createdAt) ||
+        comment.createdAt < 0 ||
         typeof comment.updatedAt !== "number" ||
-        !Number.isFinite(comment.updatedAt)
+        !Number.isFinite(comment.updatedAt) ||
+        comment.updatedAt < 0
       ) {
         return [];
       }
