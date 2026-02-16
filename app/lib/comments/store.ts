@@ -70,7 +70,11 @@ function loadState(): CommentState {
           userId: safeUserId,
           content: normalizedContent,
           anchorText: normalizedAnchorText,
-          parentCommentId: normalizedParentCommentId,
+          parentCommentId:
+            normalizedParentCommentId &&
+            normalizedParentCommentId !== normalizedCommentId
+              ? normalizedParentCommentId
+              : undefined,
           resolved: Boolean(comment.resolved),
           anchorFrom: normalizedAnchorFrom,
           anchorTo: normalizedAnchorTo,

@@ -242,7 +242,7 @@ describe("comments store", () => {
             anchorTo: 5,
             anchorText: "Anchor",
             resolved: false,
-            parentCommentId: "bad\nparent",
+            parentCommentId: "valid-comment",
             createdAt: 5,
             updatedAt: 6,
           },
