@@ -231,7 +231,12 @@ export function triggerIdleSave(params: {
     return { skipped: true, reason: "invalid_snapshot" as const };
   }
 
-  const dedupWindowMs = params.dedupWindowMs ?? 4000;
+  const dedupWindowMs =
+    typeof params.dedupWindowMs === "number" &&
+    Number.isFinite(params.dedupWindowMs) &&
+    params.dedupWindowMs >= 0
+      ? params.dedupWindowMs
+      : 4000;
   const now = Date.now();
   const document = getDocumentById(normalizedDocumentId);
   if (!document) {

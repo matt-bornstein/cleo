@@ -58,6 +58,31 @@ describe("diff store triggerIdleSave", () => {
     expect(getDocumentById(document.id)?.content).toBe(changedSnapshot);
   });
 
+  it("falls back to default dedup window for malformed dedup values", () => {
+    const document = createDocument("Changed doc");
+    const changedSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "hello" }] }],
+    });
+
+    const first = triggerIdleSave({
+      documentId: document.id,
+      snapshot: changedSnapshot,
+      dedupWindowMs: Number.NaN,
+    });
+    expect(first.skipped).toBe(false);
+
+    const immediateRetry = triggerIdleSave({
+      documentId: document.id,
+      snapshot: changedSnapshot,
+      dedupWindowMs: Number.NaN,
+    });
+    expect(immediateRetry).toEqual({
+      skipped: true,
+      reason: "dedup_window",
+    });
+  });
+
   it("creates an initial created diff and restores historical snapshot", () => {
     const document = createDocument("History doc");
     ensureCreatedDiff({
