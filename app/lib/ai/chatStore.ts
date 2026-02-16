@@ -1,3 +1,5 @@
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
+import { normalizeAIUserId } from "@/lib/ai/identity";
 import type { AIMessage } from "@/lib/types";
 
 const STORAGE_KEY = "plan00.aiMessages.v1";
@@ -35,19 +37,34 @@ function persistState(state: AIMessageState) {
 }
 
 export function listMessagesByDocument(documentId: string, chatClearedAt?: number) {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return [];
+
   const state = loadState();
   const clearedAt = chatClearedAt ?? 0;
   return state.messages
-    .filter((message) => message.documentId === documentId)
+    .filter((message) => message.documentId === normalizedDocumentId)
     .filter((message) => message.createdAt >= clearedAt)
     .sort((a, b) => a.createdAt - b.createdAt);
 }
 
 export function saveMessage(message: AIMessage) {
+  const normalizedDocumentId = normalizeDocumentId(message.documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) {
+    return null;
+  }
+
   const state = loadState();
-  state.messages = [...state.messages, message];
+  state.messages = [
+    ...state.messages,
+    {
+      ...message,
+      documentId: normalizedDocumentId,
+      userId: normalizeAIUserId(message.userId),
+    },
+  ];
   persistState(state);
-  return message;
+  return state.messages[state.messages.length - 1];
 }
 
 export function resetMessagesForTests() {

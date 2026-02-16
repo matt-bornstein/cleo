@@ -54,4 +54,28 @@ describe("ai chat store", () => {
     expect(visible).toHaveLength(1);
     expect(visible[0].id).toBe("m-4");
   });
+
+  it("normalizes document ids and rejects invalid document ids", () => {
+    const saved = saveMessage({
+      id: "m-5",
+      documentId: "  doc-normalized  ",
+      userId: "u-1",
+      role: "user",
+      content: "Hello",
+      createdAt: 3_000,
+    });
+    expect(saved?.documentId).toBe("doc-normalized");
+    expect(listMessagesByDocument("doc-normalized")).toHaveLength(1);
+
+    const rejected = saveMessage({
+      id: "m-6",
+      documentId: "   ",
+      userId: "u-1",
+      role: "assistant",
+      content: "Invalid doc",
+      createdAt: 3_100,
+    });
+    expect(rejected).toBeNull();
+    expect(listMessagesByDocument("   ")).toEqual([]);
+  });
 });
