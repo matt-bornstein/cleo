@@ -66,4 +66,39 @@ describe("useOnlineStatus", () => {
     const { unmount } = renderHook(() => useOnlineStatus());
     expect(() => unmount()).not.toThrow();
   });
+
+  it("does not throw when window event listener getters throw", () => {
+    const addEventListenerDescriptor = Object.getOwnPropertyDescriptor(
+      window,
+      "addEventListener",
+    );
+    const removeEventListenerDescriptor = Object.getOwnPropertyDescriptor(
+      window,
+      "removeEventListener",
+    );
+
+    try {
+      Object.defineProperty(window, "addEventListener", {
+        configurable: true,
+        get() {
+          throw new Error("addEventListener getter failed");
+        },
+      });
+      Object.defineProperty(window, "removeEventListener", {
+        configurable: true,
+        get() {
+          throw new Error("removeEventListener getter failed");
+        },
+      });
+
+      expect(() => renderHook(() => useOnlineStatus())).not.toThrow();
+    } finally {
+      if (addEventListenerDescriptor) {
+        Object.defineProperty(window, "addEventListener", addEventListenerDescriptor);
+      }
+      if (removeEventListenerDescriptor) {
+        Object.defineProperty(window, "removeEventListener", removeEventListenerDescriptor);
+      }
+    }
+  });
 });

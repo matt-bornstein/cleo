@@ -44,7 +44,16 @@ function getWindowEventTarget() {
   }
 
   try {
-    return window;
+    const addEventListener = readWindowEventMethod(window, "addEventListener");
+    const removeEventListener = readWindowEventMethod(window, "removeEventListener");
+    if (!addEventListener || !removeEventListener) {
+      return undefined;
+    }
+
+    return {
+      addEventListener,
+      removeEventListener,
+    };
   } catch {
     return undefined;
   }
@@ -71,5 +80,22 @@ function safeRemoveEventListener(
     target.removeEventListener(eventType, listener);
   } catch {
     return;
+  }
+}
+
+function readWindowEventMethod(
+  target: Window,
+  key: "addEventListener" | "removeEventListener",
+) {
+  try {
+    const candidate = target[key];
+    if (typeof candidate !== "function") {
+      return undefined;
+    }
+
+    return ((...args: unknown[]) =>
+      Reflect.apply(candidate, target, args)) as Window[typeof key];
+  } catch {
+    return undefined;
   }
 }
