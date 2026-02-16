@@ -14,5 +14,7 @@ describe("sanitizeShareRole", () => {
     expect(sanitizeShareRole("admin")).toBeUndefined();
     expect(sanitizeShareRole("   ")).toBeUndefined();
     expect(sanitizeShareRole(null)).toBeUndefined();
+    expect(sanitizeShareRole(123)).toBeUndefined();
+    expect(sanitizeShareRole("viewer\u0000")).toBeUndefined();
   });
 });
