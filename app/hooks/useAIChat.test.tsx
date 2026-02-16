@@ -562,6 +562,31 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects prompts containing disallowed control characters", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-control-prompt",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt(`bad${"\u0000"}prompt`);
+    });
+
+    expect(result.current.error).toBe("Prompt contains unsupported control characters.");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
   it("trims prompt text before persistence and diff attribution", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     createDiffMock.mockReturnValue({ id: "diff-trim-prompt" });
