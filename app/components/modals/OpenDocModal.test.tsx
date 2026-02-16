@@ -188,4 +188,51 @@ describe("OpenDocModal", () => {
     expect(screen.getByText("Untitled")).toBeInTheDocument();
     expect(screen.queryByText("Bad")).not.toBeInTheDocument();
   });
+
+  it("does not throw when document field getters throw during normalization", () => {
+    const documentWithThrowingFields = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(documentWithThrowingFields, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "title", {
+      get() {
+        throw new Error("title getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "content", {
+      get() {
+        throw new Error("content getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "createdAt", {
+      get() {
+        throw new Error("createdAt getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "updatedAt", {
+      get() {
+        throw new Error("updatedAt getter failed");
+      },
+    });
+    Object.defineProperty(documentWithThrowingFields, "ownerEmail", {
+      get() {
+        throw new Error("ownerEmail getter failed");
+      },
+    });
+
+    expect(() =>
+      render(
+        <OpenDocModal
+          open
+          onOpenChange={vi.fn()}
+          documents={[documentWithThrowingFields]}
+          onOpenDocument={vi.fn()}
+          onDeleteDocument={vi.fn()}
+        />,
+      ),
+    ).not.toThrow();
+    expect(screen.getByText("No documents found.")).toBeInTheDocument();
+  });
 });

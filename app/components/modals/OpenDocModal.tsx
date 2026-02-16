@@ -41,38 +41,43 @@ export function OpenDocModal({
         return [];
       }
       const candidate = document as Partial<AppDocument>;
-      const normalizedDocumentId = normalizeDocumentId(candidate.id);
+      const documentId = readDocumentField(candidate, "id");
+      const normalizedDocumentId = normalizeDocumentId(documentId);
       if (!isValidDocumentId(normalizedDocumentId)) {
         return [];
       }
 
+      const title = readDocumentField(candidate, "title");
       const normalizedTitle =
-        typeof candidate.title === "string" &&
-        candidate.title.trim().length > 0 &&
-        !hasControlChars(candidate.title.trim())
-          ? candidate.title.trim()
+        typeof title === "string" &&
+        title.trim().length > 0 &&
+        !hasControlChars(title.trim())
+          ? title.trim()
           : "Untitled";
+      const updatedAt = readDocumentField(candidate, "updatedAt");
       const normalizedUpdatedAt =
-        typeof candidate.updatedAt === "number" &&
-        Number.isFinite(candidate.updatedAt) &&
-        candidate.updatedAt >= 0
-          ? candidate.updatedAt
+        typeof updatedAt === "number" &&
+        Number.isFinite(updatedAt) &&
+        updatedAt >= 0
+          ? updatedAt
           : 0;
+      const content = readDocumentField(candidate, "content");
+      const createdAt = readDocumentField(candidate, "createdAt");
+      const ownerEmail = readDocumentField(candidate, "ownerEmail");
 
       return [
         {
           id: normalizedDocumentId,
           title: normalizedTitle,
-          content: typeof candidate.content === "string" ? candidate.content : "{}",
+          content: typeof content === "string" ? content : "{}",
           createdAt:
-            typeof candidate.createdAt === "number" &&
-            Number.isFinite(candidate.createdAt) &&
-            candidate.createdAt >= 0
-              ? candidate.createdAt
+            typeof createdAt === "number" &&
+            Number.isFinite(createdAt) &&
+            createdAt >= 0
+              ? createdAt
               : normalizedUpdatedAt,
           updatedAt: normalizedUpdatedAt,
-          ownerEmail:
-            typeof candidate.ownerEmail === "string" ? candidate.ownerEmail : undefined,
+          ownerEmail: typeof ownerEmail === "string" ? ownerEmail : undefined,
         },
       ];
     });
@@ -246,5 +251,16 @@ function safeOnDeleteDocument(onDeleteDocument: unknown, documentId: string) {
     onDeleteDocument(documentId);
   } catch {
     return;
+  }
+}
+
+function readDocumentField(
+  document: Partial<AppDocument>,
+  key: "id" | "title" | "content" | "createdAt" | "updatedAt" | "ownerEmail",
+) {
+  try {
+    return document[key];
+  } catch {
+    return undefined;
   }
 }
