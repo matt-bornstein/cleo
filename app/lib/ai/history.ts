@@ -30,24 +30,42 @@ export function getRecentMessages(messages: AIMessage[], limit = 5) {
     }));
 }
 
-function isValidHistoryMessage(message: AIMessage): message is AIMessage {
-  const normalizedId = typeof message.id === "string" ? message.id.trim() : "";
-  const normalizedUserId =
-    typeof message.userId === "string" ? message.userId.trim() : "";
-  const normalizedContent =
-    typeof message.content === "string" ? message.content : "";
-  return (
-    normalizedId.length > 0 &&
-    normalizedId.length <= MAX_USER_ID_LENGTH &&
-    !hasControlChars(normalizedId) &&
-    normalizedUserId.length > 0 &&
-    normalizedUserId.length <= MAX_USER_ID_LENGTH &&
-    !hasControlChars(normalizedUserId) &&
-    normalizedContent.length > 0 &&
-    normalizedContent.length <= MAX_MESSAGE_CONTENT_LENGTH &&
-    !hasDisallowedTextControlChars(normalizedContent) &&
-    Number.isFinite(message.createdAt) &&
-    message.createdAt >= 0 &&
-    (message.role === "user" || message.role === "assistant")
-  );
+function isValidHistoryMessage(message: unknown): message is AIMessage {
+  if (!message || typeof message !== "object") {
+    return false;
+  }
+
+  const candidate = message as {
+    id?: unknown;
+    userId?: unknown;
+    role?: unknown;
+    content?: unknown;
+    createdAt?: unknown;
+  };
+
+  try {
+    const normalizedId = typeof candidate.id === "string" ? candidate.id.trim() : "";
+    const normalizedUserId =
+      typeof candidate.userId === "string" ? candidate.userId.trim() : "";
+    const normalizedContent =
+      typeof candidate.content === "string" ? candidate.content : "";
+
+    return (
+      normalizedId.length > 0 &&
+      normalizedId.length <= MAX_USER_ID_LENGTH &&
+      !hasControlChars(normalizedId) &&
+      normalizedUserId.length > 0 &&
+      normalizedUserId.length <= MAX_USER_ID_LENGTH &&
+      !hasControlChars(normalizedUserId) &&
+      normalizedContent.length > 0 &&
+      normalizedContent.length <= MAX_MESSAGE_CONTENT_LENGTH &&
+      !hasDisallowedTextControlChars(normalizedContent) &&
+      typeof candidate.createdAt === "number" &&
+      Number.isFinite(candidate.createdAt) &&
+      candidate.createdAt >= 0 &&
+      (candidate.role === "user" || candidate.role === "assistant")
+    );
+  } catch {
+    return false;
+  }
 }

@@ -168,4 +168,30 @@ describe("getRecentMessages", () => {
       { role: "assistant", content: "ok", userId: "user-1" },
     ]);
   });
+
+  it("does not throw when history entries expose throwing getters", () => {
+    const throwingEntry = {} as { id?: string };
+    Object.defineProperty(throwingEntry, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+
+    const messages = [
+      {
+        id: "valid",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "assistant",
+        content: "ok",
+        createdAt: 1,
+      },
+      throwingEntry,
+    ] as unknown as AIMessage[];
+
+    expect(() => getRecentMessages(messages, 5)).not.toThrow();
+    expect(getRecentMessages(messages, 5)).toEqual([
+      { role: "assistant", content: "ok", userId: "user-1" },
+    ]);
+  });
 });
