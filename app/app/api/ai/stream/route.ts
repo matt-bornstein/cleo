@@ -13,6 +13,7 @@ import {
 } from "@/lib/editor/serialization";
 
 export const runtime = "nodejs";
+const MAX_MESSAGE_COUNT = 100;
 
 type StreamRequestPayload = {
   documentId: string;
@@ -75,6 +76,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
   }
 
   if (!Array.isArray(rawMessages)) return null;
+  if (rawMessages.length > MAX_MESSAGE_COUNT) return null;
   const messages = rawMessages.map((message) => {
     if (!message || typeof message !== "object") return null;
     const item = message as Record<string, unknown>;

@@ -250,6 +250,31 @@ describe("POST /api/ai/stream", () => {
     }
   });
 
+  it("returns bad request when message history exceeds limit", async () => {
+    const oversizedMessages = Array.from({ length: 101 }, (_, index) => ({
+      role: "user",
+      content: `message-${index}`,
+      userId: "alice@example.com",
+    }));
+
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        createRequestBody({
+          messages: oversizedMessages,
+        }),
+      ),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
   it("normalizes trimmed fields before lock lookup", async () => {
     aiLockManager.acquire("doc-trim", "alice");
 
