@@ -15,6 +15,7 @@ import { hasDocumentAccess } from "@/lib/permissions/store";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
+import { hasControlChars } from "@/lib/validators/controlChars";
 import { isValidEmail } from "@/lib/validators/email";
 
 export function useDocuments(
@@ -229,7 +230,7 @@ function safeNormalizeListedDocument(document: unknown): AppDocument | null {
 
   const id = safeReadObjectField(document, "id");
   const normalizedId = typeof id === "string" ? id.trim() : "";
-  if (!normalizedId) {
+  if (!normalizedId || hasControlChars(normalizedId)) {
     return null;
   }
 

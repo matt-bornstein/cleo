@@ -307,6 +307,23 @@ describe("useDocuments", () => {
     expect(result.current.documents[0]?.content).toContain('"type":"doc"');
   });
 
+  it("drops listed documents with control characters in ids", () => {
+    listDocumentsMock.mockReturnValue([
+      {
+        id: "doc-\ninvalid",
+        title: "Bad",
+        content: "{}",
+        ownerEmail: "owner@example.com",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]);
+    hasDocumentAccessMock.mockReturnValue(true);
+
+    const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
+    expect(result.current.documents).toEqual([]);
+  });
+
   it("returns safe fallbacks when document operation return payload getters throw", () => {
     const malformedOperationDocument = Object.create(null) as Record<string, unknown>;
     Object.defineProperty(malformedOperationDocument, "id", {
@@ -332,6 +349,35 @@ describe("useDocuments", () => {
         expect(result.current.setChatClearedAt("doc-1", 1)).toBeUndefined();
       });
     }).not.toThrow();
+    expect(listDocumentsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns safe fallbacks when operation returns control-char document ids", () => {
+    const malformedIdDocument = {
+      id: "doc-\ninvalid",
+      title: "Title",
+      content: "{}",
+      ownerEmail: "owner@example.com",
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    createDocumentMock.mockReturnValue(malformedIdDocument);
+    getDocumentByIdMock.mockReturnValue(malformedIdDocument);
+    updateDocumentTitleMock.mockReturnValue(malformedIdDocument);
+    updateDocumentContentMock.mockReturnValue(malformedIdDocument);
+    setDocumentChatClearedAtMock.mockReturnValue(malformedIdDocument);
+
+    const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
+    expect(listDocumentsMock).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      expect(result.current.create("Title", "owner@example.com")).toBeNull();
+      expect(result.current.getById("doc-1")).toBeUndefined();
+      expect(result.current.updateTitle("doc-1", "Next")).toBeUndefined();
+      expect(result.current.updateContent("doc-1", "{}")).toBeUndefined();
+      expect(result.current.setChatClearedAt("doc-1", 1)).toBeUndefined();
+    });
+
     expect(listDocumentsMock).toHaveBeenCalledTimes(1);
   });
 });
