@@ -40,6 +40,18 @@ describe("SettingsModal", () => {
     expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 
+  it("hides sign out action when onSignOut is malformed non-function", () => {
+    render(
+      <SettingsModal
+        open
+        onOpenChange={vi.fn()}
+        onSignOut={123 as unknown as () => Promise<void>}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+  });
+
   it("does not throw when onSaved callback is malformed non-function", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();

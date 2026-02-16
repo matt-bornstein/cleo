@@ -29,6 +29,7 @@ export function SettingsModal({
   onSignOut,
 }: SettingsModalProps) {
   const [settings, setSettings] = useState<AppUserSettings>(getSettings());
+  const hasSignOutHandler = typeof onSignOut === "function";
 
   return (
     <Dialog
@@ -124,8 +125,15 @@ export function SettingsModal({
             </label>
           </div>
           <div className="flex justify-end gap-2">
-            {onSignOut ? (
-              <Button variant="outline" onClick={() => void onSignOut()}>
+            {hasSignOutHandler ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (typeof onSignOut === "function") {
+                    void onSignOut();
+                  }
+                }}
+              >
                 Sign out
               </Button>
             ) : null}
