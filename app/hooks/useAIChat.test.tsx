@@ -395,6 +395,23 @@ describe("useAIChat", () => {
     expect(result.current.selectedModel).toBe("gpt-4o");
   });
 
+  it("falls back to default model when defaultModel is malformed non-string", () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-model-malformed-default",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+        defaultModel: 123,
+      }),
+    );
+
+    expect(result.current.selectedModel).toBe("gpt-4o");
+    expect(getModelConfigMock).not.toHaveBeenCalledWith(123);
+  });
+
   it("normalizes unknown selected model updates to known ids", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const { result } = renderHook(() =>
@@ -411,6 +428,25 @@ describe("useAIChat", () => {
     });
 
     expect(result.current.selectedModel).toBe("gpt-4o");
+  });
+
+  it("falls back to default model when selected model update is malformed non-string", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-model-update-malformed",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      result.current.setSelectedModel(123 as unknown as string);
+    });
+
+    expect(result.current.selectedModel).toBe("gpt-4o");
+    expect(getModelConfigMock).not.toHaveBeenCalledWith(123);
   });
 
   it("normalizes whitespace current user id for headers and messages", async () => {

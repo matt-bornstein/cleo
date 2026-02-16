@@ -22,7 +22,7 @@ type UseAIChatArgs = {
   currentDocumentContent: string;
   onApplyContent: (nextContent: string) => void;
   currentUserId: string;
-  defaultModel?: string;
+  defaultModel?: unknown;
   chatClearedAt?: number;
   onClearChat?: (clearedAt: number) => void;
 };
@@ -50,9 +50,11 @@ function createMessage(
   };
 }
 
-function normalizeModelId(modelId?: string) {
-  if (!modelId) return DEFAULT_MODEL;
-  return getModelConfig(modelId).id;
+function normalizeModelId(modelId?: unknown) {
+  if (typeof modelId !== "string" || modelId.trim().length === 0) {
+    return DEFAULT_MODEL;
+  }
+  return getModelConfig(modelId.trim()).id;
 }
 
 function updateMessageContent(messages: AIMessage[], messageId: string, content: string) {
@@ -146,7 +148,7 @@ export function useAIChat({
     }
   }, [defaultModel]);
 
-  const updateSelectedModel = useCallback((modelId: string) => {
+  const updateSelectedModel = useCallback((modelId: unknown) => {
     setSelectedModel(normalizeModelId(modelId));
   }, []);
 
