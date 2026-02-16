@@ -32,18 +32,79 @@ export function downloadFile(content: unknown, filename: unknown, mimeType: unkn
 
   try {
     const blob = new Blob([normalizedContent], { type: normalizedMimeType });
-    objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = normalizedFilename;
+    objectUrl = safeCreateObjectURL(blob);
+    if (typeof objectUrl !== "string" || objectUrl.length === 0) {
+      return;
+    }
+    const anchor = safeCreateDownloadAnchor();
+    if (!anchor) {
+      return;
+    }
+    safePrepareAnchor(anchor, objectUrl, normalizedFilename);
+    safeClickAnchor(anchor);
+  } catch {
+    return;
+  } finally {
+    safeRevokeObjectURL(objectUrl);
+  }
+}
+
+function safeCreateObjectURL(blob: Blob) {
+  if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") {
+    return undefined;
+  }
+
+  try {
+    return URL.createObjectURL(blob);
+  } catch {
+    return undefined;
+  }
+}
+
+function safeCreateDownloadAnchor() {
+  if (typeof document === "undefined" || typeof document.createElement !== "function") {
+    return null;
+  }
+
+  try {
+    return document.createElement("a");
+  } catch {
+    return null;
+  }
+}
+
+function safePrepareAnchor(anchor: HTMLAnchorElement, href: string, download: string) {
+  try {
+    anchor.href = href;
+    anchor.download = download;
+  } catch {
+    return;
+  }
+}
+
+function safeClickAnchor(anchor: HTMLAnchorElement) {
+  try {
     if (typeof anchor.click === "function") {
       anchor.click();
     }
   } catch {
     return;
-  } finally {
-    if (typeof objectUrl === "string" && objectUrl.length > 0) {
-      URL.revokeObjectURL(objectUrl);
-    }
+  }
+}
+
+function safeRevokeObjectURL(objectUrl: unknown) {
+  if (
+    typeof objectUrl !== "string" ||
+    objectUrl.length === 0 ||
+    typeof URL === "undefined" ||
+    typeof URL.revokeObjectURL !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    return;
   }
 }

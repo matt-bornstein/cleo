@@ -75,4 +75,25 @@ describe("export helpers", () => {
     expect(() => downloadFile("content", "file.txt", "text/plain")).not.toThrow();
     expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:local-test");
   });
+
+  it("does not throw when creating download anchor throws", () => {
+    vi.spyOn(document, "createElement").mockImplementation(() => {
+      throw new Error("createElement failed");
+    });
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:local-test");
+
+    expect(() => downloadFile("content", "file.txt", "text/plain")).not.toThrow();
+  });
+
+  it("does not throw when object URL revoke throws", () => {
+    const click = vi.fn();
+    const anchor = { href: "", download: "", click } as unknown as HTMLAnchorElement;
+    vi.spyOn(document, "createElement").mockReturnValue(anchor as HTMLElementTagNameMap["a"]);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:local-test");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {
+      throw new Error("revokeObjectURL failed");
+    });
+
+    expect(() => downloadFile("content", "file.txt", "text/plain")).not.toThrow();
+  });
 });
