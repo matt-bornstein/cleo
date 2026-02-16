@@ -87,4 +87,18 @@ describe("useComments", () => {
       }),
     );
   });
+
+  it("short-circuits comment operations for invalid document ids", () => {
+    const { result } = renderHook(() => useComments("   ", "reviewer@example.com"));
+
+    expect(result.current.comments).toEqual([]);
+    expect(listCommentsMock).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.createComment("Ignored", "Anchor");
+      result.current.createReply("parent-1", "Ignored reply");
+    });
+
+    expect(addCommentMock).not.toHaveBeenCalled();
+  });
 });
