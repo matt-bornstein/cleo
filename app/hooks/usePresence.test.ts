@@ -53,6 +53,11 @@ describe("filterStalePresence", () => {
     const active = filterStalePresence(entries, now, 10_000);
     expect(active).toEqual([{ id: "near-future", updatedAt: now + 2_000 }]);
   });
+
+  it("returns empty array for malformed non-array entries input", () => {
+    const active = filterStalePresence("bad" as unknown as Array<{ updatedAt: number }>, 10_000);
+    expect(active).toEqual([]);
+  });
 });
 
 describe("usePresence", () => {

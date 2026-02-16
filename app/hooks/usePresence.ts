@@ -33,6 +33,9 @@ export function filterStalePresence<
     updatedAt: number;
   },
 >(entries: T[], now: number, maxAgeMs = 10_000) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
   const safeNow = Number.isFinite(now) ? Math.max(0, now) : 0;
   const safeMaxAge =
     Number.isFinite(maxAgeMs) && maxAgeMs >= 0 ? maxAgeMs : 10_000;
