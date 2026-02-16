@@ -18,8 +18,8 @@ import { hasDisallowedTextControlChars } from "@/lib/validators/controlChars";
 const DEFAULT_MODEL = "gpt-4o";
 
 type UseAIChatArgs = {
-  documentId: string;
-  currentDocumentContent: string;
+  documentId: unknown;
+  currentDocumentContent: unknown;
   onApplyContent: unknown;
   currentUserId: unknown;
   defaultModel?: unknown;
@@ -126,8 +126,12 @@ export function useAIChat({
     [documentId],
   );
   const hasValidDocumentId = useMemo(
-    () => isValidDocumentId(documentId),
-    [documentId],
+    () => isValidDocumentId(normalizedDocumentId),
+    [normalizedDocumentId],
+  );
+  const normalizedCurrentDocumentContent = useMemo(
+    () => (typeof currentDocumentContent === "string" ? currentDocumentContent : ""),
+    [currentDocumentContent],
   );
   const normalizedCurrentUserId = useMemo(
     () => normalizeAIUserId(currentUserId),
@@ -216,7 +220,7 @@ export function useAIChat({
             documentId: normalizedDocumentId,
             prompt: normalizedPrompt,
             model: selectedModel,
-            documentContent: currentDocumentContent,
+            documentContent: normalizedCurrentDocumentContent,
             messages: getRecentMessages(
               listMessagesByDocument(normalizedDocumentId, normalizedChatClearedAt),
             ),
@@ -242,12 +246,13 @@ export function useAIChat({
           }
 
           if (payload.type === "done") {
-            const didContentChange = payload.nextContent !== currentDocumentContent;
+            const didContentChange =
+              payload.nextContent !== normalizedCurrentDocumentContent;
             const diff = didContentChange
               ? createDiff({
                   documentId: normalizedDocumentId,
                   userId: normalizedCurrentUserId,
-                  previousSnapshot: currentDocumentContent,
+                  previousSnapshot: normalizedCurrentDocumentContent,
                   snapshotAfter: payload.nextContent,
                   source: "ai",
                   aiPrompt: normalizedPrompt,
@@ -316,8 +321,8 @@ export function useAIChat({
       }
     },
     [
-      currentDocumentContent,
       hasValidDocumentId,
+      normalizedCurrentDocumentContent,
       normalizedDocumentId,
       normalizedChatClearedAt,
       normalizedCurrentUserId,

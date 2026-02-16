@@ -856,6 +856,32 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects prompts when document id is malformed non-string", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: 42 as unknown as string,
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Help improve this");
+    });
+
+    expect(result.current.error).toBe("Document is unavailable.");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).not.toHaveBeenCalled();
+    expect(listMessagesByDocumentMock).not.toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
+
   it("rejects oversized prompts without sending requests", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi.fn();
@@ -946,6 +972,49 @@ describe("useAIChat", () => {
         aiPrompt: "polish this paragraph",
       }),
     );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("normalizes malformed non-string current document content before diffing", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-malformed-current-content" });
+    const fetchMock = vi.fn().mockResolvedValue(
+      createStreamResponse([
+        {
+          type: "done",
+          assistantMessage: "Updated.",
+          nextContent: "<p>Updated content</p>",
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onApplyContent = vi.fn();
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-malformed-content",
+        currentDocumentContent: 123 as unknown as string,
+        onApplyContent,
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Improve this");
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      documentContent?: string;
+    };
+    expect(requestBody.documentContent).toBe("");
+    expect(createDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previousSnapshot: "",
+      }),
+    );
+    expect(onApplyContent).toHaveBeenCalledWith("<p>Updated content</p>");
 
     vi.unstubAllGlobals();
   });
