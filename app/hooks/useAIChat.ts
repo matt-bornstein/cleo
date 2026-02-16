@@ -22,6 +22,7 @@ type UseAIChatArgs = {
 
 function createMessage(
   documentId: string,
+  userId: string,
   role: AIMessage["role"],
   content: string,
   model?: string,
@@ -29,7 +30,7 @@ function createMessage(
   return {
     id: crypto.randomUUID(),
     documentId,
-    userId: "local-dev-user",
+    userId,
     role,
     content,
     model,
@@ -69,8 +70,14 @@ export function useAIChat({
 
   const sendPrompt = useCallback(
     async (prompt: string) => {
-      const userMessage = createMessage(documentId, "user", prompt);
-      const assistantDraft = createMessage(documentId, "assistant", "", selectedModel);
+      const userMessage = createMessage(documentId, currentUserId, "user", prompt);
+      const assistantDraft = createMessage(
+        documentId,
+        "assistant",
+        "assistant",
+        "",
+        selectedModel,
+      );
       setMessages((prev) => [...prev, userMessage, assistantDraft]);
       saveMessage(userMessage);
       setIsLoading(true);

@@ -57,9 +57,9 @@ describe("getRecentMessages", () => {
     const recent = getRecentMessages(messages, 3);
 
     expect(recent).toEqual([
-      { role: "assistant", content: "d" },
-      { role: "user", content: "e" },
-      { role: "assistant", content: "f" },
+      { role: "assistant", content: "d", userId: "user-1" },
+      { role: "user", content: "e", userId: "user-1" },
+      { role: "assistant", content: "f", userId: "user-1" },
     ]);
   });
 

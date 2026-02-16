@@ -8,5 +8,6 @@ export function getRecentMessages(messages: AIMessage[], limit = 5) {
     .map((message) => ({
       role: message.role,
       content: message.content,
+      userId: message.userId,
     }));
 }

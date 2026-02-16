@@ -43,4 +43,22 @@ describe("AILockManager", () => {
     expect(manager.getStatus("doc-3", 120_000)).toEqual({ locked: false });
     nowSpy.mockRestore();
   });
+
+  it("allows takeover when lock becomes stale", () => {
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValue(1_000);
+    const manager = new AILockManager();
+    manager.acquire("doc-4", "alice", 100);
+
+    nowSpy.mockReturnValue(2_000);
+    const takeover = manager.acquire("doc-4", "bob", 100);
+    expect(takeover).toEqual({ acquired: true });
+    const status = manager.getStatus("doc-4", 100);
+    expect(status).toEqual({
+      locked: true,
+      lockedBy: "bob",
+      lockedAt: 2_000,
+    });
+    nowSpy.mockRestore();
+  });
 });

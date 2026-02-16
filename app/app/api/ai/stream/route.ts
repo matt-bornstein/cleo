@@ -18,7 +18,11 @@ type StreamRequestPayload = {
   model: string;
   prompt: string;
   documentContent: string;
-  messages: Array<{ role: "user" | "assistant" | "system"; content: string }>;
+  messages: Array<{
+    role: "user" | "assistant" | "system";
+    content: string;
+    userId?: string;
+  }>;
 };
 
 export async function GET(request: Request) {
@@ -36,7 +40,18 @@ export async function GET(request: Request) {
 function buildPrompt(payload: StreamRequestPayload, documentHtml: string) {
   const history = payload.messages
     .slice(-5)
-    .map((message) => `[${message.role}]: ${message.content}`)
+    .map((message) => {
+      if (message.role === "user") {
+        const author = message.userId ?? "User";
+        return `[${author}]: ${message.content}`;
+      }
+
+      if (message.role === "assistant") {
+        return `[Assistant]: ${message.content}`;
+      }
+
+      return `[System]: ${message.content}`;
+    })
     .join("\n");
 
   return [
