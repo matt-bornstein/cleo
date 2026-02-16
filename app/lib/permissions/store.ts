@@ -111,7 +111,7 @@ export function getRoleForUser(
   const match = loadState().permissions.find(
     (entry) =>
       entry.documentId === normalizedDocumentId &&
-      entry.email.trim().toLowerCase() === normalizedEmail,
+      entry.email === normalizedEmail,
   );
   return match?.role ?? "viewer";
 }
@@ -138,7 +138,7 @@ export function hasDocumentAccess(
   return loadState().permissions.some(
     (entry) =>
       entry.documentId === normalizedDocumentId &&
-      entry.email.trim().toLowerCase() === normalizedEmail,
+      entry.email === normalizedEmail,
   );
 }
 
@@ -149,7 +149,7 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
   }
 
   const normalizedEmail = normalizeEmailOrUndefined(email);
-  if (!normalizedEmail) {
+  if (!normalizedEmail || !ALLOWED_ROLES.has(role)) {
     return null;
   }
 
@@ -157,7 +157,7 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
   const index = state.permissions.findIndex(
     (entry) =>
       entry.documentId === normalizedDocumentId &&
-      entry.email.trim().toLowerCase() === normalizedEmail,
+      entry.email === normalizedEmail,
   );
   if (index === -1) {
     const permission: PermissionEntry = {

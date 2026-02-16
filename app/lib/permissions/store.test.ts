@@ -145,6 +145,7 @@ describe("permissions store", () => {
 
   it("rejects invalid document ids and malformed user emails", () => {
     expect(upsertPermission("   ", "user@example.com", "viewer")).toBeNull();
+    expect(upsertPermission("doc-1", "user@example.com", "admin" as never)).toBeNull();
     expect(upsertPermission("doc-1", "bad\nemail@example.com", "viewer")).toBeNull();
     expect(listPermissions("doc-\ninvalid")).toEqual([]);
     expect(getRoleForUser("doc-\ninvalid", "user@example.com")).toBe("viewer");
