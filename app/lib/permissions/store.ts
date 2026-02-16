@@ -57,10 +57,14 @@ function loadState(): PermissionState {
         }
 
         const candidate = entry as Partial<PermissionEntry>;
-        const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
-        const normalizedEmail = normalizeEmailOrUndefined(candidate.email);
-        const normalizedPermissionId = normalizePermissionId(candidate.id);
-        const normalizedRole = normalizePermissionRole(candidate.role);
+        const documentId = safeReadPersistedPermissionField(candidate, "documentId");
+        const email = safeReadPersistedPermissionField(candidate, "email");
+        const id = safeReadPersistedPermissionField(candidate, "id");
+        const role = safeReadPersistedPermissionField(candidate, "role");
+        const normalizedDocumentId = normalizeDocumentId(documentId);
+        const normalizedEmail = normalizeEmailOrUndefined(email);
+        const normalizedPermissionId = normalizePermissionId(id);
+        const normalizedRole = normalizePermissionRole(role);
         if (
           !isValidDocumentId(normalizedDocumentId) ||
           !normalizedEmail ||
@@ -293,5 +297,16 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeReadPersistedPermissionField(
+  permission: Partial<PermissionEntry>,
+  key: "id" | "documentId" | "email" | "role",
+) {
+  try {
+    return permission[key];
+  } catch {
+    return undefined;
   }
 }

@@ -212,6 +212,37 @@ describe("permissions store", () => {
     ]);
   });
 
+  it("skips persisted permissions when field getters throw during load", () => {
+    const permissionWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(permissionWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(permissionWithThrowingGetters, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+    Object.defineProperty(permissionWithThrowingGetters, "email", {
+      get() {
+        throw new Error("email getter failed");
+      },
+    });
+    Object.defineProperty(permissionWithThrowingGetters, "role", {
+      get() {
+        throw new Error("role getter failed");
+      },
+    });
+
+    window.localStorage.setItem("plan00.permissions.v1", "{}");
+    vi.spyOn(JSON, "parse").mockReturnValue({
+      permissions: [permissionWithThrowingGetters],
+    });
+
+    expect(listPermissions("doc-valid")).toEqual([]);
+  });
+
   it("returns empty when persisted permissions container is non-array", () => {
     window.localStorage.setItem(
       "plan00.permissions.v1",
