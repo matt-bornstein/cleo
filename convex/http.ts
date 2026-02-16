@@ -2,6 +2,7 @@ import { httpRouter } from "convex/server";
 import { auth } from "./auth";
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
+import { prosemirrorJsonToHtml } from "./lib/htmlSerializer";
 
 const http = httpRouter();
 
@@ -54,8 +55,14 @@ http.route({
         );
       }
 
-      // Build the document content (ProseMirror JSON -> simple text representation)
-      const documentHtml = doc.content;
+      // Build the document HTML from ProseMirror JSON
+      let documentHtml: string;
+      try {
+        const parsed = JSON.parse(doc.content);
+        documentHtml = prosemirrorJsonToHtml(parsed);
+      } catch {
+        documentHtml = doc.content; // fallback to raw content
+      }
 
       // Build messages for the AI
       const systemPrompt = getSystemPrompt();
