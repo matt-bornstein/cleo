@@ -14,6 +14,7 @@ import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.diffs.v1";
 const dmp = new diff_match_patch();
+const DISALLOWED_PROMPT_CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 type DiffStoreState = {
   diffs: DiffRecord[];
@@ -278,7 +279,8 @@ function normalizeDiffMetadata(aiPrompt: unknown, aiModel: unknown) {
   const normalizedPrompt = typeof aiPrompt === "string" ? aiPrompt.trim() : "";
   const normalizedModel = typeof aiModel === "string" ? aiModel.trim() : "";
   const hasInvalidPrompt =
-    normalizedPrompt.length > MAX_PROMPT_LENGTH || hasControlChars(normalizedPrompt);
+    normalizedPrompt.length > MAX_PROMPT_LENGTH ||
+    DISALLOWED_PROMPT_CONTROL_CHARS_REGEX.test(normalizedPrompt);
   const hasInvalidModel = hasControlChars(normalizedModel);
   if (hasInvalidPrompt || hasInvalidModel) {
     return null;

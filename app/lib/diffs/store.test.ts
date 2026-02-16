@@ -179,6 +179,13 @@ describe("diff store triggerIdleSave", () => {
       source: "manual",
       aiPrompt: "a".repeat(4_001),
     });
+    const multilinePrompt = createDiff({
+      documentId: document.id,
+      userId: "reviewer@example.com",
+      snapshotAfter: snapshot,
+      source: "manual",
+      aiPrompt: "Line one\nLine two",
+    });
     const controlCharModel = createDiff({
       documentId: document.id,
       userId: "reviewer@example.com",
@@ -189,6 +196,8 @@ describe("diff store triggerIdleSave", () => {
 
     expect(invalidSource).toBeNull();
     expect(oversizedPrompt).toBeNull();
+    expect(multilinePrompt).not.toBeNull();
+    expect(multilinePrompt?.aiPrompt).toBe("Line one\nLine two");
     expect(controlCharModel).toBeNull();
   });
 
@@ -266,7 +275,7 @@ describe("diff store triggerIdleSave", () => {
             patch: "@@ -0,0 +1 @@\n+text",
             snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
             source: "manual",
-            aiPrompt: "bad\nprompt",
+            aiPrompt: `bad${"\u0000"}prompt`,
             createdAt: 4,
           },
           {
