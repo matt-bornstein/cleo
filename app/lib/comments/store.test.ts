@@ -4,6 +4,7 @@ import {
   resetCommentsForTests,
   resolveComment,
 } from "@/lib/comments/store";
+import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { vi } from "vitest";
 
 function safeClearLocalStorage() {
@@ -253,6 +254,56 @@ describe("comments store", () => {
     const comment = addComment(123 as unknown as never);
 
     expect(comment).toBeNull();
+  });
+
+  it("handles addComment payload getter traps safely", () => {
+    const payloadWithThrowingDocumentId = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingDocumentId, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingDocumentId, "content", {
+      value: "Valid content",
+    });
+    Object.defineProperty(payloadWithThrowingDocumentId, "anchorText", {
+      value: "Anchor",
+    });
+
+    expect(
+      addComment(payloadWithThrowingDocumentId as unknown as Parameters<typeof addComment>[0]),
+    ).toBeNull();
+
+    const payloadWithThrowingOptionalFields = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingOptionalFields, "documentId", {
+      value: "doc-getter-safe",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "content", {
+      value: "Valid content",
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "anchorText", {
+      get() {
+        throw new Error("anchorText getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "userId", {
+      get() {
+        throw new Error("userId getter failed");
+      },
+    });
+    Object.defineProperty(payloadWithThrowingOptionalFields, "parentCommentId", {
+      get() {
+        throw new Error("parentCommentId getter failed");
+      },
+    });
+
+    const comment = addComment(
+      payloadWithThrowingOptionalFields as unknown as Parameters<typeof addComment>[0],
+    );
+    expect(comment).not.toBeNull();
+    expect(comment?.anchorText).toBe("Comment");
+    expect(comment?.userId).toBe(DEFAULT_LOCAL_USER_ID);
+    expect(comment?.parentCommentId).toBeUndefined();
   });
 
   it("falls back anchor text when runtime anchor input is non-string", () => {

@@ -199,20 +199,24 @@ export function addComment(
     return null;
   }
 
-  const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+  const documentId = safeReadAddCommentField(candidate, "documentId");
+  const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) {
     return null;
   }
+  const content = safeReadAddCommentField(candidate, "content");
   const normalizedContent =
-    typeof candidate.content === "string" ? candidate.content.trim() : "";
+    typeof content === "string" ? content.trim() : "";
   if (
     !normalizedContent ||
     hasDisallowedTextControlChars(normalizedContent)
   ) {
     return null;
   }
-  const normalizedAnchorText = normalizeAnchorText(candidate.anchorText);
-  const normalizedParentCommentId = normalizeCommentReferenceId(candidate.parentCommentId);
+  const anchorText = safeReadAddCommentField(candidate, "anchorText");
+  const normalizedAnchorText = normalizeAnchorText(anchorText);
+  const parentCommentId = safeReadAddCommentField(candidate, "parentCommentId");
+  const normalizedParentCommentId = normalizeCommentReferenceId(parentCommentId);
 
   const state = loadState();
   const safeParentCommentId =
@@ -225,8 +229,9 @@ export function addComment(
       ? normalizedParentCommentId
       : undefined;
   const now = safeNow();
+  const userId = safeReadAddCommentField(candidate, "userId");
   const normalizedUserId =
-    typeof candidate.userId === "string" ? candidate.userId.trim() : undefined;
+    typeof userId === "string" ? userId.trim() : undefined;
   const comment: CommentRecord = {
     id: generateLocalId(),
     documentId: normalizedDocumentId,
@@ -337,6 +342,23 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function safeReadAddCommentField(
+  params: {
+    documentId?: unknown;
+    content?: unknown;
+    anchorText?: unknown;
+    parentCommentId?: unknown;
+    userId?: unknown;
+  },
+  key: "documentId" | "content" | "anchorText" | "parentCommentId" | "userId",
+) {
+  try {
+    return params[key];
+  } catch {
+    return undefined;
   }
 }
 
