@@ -35,6 +35,7 @@ export function filterStalePresence<
 }
 
 export function usePresence(documentId: string) {
+  const normalizedDocumentId = documentId.trim();
   const [visitorId] = useState(createVisitorId);
   const [version, setVersion] = useState(0);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -45,9 +46,14 @@ export function usePresence(documentId: string) {
   }, []);
 
   useEffect(() => {
+    if (!normalizedDocumentId) {
+      removePresence(visitorId);
+      return;
+    }
+
     const heartbeatInterval = setInterval(() => {
       updatePresence({
-        documentId,
+        documentId: normalizedDocumentId,
         visitorId,
         userId: CURRENT_USER.id,
         data: {
@@ -63,12 +69,13 @@ export function usePresence(documentId: string) {
       removePresence(visitorId);
       refresh();
     };
-  }, [documentId, refresh, visitorId]);
+  }, [normalizedDocumentId, refresh, visitorId]);
 
   const allPresence = useMemo(() => {
     void version;
-    return filterStalePresence(listPresence(documentId), currentTime);
-  }, [currentTime, documentId, version]);
+    if (!normalizedDocumentId) return [];
+    return filterStalePresence(listPresence(normalizedDocumentId), currentTime);
+  }, [currentTime, normalizedDocumentId, version]);
 
   const me = allPresence.find((entry) => entry.visitorId === visitorId);
   const others = allPresence.filter((entry) => entry.visitorId !== visitorId);
@@ -76,14 +83,14 @@ export function usePresence(documentId: string) {
   const updateMyPresence = useCallback(
     (data: PresenceData) => {
       updatePresence({
-        documentId,
+        documentId: normalizedDocumentId,
         visitorId,
         userId: CURRENT_USER.id,
         data,
       });
       refresh();
     },
-    [documentId, refresh, visitorId],
+    [normalizedDocumentId, refresh, visitorId],
   );
 
   return {
