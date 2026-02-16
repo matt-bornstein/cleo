@@ -63,15 +63,8 @@ function readMessageRole(
       }
     | undefined,
 ) {
-  if (!candidate) {
-    return "assistant";
-  }
-
-  try {
-    return candidate.role === "user" ? "user" : "assistant";
-  } catch {
-    return "assistant";
-  }
+  const role = readMessageField(candidate, "role");
+  return role === "user" ? "user" : "assistant";
 }
 
 function readMessageField(
@@ -83,7 +76,7 @@ function readMessageField(
         diffId?: unknown;
       }
     | undefined,
-  key: "model" | "content" | "diffId",
+  key: "role" | "model" | "content" | "diffId",
 ) {
   if (!candidate) {
     return undefined;

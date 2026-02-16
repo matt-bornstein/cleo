@@ -70,23 +70,17 @@ function normalizePresenceEntry(presence: unknown) {
     return undefined;
   }
 
-  try {
-    const candidate = presence as {
-      id?: unknown;
-      data?: unknown;
-    };
-    return {
-      id: typeof candidate.id === "string" && candidate.id.trim().length > 0
-        ? candidate.id.trim()
+  const id = readPresenceField(presence, "id");
+  const data = readPresenceField(presence, "data");
+  return {
+    id: typeof id === "string" && id.trim().length > 0
+      ? id.trim()
+      : undefined,
+    data:
+      data && typeof data === "object"
+        ? (data as { name?: unknown; color?: unknown })
         : undefined,
-      data:
-        candidate.data && typeof candidate.data === "object"
-          ? (candidate.data as { name?: unknown; color?: unknown })
-          : undefined,
-    };
-  } catch {
-    return undefined;
-  }
+  };
 }
 
 function readPresenceDataField(
@@ -99,6 +93,18 @@ function readPresenceDataField(
 
   try {
     return data[key];
+  } catch {
+    return undefined;
+  }
+}
+
+function readPresenceField(presence: unknown, key: "id" | "data") {
+  if (!presence || typeof presence !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (presence as Record<string, unknown>)[key];
   } catch {
     return undefined;
   }
