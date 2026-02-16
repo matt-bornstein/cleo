@@ -178,7 +178,8 @@ export function addComment(params: {
   if (!isValidDocumentId(normalizedDocumentId)) {
     return null;
   }
-  const normalizedContent = params.content.trim();
+  const normalizedContent =
+    typeof params.content === "string" ? params.content.trim() : "";
   if (
     !normalizedContent ||
     hasDisallowedTextControlChars(normalizedContent)

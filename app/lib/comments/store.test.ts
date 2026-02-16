@@ -187,6 +187,27 @@ describe("comments store", () => {
     expect(comment).toBeNull();
   });
 
+  it("rejects comment creation when content is non-string", () => {
+    const comment = addComment({
+      documentId: "doc-control-content",
+      content: 123 as unknown as string,
+      anchorText: "Anchor",
+    });
+
+    expect(comment).toBeNull();
+  });
+
+  it("falls back anchor text when runtime anchor input is non-string", () => {
+    const comment = addComment({
+      documentId: "doc-anchor-type",
+      content: "Valid content",
+      anchorText: 123 as unknown as string,
+    });
+
+    expect(comment).not.toBeNull();
+    expect(comment?.anchorText).toBe("Comment");
+  });
+
   it("drops malformed parent comment references", () => {
     const comment = addComment({
       documentId: "doc-6",
