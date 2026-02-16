@@ -324,6 +324,46 @@ describe("useDocuments", () => {
     expect(result.current.documents).toEqual([]);
   });
 
+  it("normalizes malformed owner and lock metadata in listed documents", () => {
+    listDocumentsMock.mockReturnValue([
+      {
+        id: "doc-1",
+        title: "Doc",
+        content: "{}",
+        ownerEmail: "bad\nowner",
+        aiLockedBy: "bad\nlocker",
+        aiLockedAt: 5,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      {
+        id: "doc-2",
+        title: "Doc 2",
+        content: "{}",
+        ownerEmail: "owner@example.com",
+        aiLockedBy: "owner@example.com",
+        aiLockedAt: 6,
+        createdAt: 2,
+        updatedAt: 2,
+      },
+    ]);
+    hasDocumentAccessMock.mockReturnValue(true);
+
+    const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
+    expect(result.current.documents).toEqual([
+      expect.objectContaining({
+        id: "doc-1",
+        ownerEmail: "me@local.dev",
+        aiLockedBy: undefined,
+      }),
+      expect.objectContaining({
+        id: "doc-2",
+        ownerEmail: "owner@example.com",
+        aiLockedBy: "owner@example.com",
+      }),
+    ]);
+  });
+
   it("returns safe fallbacks when document operation return payload getters throw", () => {
     const malformedOperationDocument = Object.create(null) as Record<string, unknown>;
     Object.defineProperty(malformedOperationDocument, "id", {

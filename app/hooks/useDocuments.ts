@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import {
   createDocument,
   deleteDocument,
@@ -253,6 +254,8 @@ function safeNormalizeListedDocument(document: unknown): AppDocument | null {
       ? Math.max(updatedAt, normalizedCreatedAt)
       : normalizedCreatedAt;
 
+  const normalizedOwnerEmailCandidate = normalizeEmailOrUndefined(ownerEmail);
+
   return {
     id: normalizedId,
     title:
@@ -267,8 +270,8 @@ function safeNormalizeListedDocument(document: unknown): AppDocument | null {
             content: [{ type: "paragraph" }],
           }),
     ownerEmail:
-      typeof ownerEmail === "string" && ownerEmail.trim().length > 0
-        ? ownerEmail.trim()
+      normalizedOwnerEmailCandidate && isValidEmail(normalizedOwnerEmailCandidate)
+        ? normalizedOwnerEmailCandidate
         : DEFAULT_LOCAL_USER_EMAIL,
     createdAt: normalizedCreatedAt,
     updatedAt: normalizedUpdatedAt,
@@ -283,7 +286,10 @@ function safeNormalizeListedDocument(document: unknown): AppDocument | null {
         ? chatClearedAt
         : undefined,
     aiLockedBy:
-      typeof aiLockedBy === "string" && aiLockedBy.trim().length > 0
+      typeof aiLockedBy === "string" &&
+      aiLockedBy.trim().length > 0 &&
+      aiLockedBy.trim().length <= MAX_USER_ID_LENGTH &&
+      !hasControlChars(aiLockedBy.trim())
         ? aiLockedBy.trim()
         : undefined,
     aiLockedAt:
