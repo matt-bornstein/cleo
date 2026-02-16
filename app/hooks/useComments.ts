@@ -43,11 +43,14 @@ export function useComments(documentId: string, currentUserId?: string) {
 
   const markResolved = useCallback(
     (commentId: string) => {
+      const existing = comments.find((comment) => comment.id === commentId);
       const updated = resolveComment(commentId);
-      refresh();
+      if (updated && (!existing || !existing.resolved)) {
+        refresh();
+      }
       return updated;
     },
-    [refresh],
+    [comments, refresh],
   );
 
   const createReply = useCallback(

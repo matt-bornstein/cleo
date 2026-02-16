@@ -101,4 +101,82 @@ describe("useComments", () => {
 
     expect(addCommentMock).not.toHaveBeenCalled();
   });
+
+  it("refreshes when marking an unresolved comment as resolved", () => {
+    listCommentsMock.mockReturnValue([
+      {
+        id: "comment-1",
+        documentId: "doc-1",
+        userId: "owner@example.com",
+        content: "Needs resolution",
+        anchorFrom: 0,
+        anchorTo: 0,
+        anchorText: "Paragraph",
+        resolved: false,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]);
+    resolveCommentMock.mockReturnValue({
+      id: "comment-1",
+      documentId: "doc-1",
+      userId: "owner@example.com",
+      content: "Needs resolution",
+      anchorFrom: 0,
+      anchorTo: 0,
+      anchorText: "Paragraph",
+      resolved: true,
+      createdAt: 1,
+      updatedAt: 2,
+    });
+
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+    expect(listCommentsMock).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.markResolved("comment-1");
+    });
+
+    expect(resolveCommentMock).toHaveBeenCalledWith("comment-1");
+    expect(listCommentsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips refresh when comment was already resolved", () => {
+    listCommentsMock.mockReturnValue([
+      {
+        id: "comment-1",
+        documentId: "doc-1",
+        userId: "owner@example.com",
+        content: "Already resolved",
+        anchorFrom: 0,
+        anchorTo: 0,
+        anchorText: "Paragraph",
+        resolved: true,
+        createdAt: 1,
+        updatedAt: 2,
+      },
+    ]);
+    resolveCommentMock.mockReturnValue({
+      id: "comment-1",
+      documentId: "doc-1",
+      userId: "owner@example.com",
+      content: "Already resolved",
+      anchorFrom: 0,
+      anchorTo: 0,
+      anchorText: "Paragraph",
+      resolved: true,
+      createdAt: 1,
+      updatedAt: 2,
+    });
+
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+    expect(listCommentsMock).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.markResolved("comment-1");
+    });
+
+    expect(resolveCommentMock).toHaveBeenCalledWith("comment-1");
+    expect(listCommentsMock).toHaveBeenCalledTimes(1);
+  });
 });
