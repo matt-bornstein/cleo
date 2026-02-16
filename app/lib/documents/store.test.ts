@@ -91,6 +91,42 @@ describe("document store", () => {
     expect(listDocuments().map((document) => document.id)).toEqual(["doc-a", "doc-b"]);
   });
 
+  it("prefers newer createdAt when duplicate records share equal updatedAt", () => {
+    window.localStorage.setItem(
+      "plan00.documents.v1",
+      JSON.stringify({
+        documents: [
+          {
+            id: "doc-same-updated",
+            title: "Older createdAt",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "older@example.com",
+            createdAt: 1,
+            updatedAt: 10,
+          },
+          {
+            id: "doc-same-updated",
+            title: "Newer createdAt",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "newer@example.com",
+            createdAt: 5,
+            updatedAt: 10,
+          },
+        ],
+      }),
+    );
+
+    expect(listDocuments()).toEqual([
+      expect.objectContaining({
+        id: "doc-same-updated",
+        title: "Newer createdAt",
+        ownerEmail: "newer@example.com",
+        createdAt: 5,
+        updatedAt: 10,
+      }),
+    ]);
+  });
+
   it("normalizes legacy stored owner emails when loading from storage", () => {
     window.localStorage.setItem(
       "plan00.documents.v1",

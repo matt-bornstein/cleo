@@ -112,6 +112,14 @@ function loadState(): DocumentStoreState {
 
       if (entry.dedupeUpdatedAt > existing.dedupeUpdatedAt) {
         dedupedByDocumentId.set(entry.document.id, entry);
+        continue;
+      }
+
+      if (
+        entry.dedupeUpdatedAt === existing.dedupeUpdatedAt &&
+        entry.document.createdAt > existing.document.createdAt
+      ) {
+        dedupedByDocumentId.set(entry.document.id, entry);
       }
     }
 
