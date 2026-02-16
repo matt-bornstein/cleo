@@ -47,21 +47,32 @@ export function useDocuments(
   }, [normalizedCurrentUserEmail, normalizedSearch, refreshCounter]);
 
   const create = useCallback(
-    (title: string, ownerEmail?: string) => {
-      const document = createDocument(title, ownerEmail);
+    (title: unknown, ownerEmail?: unknown) => {
+      const normalizedTitle = typeof title === "string" ? title : "";
+      const normalizedOwnerEmail =
+        typeof ownerEmail === "string" ? ownerEmail : undefined;
+      const document = createDocument(normalizedTitle, normalizedOwnerEmail);
       refresh();
       return document;
     },
     [refresh],
   );
 
-  const getById = useCallback((documentId: string): AppDocument | undefined => {
-    return getDocumentById(documentId);
+  const getById = useCallback((documentId: unknown): AppDocument | undefined => {
+    const normalizedDocumentId =
+      typeof documentId === "string" ? documentId : "";
+    return getDocumentById(normalizedDocumentId);
   }, []);
 
   const updateContent = useCallback(
-    (documentId: string, content: string) => {
-      const updated = updateDocumentContent(documentId, content);
+    (documentId: unknown, content: unknown) => {
+      const normalizedDocumentId =
+        typeof documentId === "string" ? documentId : "";
+      const normalizedContent = typeof content === "string" ? content : "";
+      const updated = updateDocumentContent(
+        normalizedDocumentId,
+        normalizedContent,
+      );
       if (updated) {
         refresh();
       }
@@ -71,8 +82,11 @@ export function useDocuments(
   );
 
   const updateTitle = useCallback(
-    (documentId: string, title: string) => {
-      const updated = updateDocumentTitle(documentId, title);
+    (documentId: unknown, title: unknown) => {
+      const normalizedDocumentId =
+        typeof documentId === "string" ? documentId : "";
+      const normalizedTitle = typeof title === "string" ? title : "";
+      const updated = updateDocumentTitle(normalizedDocumentId, normalizedTitle);
       if (updated) {
         refresh();
       }
@@ -82,8 +96,15 @@ export function useDocuments(
   );
 
   const setChatClearedAt = useCallback(
-    (documentId: string, timestamp: number) => {
-      const updated = setDocumentChatClearedAt(documentId, timestamp);
+    (documentId: unknown, timestamp: unknown) => {
+      const normalizedDocumentId =
+        typeof documentId === "string" ? documentId : "";
+      const normalizedTimestamp =
+        typeof timestamp === "number" ? timestamp : Number.NaN;
+      const updated = setDocumentChatClearedAt(
+        normalizedDocumentId,
+        normalizedTimestamp,
+      );
       if (updated) {
         refresh();
       }
@@ -93,8 +114,10 @@ export function useDocuments(
   );
 
   const remove = useCallback(
-    (documentId: string) => {
-      const removed = deleteDocument(documentId);
+    (documentId: unknown) => {
+      const normalizedDocumentId =
+        typeof documentId === "string" ? documentId : "";
+      const removed = deleteDocument(normalizedDocumentId);
       if (removed) {
         refresh();
       }

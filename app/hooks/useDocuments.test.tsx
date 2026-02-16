@@ -165,4 +165,24 @@ describe("useDocuments", () => {
 
     expect(listDocumentsMock).toHaveBeenCalledTimes(5);
   });
+
+  it("normalizes malformed non-string operation payloads before dispatch", () => {
+    const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
+
+    act(() => {
+      result.current.getById(123 as unknown as string);
+      result.current.updateTitle(123 as unknown as string, 456 as unknown as string);
+      result.current.updateContent(123 as unknown as string, 456 as unknown as string);
+      result.current.setChatClearedAt(123 as unknown as string, "bad" as unknown as number);
+      result.current.remove(123 as unknown as string);
+      result.current.create(123 as unknown as string, 456 as unknown as string);
+    });
+
+    expect(getDocumentByIdMock).toHaveBeenCalledWith("");
+    expect(updateDocumentTitleMock).toHaveBeenCalledWith("", "");
+    expect(updateDocumentContentMock).toHaveBeenCalledWith("", "");
+    expect(setDocumentChatClearedAtMock).toHaveBeenCalledWith("", Number.NaN);
+    expect(deleteDocumentMock).toHaveBeenCalledWith("");
+    expect(createDocumentMock).toHaveBeenCalledWith("", undefined);
+  });
 });
