@@ -35,19 +35,19 @@ function loadState(): PermissionState {
     const sanitizedPermissions = parsed.permissions.flatMap((entry) => {
         const normalizedDocumentId = normalizeDocumentId(entry.documentId);
         const normalizedEmail = normalizeEmailOrUndefined(entry.email);
+        const normalizedPermissionId = entry.id?.trim();
         if (
           !isValidDocumentId(normalizedDocumentId) ||
           !normalizedEmail ||
           !ALLOWED_ROLES.has(entry.role) ||
-          typeof entry.id !== "string" ||
-          entry.id.trim().length === 0
+          !normalizedPermissionId
         ) {
           return [];
         }
 
         return [
           {
-            id: entry.id,
+            id: normalizedPermissionId,
             documentId: normalizedDocumentId,
             email: normalizedEmail,
             role: entry.role,
@@ -180,9 +180,16 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
 }
 
 export function removePermission(permissionId: string) {
+  const normalizedPermissionId = permissionId.trim();
+  if (!normalizedPermissionId) {
+    return false;
+  }
+
   const state = loadState();
   const beforeCount = state.permissions.length;
-  state.permissions = state.permissions.filter((entry) => entry.id !== permissionId);
+  state.permissions = state.permissions.filter(
+    (entry) => entry.id !== normalizedPermissionId,
+  );
   persistState(state);
   return state.permissions.length !== beforeCount;
 }
