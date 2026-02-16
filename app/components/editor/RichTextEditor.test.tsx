@@ -87,4 +87,25 @@ describe("RichTextEditor", () => {
     await user.click(screen.getByRole("button", { name: "Trigger update" }));
     expect(onContentChange).toHaveBeenCalledTimes(1);
   });
+
+  it("handles malformed non-string editor content payloads safely", async () => {
+    const user = userEvent.setup();
+    const onContentChange = vi.fn();
+
+    render(
+      <RichTextEditor
+        documentId="doc-1"
+        content={123 as unknown as string}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Trigger update" }));
+    expect(onContentChange).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: "doc",
+        content: [{ type: "paragraph" }],
+      }),
+    );
+  });
 });

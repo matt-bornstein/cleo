@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
+import type { JSONContent } from "@tiptap/core";
 
 import { FormattingToolbar } from "@/components/editor/FormattingToolbar";
 import { editorExtensions } from "@/lib/editor/extensions";
@@ -9,7 +10,7 @@ import { useOptionalTiptapSync } from "@/hooks/useOptionalTiptapSync";
 
 type RichTextEditorProps = {
   documentId: string;
-  content: string;
+  content: unknown;
   onContentChange: (content: string) => void;
   onLocalUpdate?: unknown;
   fontSize?: number;
@@ -17,9 +18,24 @@ type RichTextEditorProps = {
   editable?: boolean;
 };
 
-function parseContent(content: string) {
+function parseContent(content: unknown): JSONContent {
   try {
-    return JSON.parse(content);
+    if (typeof content !== "string") {
+      throw new Error("Invalid content payload type.");
+    }
+    const parsed = JSON.parse(content) as {
+      type?: unknown;
+      content?: unknown;
+    };
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      parsed.type !== "doc" ||
+      !Array.isArray(parsed.content)
+    ) {
+      throw new Error("Invalid ProseMirror payload.");
+    }
+    return parsed as JSONContent;
   } catch {
     return {
       type: "doc",
