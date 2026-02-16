@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 type AnyCtx = {
   db: {
     insert: (...args: unknown[]) => Promise<unknown>;
@@ -11,6 +13,7 @@ type AnyCtx = {
         first: () => Promise<unknown>;
         order: (...orderArgs: unknown[]) => {
           collect: () => Promise<unknown[]>;
+          first: () => Promise<unknown>;
         };
       };
     };

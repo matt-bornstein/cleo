@@ -27,9 +27,7 @@ describe("EditorShell", () => {
 
     expect(screen.getAllByText("Phase 1 Doc")).toHaveLength(2);
     expect(screen.getByText("AI Assistant")).toBeInTheDocument();
-    expect(
-      screen.getByText("Rich text editor area (Phase 2 will integrate Tiptap)."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Saved")).toBeInTheDocument();
   });
 
   it("creates a document from New modal and navigates to it", async () => {

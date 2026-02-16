@@ -6,6 +6,7 @@ import {
   createDocument,
   getDocumentById,
   listDocuments,
+  updateDocumentContent,
 } from "@/lib/documents/store";
 import type { AppDocument } from "@/lib/types";
 
@@ -34,10 +35,20 @@ export function useDocuments(search?: string) {
     return getDocumentById(documentId);
   }, []);
 
+  const updateContent = useCallback(
+    (documentId: string, content: string) => {
+      const updated = updateDocumentContent(documentId, content);
+      refresh();
+      return updated;
+    },
+    [refresh],
+  );
+
   return {
     documents,
     create,
     getById,
+    updateContent,
     refresh,
   };
 }

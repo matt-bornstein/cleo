@@ -80,6 +80,41 @@ export function getDocumentById(documentId: string): AppDocument | undefined {
   return state.documents.find((doc) => doc.id === documentId);
 }
 
+export function updateDocumentContent(
+  documentId: string,
+  content: string,
+): AppDocument | undefined {
+  const state = loadState();
+  const index = state.documents.findIndex((doc) => doc.id === documentId);
+  if (index === -1) return undefined;
+
+  const existing = state.documents[index];
+  const updated: AppDocument = {
+    ...existing,
+    content,
+    updatedAt: Date.now(),
+  };
+  state.documents[index] = updated;
+  persistState(state);
+  return updated;
+}
+
+export function setDocumentLastDiffAt(
+  documentId: string,
+  timestamp: number,
+): AppDocument | undefined {
+  const state = loadState();
+  const index = state.documents.findIndex((doc) => doc.id === documentId);
+  if (index === -1) return undefined;
+  const updated: AppDocument = {
+    ...state.documents[index],
+    lastDiffAt: timestamp,
+  };
+  state.documents[index] = updated;
+  persistState(state);
+  return updated;
+}
+
 export function resetDocumentsForTests() {
   persistState({ documents: [] });
 }
