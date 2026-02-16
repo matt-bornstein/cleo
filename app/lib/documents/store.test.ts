@@ -4,7 +4,9 @@ import {
   getDocumentById,
   listDocuments,
   resetDocumentsForTests,
+  setDocumentLastDiffAt,
   setDocumentChatClearedAt,
+  updateDocumentContent,
   updateDocumentTitle,
 } from "@/lib/documents/store";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
@@ -163,6 +165,21 @@ describe("document store", () => {
     expect(getDocumentById(created.id)?.chatClearedAt).toBe(1234);
   });
 
+  it("updates document content only for valid prosemirror doc json", () => {
+    const created = createDocument("Content doc");
+    const validContent = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "Updated" }] }],
+    });
+
+    const updated = updateDocumentContent(created.id, validContent);
+    expect(updated?.content).toBe(validContent);
+
+    const invalid = updateDocumentContent(created.id, "not-json");
+    expect(invalid).toBeUndefined();
+    expect(getDocumentById(created.id)?.content).toBe(validContent);
+  });
+
   it("deletes document by id", () => {
     const created = createDocument("Delete me");
     const removed = deleteDocument(created.id);
@@ -173,7 +190,9 @@ describe("document store", () => {
   it("rejects invalid document ids for document operations", () => {
     expect(getDocumentById("   ")).toBeUndefined();
     expect(updateDocumentTitle("   ", "Ignored")).toBeUndefined();
+    expect(setDocumentLastDiffAt("doc-valid", Number.NaN)).toBeUndefined();
     expect(setDocumentChatClearedAt("doc-\ninvalid", 123)).toBeUndefined();
+    expect(setDocumentChatClearedAt("doc-valid", Number.NaN)).toBeUndefined();
     expect(deleteDocument("doc-\ninvalid")).toBe(false);
   });
 

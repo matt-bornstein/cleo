@@ -156,7 +156,12 @@ export function updateDocumentContent(
   content: string,
 ): AppDocument | undefined {
   const normalizedDocumentId = normalizeDocumentId(documentId);
-  if (!isValidDocumentId(normalizedDocumentId)) return undefined;
+  if (
+    !isValidDocumentId(normalizedDocumentId) ||
+    !isValidDocumentContentJson(content)
+  ) {
+    return undefined;
+  }
 
   const state = loadState();
   const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
@@ -200,7 +205,12 @@ export function setDocumentLastDiffAt(
   timestamp: number,
 ): AppDocument | undefined {
   const normalizedDocumentId = normalizeDocumentId(documentId);
-  if (!isValidDocumentId(normalizedDocumentId)) return undefined;
+  if (
+    !isValidDocumentId(normalizedDocumentId) ||
+    !Number.isFinite(timestamp)
+  ) {
+    return undefined;
+  }
 
   const state = loadState();
   const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
@@ -219,7 +229,12 @@ export function setDocumentChatClearedAt(
   timestamp: number,
 ): AppDocument | undefined {
   const normalizedDocumentId = normalizeDocumentId(documentId);
-  if (!isValidDocumentId(normalizedDocumentId)) return undefined;
+  if (
+    !isValidDocumentId(normalizedDocumentId) ||
+    !Number.isFinite(timestamp)
+  ) {
+    return undefined;
+  }
 
   const state = loadState();
   const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
