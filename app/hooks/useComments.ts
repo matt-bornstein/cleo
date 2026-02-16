@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { addComment, listComments, resolveComment } from "@/lib/comments/store";
 
-export function useComments(documentId: string, currentUserId?: string) {
+export function useComments(documentId: string, currentUserId?: unknown) {
   const [version, setVersion] = useState(0);
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
@@ -23,15 +23,19 @@ export function useComments(documentId: string, currentUserId?: string) {
   }, [hasValidDocumentId, normalizedDocumentId, version]);
 
   const createComment = useCallback(
-    (content: string, anchorText: string, parentCommentId?: string) => {
+    (content: unknown, anchorText: unknown, parentCommentId?: unknown) => {
       if (!hasValidDocumentId) {
         return null;
       }
+      const normalizedContent = typeof content === "string" ? content : "";
+      const normalizedAnchorText = typeof anchorText === "string" ? anchorText : "";
+      const normalizedParentCommentId =
+        typeof parentCommentId === "string" ? parentCommentId : undefined;
       const comment = addComment({
         documentId: normalizedDocumentId,
-        content,
-        anchorText,
-        parentCommentId,
+        content: normalizedContent,
+        anchorText: normalizedAnchorText,
+        parentCommentId: normalizedParentCommentId,
         userId: normalizedCurrentUserId,
       });
       if (comment) {
@@ -43,12 +47,13 @@ export function useComments(documentId: string, currentUserId?: string) {
   );
 
   const markResolved = useCallback(
-    (commentId: string) => {
+    (commentId: unknown) => {
       if (!hasValidDocumentId) {
         return null;
       }
-      const existing = comments.find((comment) => comment.id === commentId);
-      const updated = resolveComment(commentId);
+      const normalizedCommentId = typeof commentId === "string" ? commentId : "";
+      const existing = comments.find((comment) => comment.id === normalizedCommentId);
+      const updated = resolveComment(normalizedCommentId);
       if (updated && (!existing || !existing.resolved)) {
         refresh();
       }
@@ -58,12 +63,13 @@ export function useComments(documentId: string, currentUserId?: string) {
   );
 
   const createReply = useCallback(
-    (parentCommentId: string, content: string) => {
+    (parentCommentId: unknown, content: unknown) => {
       if (!hasValidDocumentId) {
         return null;
       }
       const normalizedParentCommentId =
         typeof parentCommentId === "string" ? parentCommentId.trim() : "";
+      const normalizedContent = typeof content === "string" ? content : "";
       const parent = comments.find((comment) => comment.id === normalizedParentCommentId);
       const anchorText = parent?.anchorText ?? "Reply";
       const parentIdForReply =
@@ -72,7 +78,7 @@ export function useComments(documentId: string, currentUserId?: string) {
           : undefined;
       const reply = addComment({
         documentId: normalizedDocumentId,
-        content,
+        content: normalizedContent,
         anchorText,
         parentCommentId: parentIdForReply,
         userId: normalizedCurrentUserId,

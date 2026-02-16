@@ -56,6 +56,21 @@ describe("useComments", () => {
     );
   });
 
+  it("normalizes malformed non-string comment inputs before dispatch", () => {
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+
+    act(() => {
+      result.current.createComment(123 as unknown as string, 456 as unknown as string);
+    });
+
+    expect(addCommentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "",
+        anchorText: "",
+      }),
+    );
+  });
+
   it("uses parent anchor text and current user id for replies", () => {
     listCommentsMock.mockReturnValue([
       {
