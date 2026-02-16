@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 
 import { aiLockManager } from "@/lib/ai/lock";
-import { getModelConfig } from "@/lib/ai/models";
+import { getModelConfig, isSupportedModel } from "@/lib/ai/models";
 import { applyParsedEditsToHtml, parseAIResponse } from "@/lib/ai/parseResponse";
 import { getSystemPrompt } from "@/lib/ai/prompts";
 import {
@@ -51,6 +51,9 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
   const documentId = candidate.documentId.trim();
   const model = candidate.model.trim();
   const prompt = candidate.prompt.trim();
+  if (!isSupportedModel(model)) {
+    return null;
+  }
 
   if (rawMessages === undefined) {
     return {

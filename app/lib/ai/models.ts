@@ -17,6 +17,10 @@ export const AI_MODELS: AIModelConfig[] = [
   { id: "gemini-2.5-pro", label: "Google Gemini 2.5 Pro", provider: "google" },
 ];
 
+export function isSupportedModel(modelId: string) {
+  return AI_MODELS.some((model) => model.id === modelId);
+}
+
 export function getModelConfig(modelId: string) {
   return AI_MODELS.find((model) => model.id === modelId) ?? AI_MODELS[0];
 }
