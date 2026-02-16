@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  MAX_DOCUMENT_ID_LENGTH,
+  MAX_PROMPT_LENGTH,
+} from "@/lib/ai/constraints";
 import { getModelConfig } from "@/lib/ai/models";
 import { listMessagesByDocument, saveMessage } from "@/lib/ai/chatStore";
 import { getRecentMessages } from "@/lib/ai/history";
@@ -10,8 +14,6 @@ import { createDiff } from "@/lib/diffs/store";
 import type { AIMessage } from "@/lib/types";
 
 const DEFAULT_MODEL = "gpt-4o";
-const MAX_PROMPT_LENGTH = 4_000;
-const MAX_DOCUMENT_ID_LENGTH = 256;
 
 type UseAIChatArgs = {
   documentId: string;

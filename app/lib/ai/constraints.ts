@@ -1,0 +1,6 @@
+export const MAX_MESSAGE_COUNT = 100;
+export const MAX_PROMPT_LENGTH = 4_000;
+export const MAX_MESSAGE_CONTENT_LENGTH = 8_000;
+export const MAX_DOCUMENT_ID_LENGTH = 256;
+export const MAX_USER_ID_LENGTH = 256;
+export const MAX_DOCUMENT_CONTENT_LENGTH = 200_000;

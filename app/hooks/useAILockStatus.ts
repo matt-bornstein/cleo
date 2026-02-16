@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+import { MAX_DOCUMENT_ID_LENGTH } from "@/lib/ai/constraints";
+
 type LockStatus = {
   locked: boolean;
   lockedBy?: string;
   lockedAt?: number;
 };
-
-const MAX_DOCUMENT_ID_LENGTH = 256;
 
 export function useAILockStatus(documentId: string) {
   const normalizedDocumentId = documentId.trim();

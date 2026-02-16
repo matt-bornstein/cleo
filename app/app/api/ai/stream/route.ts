@@ -2,6 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 
+import {
+  MAX_DOCUMENT_CONTENT_LENGTH,
+  MAX_DOCUMENT_ID_LENGTH,
+  MAX_MESSAGE_CONTENT_LENGTH,
+  MAX_MESSAGE_COUNT,
+  MAX_PROMPT_LENGTH,
+  MAX_USER_ID_LENGTH,
+} from "@/lib/ai/constraints";
 import { aiLockManager } from "@/lib/ai/lock";
 import { normalizeAIUserId } from "@/lib/ai/identity";
 import { getModelConfig, isSupportedModel } from "@/lib/ai/models";
@@ -13,12 +21,6 @@ import {
 } from "@/lib/editor/serialization";
 
 export const runtime = "nodejs";
-const MAX_MESSAGE_COUNT = 100;
-const MAX_PROMPT_LENGTH = 4_000;
-const MAX_MESSAGE_CONTENT_LENGTH = 8_000;
-const MAX_DOCUMENT_ID_LENGTH = 256;
-const MAX_USER_ID_LENGTH = 256;
-const MAX_DOCUMENT_CONTENT_LENGTH = 200_000;
 
 type StreamRequestPayload = {
   documentId: string;
