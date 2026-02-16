@@ -180,6 +180,21 @@ describe("document store", () => {
     expect(getDocumentById(created.id)?.content).toBe(validContent);
   });
 
+  it("treats unchanged document updates as no-ops", () => {
+    const created = createDocument("No-op doc");
+
+    expect(updateDocumentTitle(created.id, "No-op doc")).toBeUndefined();
+    expect(updateDocumentContent(created.id, created.content)).toBeUndefined();
+
+    const firstDiffAt = setDocumentLastDiffAt(created.id, 1234);
+    expect(firstDiffAt?.lastDiffAt).toBe(1234);
+    expect(setDocumentLastDiffAt(created.id, 1234)).toBeUndefined();
+
+    const firstClearedAt = setDocumentChatClearedAt(created.id, 5678);
+    expect(firstClearedAt?.chatClearedAt).toBe(5678);
+    expect(setDocumentChatClearedAt(created.id, 5678)).toBeUndefined();
+  });
+
   it("deletes document by id", () => {
     const created = createDocument("Delete me");
     const removed = deleteDocument(created.id);

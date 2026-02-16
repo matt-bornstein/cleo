@@ -168,6 +168,9 @@ export function updateDocumentContent(
   if (index === -1) return undefined;
 
   const existing = state.documents[index];
+  if (existing.content === content) {
+    return undefined;
+  }
   const updated: AppDocument = {
     ...existing,
     content,
@@ -190,8 +193,12 @@ export function updateDocumentTitle(
   if (index === -1) return undefined;
 
   const normalizedTitle = title.trim() || "Untitled";
+  const existing = state.documents[index];
+  if (existing.title === normalizedTitle) {
+    return undefined;
+  }
   const updated: AppDocument = {
-    ...state.documents[index],
+    ...existing,
     title: normalizedTitle,
     updatedAt: Date.now(),
   };
@@ -215,8 +222,12 @@ export function setDocumentLastDiffAt(
   const state = loadState();
   const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
+  const existing = state.documents[index];
+  if (existing.lastDiffAt === timestamp) {
+    return undefined;
+  }
   const updated: AppDocument = {
-    ...state.documents[index],
+    ...existing,
     lastDiffAt: timestamp,
   };
   state.documents[index] = updated;
@@ -239,8 +250,12 @@ export function setDocumentChatClearedAt(
   const state = loadState();
   const index = state.documents.findIndex((doc) => doc.id === normalizedDocumentId);
   if (index === -1) return undefined;
+  const existing = state.documents[index];
+  if (existing.chatClearedAt === timestamp) {
+    return undefined;
+  }
   const updated: AppDocument = {
-    ...state.documents[index],
+    ...existing,
     chatClearedAt: timestamp,
   };
   state.documents[index] = updated;
