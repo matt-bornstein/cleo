@@ -27,4 +27,39 @@ describe("settings store", () => {
     expect(settings.editorFontSize).toBe(18);
     expect(settings.userEmail).toBe("test@example.com");
   });
+
+  it("normalizes settings values before persisting", () => {
+    const saved = saveSettings({
+      theme: "dark",
+      defaultModel: "  gpt-4o-mini  ",
+      editorFontSize: Number.NaN,
+      editorLineSpacing: 0,
+      userEmail: "  TEST@EXAMPLE.COM  ",
+    });
+
+    expect(saved.defaultModel).toBe("gpt-4o-mini");
+    expect(saved.editorFontSize).toBe(16);
+    expect(saved.editorLineSpacing).toBe(1.6);
+    expect(saved.userEmail).toBe("test@example.com");
+  });
+
+  it("falls back to defaults for malformed persisted settings", () => {
+    window.localStorage.setItem(
+      "plan00.settings.v1",
+      JSON.stringify({
+        theme: "invalid-theme",
+        defaultModel: "model\ninvalid",
+        editorFontSize: "big",
+        editorLineSpacing: -1,
+        userEmail: "owner\n@example.com",
+      }),
+    );
+
+    const settings = getSettings();
+    expect(settings.theme).toBe("system");
+    expect(settings.defaultModel).toBe("gpt-4o");
+    expect(settings.editorFontSize).toBe(16);
+    expect(settings.editorLineSpacing).toBe(1.6);
+    expect(settings.userEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
+  });
 });
