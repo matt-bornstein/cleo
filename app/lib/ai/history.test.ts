@@ -67,4 +67,30 @@ describe("getRecentMessages", () => {
     const recent = getRecentMessages([], 0);
     expect(recent).toEqual([]);
   });
+
+  it("uses deterministic id tie-breaker when timestamps are equal", () => {
+    const messages: AIMessage[] = [
+      {
+        id: "b",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "assistant",
+        content: "second",
+        createdAt: 10,
+      },
+      {
+        id: "a",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "user",
+        content: "first",
+        createdAt: 10,
+      },
+    ];
+
+    expect(getRecentMessages(messages, 2)).toEqual([
+      { role: "user", content: "first", userId: "user-1" },
+      { role: "assistant", content: "second", userId: "user-1" },
+    ]);
+  });
 });
