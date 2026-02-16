@@ -23,7 +23,7 @@ export default function EditorIndexPage() {
 
   const handleContinue = () => {
     if (existingDocumentId) {
-      router.push(`/editor/${existingDocumentId}`);
+      safeNavigate(router, `/editor/${existingDocumentId}`);
       return;
     }
 
@@ -35,7 +35,7 @@ export default function EditorIndexPage() {
         ? (document as { id?: unknown }).id
         : undefined,
     );
-    router.push(nextDocumentId ? `/editor/${nextDocumentId}` : "/editor");
+    safeNavigate(router, nextDocumentId ? `/editor/${nextDocumentId}` : "/editor");
   };
 
   return (
@@ -53,6 +53,17 @@ export default function EditorIndexPage() {
       </section>
     </main>
   );
+}
+
+function safeNavigate(router: unknown, path: string) {
+  if (
+    router &&
+    typeof router === "object" &&
+    "push" in router &&
+    typeof (router as { push?: unknown }).push === "function"
+  ) {
+    (router as { push: (nextPath: string) => void }).push(path);
+  }
 }
 
 function normalizeDocumentId(value: unknown) {

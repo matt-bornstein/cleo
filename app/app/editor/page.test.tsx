@@ -7,11 +7,10 @@ import EditorIndexPage from "@/app/editor/page";
 const pushMock = vi.fn();
 const useDocumentsMock = vi.fn();
 const useSettingsMock = vi.fn();
+let mockedRouter: unknown = { push: pushMock };
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: pushMock,
-  }),
+  useRouter: () => mockedRouter,
 }));
 
 vi.mock("@/hooks/useDocuments", () => ({
@@ -27,6 +26,7 @@ describe("EditorIndexPage", () => {
     pushMock.mockReset();
     useDocumentsMock.mockReset();
     useSettingsMock.mockReset();
+    mockedRouter = { push: pushMock };
     useSettingsMock.mockReturnValue({
       settings: { userEmail: "owner@example.com" },
     });
@@ -103,5 +103,19 @@ describe("EditorIndexPage", () => {
 
     expect(create).toHaveBeenCalledWith("Untitled", "me@local.dev");
     expect(pushMock).toHaveBeenCalledWith("/editor/doc-created");
+  });
+
+  it("does not throw when router payload is malformed", async () => {
+    const user = userEvent.setup();
+    mockedRouter = {};
+    useDocumentsMock.mockReturnValue({
+      documents: [{ id: "doc-1" }],
+      create: vi.fn(),
+    });
+
+    render(<EditorIndexPage />);
+    await user.click(screen.getByRole("button", { name: "Open editor" }));
+
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });
