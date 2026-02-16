@@ -1,6 +1,9 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvexAuth } from "convex/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -8,25 +11,33 @@ import { useState } from "react";
 
 export default function SignInPage() {
   const { signIn } = useAuthActions();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const { isAuthenticated } = useConvexAuth();
+  const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handlePasswordAuth = async (e: React.FormEvent) => {
+  // Redirect to home when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, router]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    formData.set("flow", isSignUp ? "signUp" : "signIn");
+
     try {
-      await signIn("password", {
-        email,
-        password,
-        ...(isSignUp ? { name: name || email.split("@")[0] } : {}),
-        flow: isSignUp ? "signUp" : "signIn",
-      });
+      await signIn("password", formData);
+      // signIn succeeded — the ConvexAuthProvider will update isAuthenticated
+      // which triggers the useEffect redirect above
     } catch (err) {
+      console.error("signIn error:", err);
       setError(
         err instanceof Error
           ? err.message
@@ -89,36 +100,32 @@ export default function SignInPage() {
           </div>
         </div>
 
-        {/* Email/Password */}
-        <form onSubmit={handlePasswordAuth} className="space-y-3">
+        {/* Email/Password form */}
+        <form onSubmit={handleSubmit} className="space-y-3">
           {isSignUp && (
             <Input
+              name="name"
               placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
               autoComplete="name"
             />
           )}
           <Input
+            name="email"
             type="email"
             placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
           />
           <Input
+            name="password"
             type="password"
             placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
             autoComplete={isSignUp ? "new-password" : "current-password"}
           />
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          <input type="hidden" name="flow" value={isSignUp ? "signUp" : "signIn"} />
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading
               ? "Please wait..."
