@@ -82,7 +82,7 @@ describe("useComments", () => {
     expect(addCommentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         documentId: "doc-2",
-        parentCommentId: "missing-parent",
+        parentCommentId: undefined,
         anchorText: "Reply",
       }),
     );

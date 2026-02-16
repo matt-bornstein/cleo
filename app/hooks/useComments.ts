@@ -57,11 +57,12 @@ export function useComments(documentId: string, currentUserId?: string) {
       }
       const parent = comments.find((comment) => comment.id === parentCommentId);
       const anchorText = parent?.anchorText ?? "Reply";
+      const normalizedParentCommentId = parent ? parentCommentId : undefined;
       const reply = addComment({
         documentId: normalizedDocumentId,
         content,
         anchorText,
-        parentCommentId,
+        parentCommentId: normalizedParentCommentId,
         userId: normalizedCurrentUserId,
       });
       if (reply) {
