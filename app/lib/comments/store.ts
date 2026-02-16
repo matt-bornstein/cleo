@@ -1,4 +1,5 @@
 import type { CommentRecord } from "@/lib/types";
+import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { hasControlChars } from "@/lib/validators/controlChars";
@@ -69,7 +70,9 @@ export function addComment(params: {
     id: crypto.randomUUID(),
     documentId: normalizedDocumentId,
     userId:
-      normalizedUserId && !hasControlChars(normalizedUserId)
+      normalizedUserId &&
+      normalizedUserId.length <= MAX_USER_ID_LENGTH &&
+      !hasControlChars(normalizedUserId)
         ? normalizedUserId
         : DEFAULT_LOCAL_USER_ID,
     content: normalizedContent,

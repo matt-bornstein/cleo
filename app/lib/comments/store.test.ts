@@ -79,9 +79,16 @@ describe("comments store", () => {
       anchorText: "Line",
       userId: "bad\nid",
     });
+    addComment({
+      documentId: "doc-4",
+      content: "Bad length",
+      anchorText: "Line",
+      userId: "u".repeat(257),
+    });
 
     const comments = listComments("doc-4");
-    expect(comments[0]?.userId).toBe("local-dev-user");
+    expect(comments).toHaveLength(2);
+    expect(comments.every((comment) => comment.userId === "local-dev-user")).toBe(true);
   });
 
   it("rejects comment creation for invalid document ids", () => {
