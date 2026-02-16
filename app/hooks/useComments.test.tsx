@@ -367,6 +367,32 @@ describe("useComments", () => {
     ]);
   });
 
+  it("normalizes listed comment text fields with disallowed control characters", () => {
+    listCommentsMock.mockReturnValue([
+      {
+        id: "comment-control",
+        documentId: "doc-1",
+        userId: "owner@example.com",
+        content: `bad${"\u0000"}content`,
+        anchorFrom: 0,
+        anchorTo: 0,
+        anchorText: "bad\nanchor",
+        resolved: false,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]);
+
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+    expect(result.current.comments).toEqual([
+      expect.objectContaining({
+        id: "comment-control",
+        content: "",
+        anchorText: "Reply",
+      }),
+    ]);
+  });
+
   it("falls back to reply anchor when parent anchorText getter throws", () => {
     const parentWithThrowingAnchorText = Object.create(null) as Record<string, unknown>;
     Object.defineProperty(parentWithThrowingAnchorText, "id", {

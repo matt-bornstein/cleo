@@ -7,7 +7,10 @@ import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { addComment, listComments, resolveComment } from "@/lib/comments/store";
 import type { CommentRecord } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
-import { hasControlChars } from "@/lib/validators/controlChars";
+import {
+  hasControlChars,
+  hasDisallowedTextControlChars,
+} from "@/lib/validators/controlChars";
 
 export function useComments(documentId: unknown, currentUserId?: unknown) {
   const [version, setVersion] = useState(0);
@@ -186,10 +189,15 @@ function safeNormalizeComment(
       ? userId.trim()
       : DEFAULT_LOCAL_USER_ID;
   const content = safeReadCommentField(comment, "content");
-  const normalizedContent = typeof content === "string" ? content : "";
+  const normalizedContent =
+    typeof content === "string" && !hasDisallowedTextControlChars(content)
+      ? content
+      : "";
   const anchorText = safeReadCommentField(comment, "anchorText");
   const normalizedAnchorText =
-    typeof anchorText === "string" && anchorText.trim().length > 0
+    typeof anchorText === "string" &&
+    anchorText.trim().length > 0 &&
+    !hasControlChars(anchorText.trim())
       ? anchorText.trim()
       : "Reply";
   const resolved = safeReadCommentField(comment, "resolved");
