@@ -246,10 +246,10 @@ export function EditorShell({ documentId }: EditorShellProps) {
             defaultModel={settings.defaultModel}
             canEdit={canEdit}
             chatClearedAt={currentDocument?.chatClearedAt}
-            onClearChat={(clearedAt) => {
+            onClearChat={(clearedAt: number) => {
               setChatClearedAt(documentId, clearedAt);
             }}
-            onApplyContent={(nextContent) => {
+            onApplyContent={(nextContent: string) => {
               if (!canEdit) return;
               updateContent(documentId, nextContent);
               setSaveStateLabel("Saved");

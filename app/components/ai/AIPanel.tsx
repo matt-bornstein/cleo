@@ -8,14 +8,14 @@ import { useAIChat } from "@/hooks/useAIChat";
 import { normalizeAIUserId } from "@/lib/ai/identity";
 
 type AIPanelProps = {
-  documentId: string;
-  currentDocumentContent: string;
-  onApplyContent: (nextContent: string) => void;
-  currentUserId: string;
-  defaultModel?: string;
-  canEdit?: boolean;
-  chatClearedAt?: number;
-  onClearChat?: (clearedAt: number) => void;
+  documentId: unknown;
+  currentDocumentContent: unknown;
+  onApplyContent: unknown;
+  currentUserId: unknown;
+  defaultModel?: unknown;
+  canEdit?: unknown;
+  chatClearedAt?: unknown;
+  onClearChat?: unknown;
 };
 
 export function AIPanel({
@@ -28,6 +28,7 @@ export function AIPanel({
   chatClearedAt,
   onClearChat,
 }: AIPanelProps) {
+  const normalizedCanEdit = canEdit !== false;
   const lockStatus = useAILockStatus(documentId);
   const normalizedCurrentUserId = normalizeAIUserId(currentUserId);
   const normalizedLockOwner = lockStatus.lockedBy
@@ -84,7 +85,7 @@ export function AIPanel({
         <ChatMessages messages={messages} />
       </div>
       <div className="space-y-2 border-t border-slate-200 bg-slate-100 p-3">
-        {!canEdit ? (
+        {!normalizedCanEdit ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">
             AI edits are disabled for your current role.
           </div>
@@ -92,7 +93,7 @@ export function AIPanel({
         <ModelSelector value={selectedModel} onValueChange={setSelectedModel} />
         <div className="rounded-lg border border-slate-200 bg-white p-2">
           <ChatInput
-            disabled={isLoading || !canEdit || Boolean(isLockedByOther)}
+            disabled={isLoading || !normalizedCanEdit || Boolean(isLockedByOther)}
             onSubmit={sendPrompt}
           />
         </div>

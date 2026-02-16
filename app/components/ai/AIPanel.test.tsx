@@ -5,12 +5,12 @@ import { AIPanel } from "@/components/ai/AIPanel";
 
 const useAIChatMock = vi.fn();
 vi.mock("@/hooks/useAIChat", () => ({
-  useAIChat: () => useAIChatMock(),
+  useAIChat: (...args: unknown[]) => useAIChatMock(...args),
 }));
 
 const useAILockStatusMock = vi.fn();
 vi.mock("@/hooks/useAILockStatus", () => ({
-  useAILockStatus: () => useAILockStatusMock(),
+  useAILockStatus: (...args: unknown[]) => useAILockStatusMock(...args),
 }));
 
 describe("AIPanel", () => {
@@ -193,5 +193,47 @@ describe("AIPanel", () => {
     );
 
     expect(screen.getByRole("button", { name: "Clear chat" })).not.toBeDisabled();
+  });
+
+  it("normalizes malformed current user ids before useAIChat handoff", () => {
+    useAILockStatusMock.mockReturnValue({
+      locked: false,
+    });
+
+    render(
+      <AIPanel
+        documentId="doc-1"
+        currentDocumentContent="{}"
+        currentUserId={123}
+        onApplyContent={vi.fn()}
+      />,
+    );
+
+    expect(useAIChatMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        currentUserId: "local-dev-user",
+      }),
+    );
+  });
+
+  it("treats malformed non-boolean canEdit values as editable", () => {
+    useAILockStatusMock.mockReturnValue({
+      locked: false,
+    });
+
+    render(
+      <AIPanel
+        documentId="doc-1"
+        currentDocumentContent="{}"
+        currentUserId="bob@example.com"
+        onApplyContent={vi.fn()}
+        canEdit={0}
+      />,
+    );
+
+    expect(
+      screen.queryByText("AI edits are disabled for your current role."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).not.toBeDisabled();
   });
 });
