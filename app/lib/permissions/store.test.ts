@@ -246,4 +246,17 @@ describe("permissions store", () => {
     expect(hasDocumentAccess("doc-\ninvalid", "user@example.com")).toBe(false);
     expect(hasDocumentAccess("doc-1", "not-an-email")).toBe(false);
   });
+
+  it("handles malformed non-string runtime inputs safely", () => {
+    expect(upsertPermission(123 as unknown as string, "user@example.com", "viewer")).toBe(
+      null,
+    );
+    expect(
+      upsertPermission("doc-1", "user@example.com", 123 as unknown as "viewer"),
+    ).toBeNull();
+    expect(listPermissions(123 as unknown as string)).toEqual([]);
+    expect(getRoleForUser("doc-1", 123 as unknown as string)).toBe("viewer");
+    expect(hasDocumentAccess("doc-1", 123 as unknown as string)).toBe(false);
+    expect(removePermission(123 as unknown as string)).toBe(false);
+  });
 });

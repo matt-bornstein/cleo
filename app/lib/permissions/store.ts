@@ -109,7 +109,7 @@ function persistState(state: PermissionState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function listPermissions(documentId: string) {
+export function listPermissions(documentId: unknown) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) return [];
 
@@ -119,9 +119,9 @@ export function listPermissions(documentId: string) {
 }
 
 export function getRoleForUser(
-  documentId: string,
-  email: string,
-  ownerEmail?: string,
+  documentId: unknown,
+  email: unknown,
+  ownerEmail?: unknown,
 ): Role {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) {
@@ -147,9 +147,9 @@ export function getRoleForUser(
 }
 
 export function hasDocumentAccess(
-  documentId: string,
-  email: string,
-  ownerEmail?: string,
+  documentId: unknown,
+  email: unknown,
+  ownerEmail?: unknown,
 ) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) {
@@ -172,17 +172,23 @@ export function hasDocumentAccess(
   );
 }
 
-export function upsertPermission(documentId: string, email: string, role: Role) {
+export function upsertPermission(
+  documentId: unknown,
+  email: unknown,
+  role: unknown,
+) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) {
     return null;
   }
 
   const normalizedEmail = normalizeEmailOrUndefined(email);
+  const normalizedRole = normalizePermissionRole(role);
   if (
     !normalizedEmail ||
     !isValidEmail(normalizedEmail) ||
-    !ALLOWED_ROLES.has(role)
+    !normalizedRole ||
+    !ALLOWED_ROLES.has(normalizedRole)
   ) {
     return null;
   }
@@ -198,27 +204,27 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
       id: generateLocalId(),
       documentId: normalizedDocumentId,
       email: normalizedEmail,
-      role,
+      role: normalizedRole,
     };
     state.permissions.push(permission);
     persistState(state);
     return permission;
   }
   const existing = state.permissions[index];
-  if (existing.email === normalizedEmail && existing.role === role) {
+  if (existing.email === normalizedEmail && existing.role === normalizedRole) {
     return existing;
   }
 
   state.permissions[index] = {
     ...existing,
     email: normalizedEmail,
-    role,
+    role: normalizedRole,
   };
   persistState(state);
   return state.permissions[index];
 }
 
-export function removePermission(permissionId: string) {
+export function removePermission(permissionId: unknown) {
   const normalizedPermissionId = normalizePermissionId(permissionId);
   if (!normalizedPermissionId) {
     return false;
