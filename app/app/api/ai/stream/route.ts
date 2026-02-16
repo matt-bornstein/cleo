@@ -43,15 +43,10 @@ async function callModel(
   model: string,
   systemPrompt: string,
   prompt: string,
+  userPrompt: string,
 ): Promise<string> {
   const config = getModelConfig(model);
-  const fallback = `Updated the document with your request. 
-
-<<<SEARCH
-<p></p>
-===
-<p>${prompt}</p>
->>>`;
+  const fallback = `I reviewed your request: "${userPrompt}". Keeping the current document unchanged in local fallback mode.`;
 
   try {
     if (config.provider === "openai" && process.env.OPENAI_API_KEY) {
@@ -115,7 +110,12 @@ export async function POST(request: Request) {
         const documentHtml = prosemirrorJsonToHtml(payload.documentContent);
         const fullPrompt = buildPrompt(payload, documentHtml);
         const systemPrompt = getSystemPrompt();
-        const modelResponse = await callModel(payload.model, systemPrompt, fullPrompt);
+        const modelResponse = await callModel(
+          payload.model,
+          systemPrompt,
+          fullPrompt,
+          payload.prompt,
+        );
         const parsed = parseAIResponse(modelResponse);
         const nextHtml = applyParsedEditsToHtml(documentHtml, parsed);
         const nextContent = htmlToProsemirrorJson(nextHtml);

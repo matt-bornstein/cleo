@@ -38,6 +38,13 @@ describe("POST /api/ai/stream", () => {
     const events = await readStream(response);
     expect(events.some((event) => event.type === "token")).toBe(true);
     expect(events.some((event) => event.type === "done")).toBe(true);
+
+    const doneEvent = events.find((event) => event.type === "done");
+    expect(doneEvent).toBeDefined();
+    expect(String(doneEvent?.assistantMessage)).toContain(
+      "Keeping the current document unchanged",
+    );
+    expect(String(doneEvent?.nextContent)).toContain("Initial");
   });
 
   it("returns busy error when lock is already held", async () => {
