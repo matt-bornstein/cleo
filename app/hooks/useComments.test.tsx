@@ -337,4 +337,83 @@ describe("useComments", () => {
       });
     }).not.toThrow();
   });
+
+  it("falls back safely when listed comment payload getters throw", () => {
+    const commentWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(commentWithThrowingGetters, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "documentId", {
+      get() {
+        throw new Error("documentId getter failed");
+      },
+    });
+    Object.defineProperty(commentWithThrowingGetters, "anchorText", {
+      get() {
+        throw new Error("anchorText getter failed");
+      },
+    });
+    listCommentsMock.mockReturnValue([commentWithThrowingGetters]);
+
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+    expect(result.current.comments).toEqual([
+      expect.objectContaining({
+        id: "comment-0",
+        documentId: "doc-1",
+        anchorText: "Reply",
+      }),
+    ]);
+  });
+
+  it("falls back to reply anchor when parent anchorText getter throws", () => {
+    const parentWithThrowingAnchorText = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(parentWithThrowingAnchorText, "id", {
+      value: "parent-1",
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "documentId", {
+      value: "doc-1",
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "userId", {
+      value: "owner@example.com",
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "content", {
+      value: "Parent note",
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "anchorFrom", {
+      value: 0,
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "anchorTo", {
+      value: 0,
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "anchorText", {
+      get() {
+        throw new Error("anchorText getter failed");
+      },
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "resolved", {
+      value: false,
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "createdAt", {
+      value: 1,
+    });
+    Object.defineProperty(parentWithThrowingAnchorText, "updatedAt", {
+      value: 1,
+    });
+    listCommentsMock.mockReturnValue([parentWithThrowingAnchorText]);
+
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+
+    act(() => {
+      result.current.createReply("parent-1", "Thanks!");
+    });
+
+    expect(addCommentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parentCommentId: "parent-1",
+        anchorText: "Reply",
+      }),
+    );
+  });
 });

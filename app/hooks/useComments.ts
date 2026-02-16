@@ -5,6 +5,8 @@ import { useCallback, useMemo, useState } from "react";
 import { MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { addComment, listComments, resolveComment } from "@/lib/comments/store";
+import type { CommentRecord } from "@/lib/types";
+import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 export function useComments(documentId: unknown, currentUserId?: unknown) {
@@ -27,7 +29,10 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
   const comments = useMemo(() => {
     void version;
     if (!hasValidDocumentId) return [];
-    return safeListComments(normalizedDocumentId);
+    return safeNormalizeComments(
+      safeListComments(normalizedDocumentId),
+      normalizedDocumentId,
+    );
   }, [hasValidDocumentId, normalizedDocumentId, version]);
 
   const createComment = useCallback(
@@ -137,5 +142,109 @@ function safeResolveComment(commentId: string) {
     return resolveComment(commentId);
   } catch {
     return null;
+  }
+}
+
+function safeNormalizeComments(comments: unknown, fallbackDocumentId: string) {
+  if (!Array.isArray(comments)) {
+    return [] as CommentRecord[];
+  }
+
+  return comments.flatMap((comment, index) => {
+    const normalizedComment = safeNormalizeComment(comment, fallbackDocumentId, index);
+    return normalizedComment ? [normalizedComment] : [];
+  });
+}
+
+function safeNormalizeComment(
+  comment: unknown,
+  fallbackDocumentId: string,
+  fallbackIndex: number,
+) {
+  if (!comment || typeof comment !== "object") {
+    return null;
+  }
+
+  const id = safeReadCommentField(comment, "id");
+  const normalizedId =
+    typeof id === "string" && id.trim().length > 0 && !hasControlChars(id.trim())
+      ? id.trim()
+      : `comment-${fallbackIndex}`;
+  const documentId = safeReadCommentField(comment, "documentId");
+  const normalizedDocumentId =
+    typeof documentId === "string" &&
+    documentId.trim().length > 0 &&
+    !hasControlChars(documentId.trim())
+      ? documentId.trim()
+      : fallbackDocumentId;
+  const userId = safeReadCommentField(comment, "userId");
+  const normalizedUserId =
+    typeof userId === "string" &&
+    userId.trim().length > 0 &&
+    userId.trim().length <= MAX_USER_ID_LENGTH &&
+    !hasControlChars(userId.trim())
+      ? userId.trim()
+      : DEFAULT_LOCAL_USER_ID;
+  const content = safeReadCommentField(comment, "content");
+  const normalizedContent = typeof content === "string" ? content : "";
+  const anchorText = safeReadCommentField(comment, "anchorText");
+  const normalizedAnchorText =
+    typeof anchorText === "string" && anchorText.trim().length > 0
+      ? anchorText.trim()
+      : "Reply";
+  const resolved = safeReadCommentField(comment, "resolved");
+  const anchorFrom = safeReadCommentField(comment, "anchorFrom");
+  const normalizedAnchorFrom =
+    typeof anchorFrom === "number" && Number.isFinite(anchorFrom) && anchorFrom >= 0
+      ? anchorFrom
+      : 0;
+  const anchorTo = safeReadCommentField(comment, "anchorTo");
+  const normalizedAnchorTo =
+    typeof anchorTo === "number" && Number.isFinite(anchorTo) && anchorTo >= normalizedAnchorFrom
+      ? anchorTo
+      : normalizedAnchorFrom;
+  const createdAt = safeReadCommentField(comment, "createdAt");
+  const normalizedCreatedAt =
+    typeof createdAt === "number" && Number.isFinite(createdAt) && createdAt >= 0
+      ? createdAt
+      : 0;
+  const updatedAt = safeReadCommentField(comment, "updatedAt");
+  const normalizedUpdatedAt =
+    typeof updatedAt === "number" && Number.isFinite(updatedAt) && updatedAt >= 0
+      ? Math.max(updatedAt, normalizedCreatedAt)
+      : normalizedCreatedAt;
+  const parentCommentId = safeReadCommentField(comment, "parentCommentId");
+  const normalizedParentCommentId =
+    typeof parentCommentId === "string" &&
+    parentCommentId.trim().length > 0 &&
+    !hasControlChars(parentCommentId.trim()) &&
+    parentCommentId.trim() !== normalizedId
+      ? parentCommentId.trim()
+      : undefined;
+
+  return {
+    id: normalizedId,
+    documentId: normalizedDocumentId,
+    userId: normalizedUserId,
+    content: normalizedContent,
+    anchorFrom: normalizedAnchorFrom,
+    anchorTo: normalizedAnchorTo,
+    anchorText: normalizedAnchorText,
+    resolved: resolved === true,
+    parentCommentId: normalizedParentCommentId,
+    createdAt: normalizedCreatedAt,
+    updatedAt: normalizedUpdatedAt,
+  } satisfies CommentRecord;
+}
+
+function safeReadCommentField(comment: unknown, key: keyof CommentRecord) {
+  if (!comment || typeof comment !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (comment as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
   }
 }
