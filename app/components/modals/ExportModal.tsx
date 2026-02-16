@@ -82,12 +82,7 @@ export function ExportModal({
           <Button
             variant="outline"
             onClick={() => {
-              const printWindow = window.open("", "_blank", "noopener,noreferrer");
-              if (!printWindow) return;
-              printWindow.document.write(exportHtml(content));
-              printWindow.document.close();
-              printWindow.focus();
-              printWindow.print();
+              exportPdfSafely(content);
             }}
           >
             PDF
@@ -96,4 +91,87 @@ export function ExportModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+function exportPdfSafely(content: unknown) {
+  const printWindow = openPrintWindowSafely();
+  if (!printWindow) {
+    return;
+  }
+
+  const html = readExportHtmlSafely(content);
+  if (typeof html !== "string") {
+    return;
+  }
+
+  writePrintWindowDocumentSafely(printWindow, html);
+  closePrintWindowDocumentSafely(printWindow);
+  focusPrintWindowSafely(printWindow);
+  triggerPrintSafely(printWindow);
+}
+
+function openPrintWindowSafely() {
+  if (typeof window === "undefined" || typeof window.open !== "function") {
+    return null;
+  }
+
+  try {
+    return window.open("", "_blank", "noopener,noreferrer");
+  } catch {
+    return null;
+  }
+}
+
+function readExportHtmlSafely(content: unknown) {
+  try {
+    return exportHtml(content);
+  } catch {
+    return undefined;
+  }
+}
+
+function writePrintWindowDocumentSafely(printWindow: Window, html: string) {
+  try {
+    if (
+      printWindow.document &&
+      typeof printWindow.document.write === "function"
+    ) {
+      printWindow.document.write(html);
+    }
+  } catch {
+    return;
+  }
+}
+
+function closePrintWindowDocumentSafely(printWindow: Window) {
+  try {
+    if (
+      printWindow.document &&
+      typeof printWindow.document.close === "function"
+    ) {
+      printWindow.document.close();
+    }
+  } catch {
+    return;
+  }
+}
+
+function focusPrintWindowSafely(printWindow: Window) {
+  try {
+    if (typeof printWindow.focus === "function") {
+      printWindow.focus();
+    }
+  } catch {
+    return;
+  }
+}
+
+function triggerPrintSafely(printWindow: Window) {
+  try {
+    if (typeof printWindow.print === "function") {
+      printWindow.print();
+    }
+  } catch {
+    return;
+  }
 }

@@ -176,6 +176,59 @@ describe("ExportModal", () => {
     expect(openSpy).toHaveBeenCalled();
   });
 
+  it("does not throw when opening print window throws", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "open").mockImplementation(() => {
+      throw new Error("open failed");
+    });
+
+    render(
+      <ExportModal
+        open
+        onOpenChange={vi.fn()}
+        documentTitle="Broken open"
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "PDF" })),
+    ).resolves.toBeUndefined();
+  });
+
+  it("does not throw when print window methods throw", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "open").mockReturnValue({
+      document: {
+        write: vi.fn(() => {
+          throw new Error("write failed");
+        }),
+        close: vi.fn(() => {
+          throw new Error("close failed");
+        }),
+      },
+      focus: vi.fn(() => {
+        throw new Error("focus failed");
+      }),
+      print: vi.fn(() => {
+        throw new Error("print failed");
+      }),
+    } as unknown as Window);
+
+    render(
+      <ExportModal
+        open
+        onOpenChange={vi.fn()}
+        documentTitle="Broken print window"
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await expect(
+      user.click(screen.getByRole("button", { name: "PDF" })),
+    ).resolves.toBeUndefined();
+  });
+
   it("does not throw when onOpenChange callback is malformed non-function", async () => {
     const user = userEvent.setup();
     render(
