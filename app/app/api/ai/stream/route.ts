@@ -17,6 +17,7 @@ const MAX_MESSAGE_COUNT = 100;
 const MAX_PROMPT_LENGTH = 4_000;
 const MAX_MESSAGE_CONTENT_LENGTH = 8_000;
 const MAX_DOCUMENT_ID_LENGTH = 256;
+const MAX_USER_ID_LENGTH = 256;
 
 type StreamRequestPayload = {
   documentId: string;
@@ -94,6 +95,12 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     if (typeof item.content !== "string") return null;
     if (item.content.length > MAX_MESSAGE_CONTENT_LENGTH) return null;
     if (item.userId !== undefined && !hasText(item.userId)) return null;
+    if (
+      typeof item.userId === "string" &&
+      item.userId.trim().length > MAX_USER_ID_LENGTH
+    ) {
+      return null;
+    }
 
     return {
       role,
