@@ -171,6 +171,14 @@ describe("ai chat store", () => {
       content: "a".repeat(8_001),
       createdAt: Date.now(),
     });
+    const controlCharContent = saveMessage({
+      id: "msg-control-content",
+      documentId: "doc-bad",
+      userId: "author",
+      role: "assistant",
+      content: `bad${"\u0000"}content`,
+      createdAt: Date.now(),
+    });
     const negativeTimestamp = saveMessage({
       id: "msg-negative-time",
       documentId: "doc-bad",
@@ -186,6 +194,7 @@ describe("ai chat store", () => {
     expect(controlCharId).toBeNull();
     expect(oversizedId).toBeNull();
     expect(oversizedContent).toBeNull();
+    expect(controlCharContent).toBeNull();
     expect(negativeTimestamp).toBeNull();
     expect(listMessagesByDocument("doc-bad")).toEqual([]);
   });
@@ -272,6 +281,14 @@ describe("ai chat store", () => {
             userId: "u-1",
             role: "assistant",
             content: "a".repeat(8_001),
+            createdAt: 4,
+          },
+          {
+            id: "bad-control-content",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            role: "assistant",
+            content: `bad${"\u0000"}content`,
             createdAt: 4,
           },
           {

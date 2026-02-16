@@ -19,6 +19,7 @@ const ALLOWED_MESSAGE_ROLES = new Set<AIMessage["role"]>([
   "assistant",
   "system",
 ]);
+const DISALLOWED_MESSAGE_CONTROL_CHARS_REGEX = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 function canUseStorage() {
   return typeof window !== "undefined" && !!window.localStorage;
@@ -131,6 +132,7 @@ function normalizeMessage(message: AIMessage): AIMessage | null {
     typeof message.content !== "string" ||
     message.content.trim().length === 0 ||
     message.content.length > MAX_MESSAGE_CONTENT_LENGTH ||
+    DISALLOWED_MESSAGE_CONTROL_CHARS_REGEX.test(message.content) ||
     typeof message.createdAt !== "number" ||
     !Number.isFinite(message.createdAt) ||
     message.createdAt < 0
