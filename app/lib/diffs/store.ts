@@ -44,7 +44,7 @@ function loadState(): DiffStoreState {
 
     const sanitizedDiffs = parsed.diffs.flatMap((diff) => {
       const normalizedDocumentId = normalizeDocumentId(diff.documentId);
-      const normalizedDiffId = diff.id?.trim();
+      const normalizedDiffId = normalizeDiffReferenceId(diff.id);
       const normalizedMetadata = normalizeDiffMetadata(diff.aiPrompt, diff.aiModel);
       if (
         !normalizedDiffId ||
@@ -116,6 +116,19 @@ function normalizeDiffUserId(userId: string | undefined) {
   }
 
   return normalizedUserId;
+}
+
+function normalizeDiffReferenceId(diffId: string | undefined) {
+  const normalizedDiffId = diffId?.trim();
+  if (
+    !normalizedDiffId ||
+    normalizedDiffId.length > MAX_USER_ID_LENGTH ||
+    hasControlChars(normalizedDiffId)
+  ) {
+    return undefined;
+  }
+
+  return normalizedDiffId;
 }
 
 export function createDiff(params: {

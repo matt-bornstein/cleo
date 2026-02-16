@@ -143,6 +143,22 @@ describe("ai chat store", () => {
       content: "Hello",
       createdAt: Date.now(),
     });
+    const controlCharId = saveMessage({
+      id: "msg-\ncontrol",
+      documentId: "doc-bad",
+      userId: "author",
+      role: "assistant",
+      content: "Hello",
+      createdAt: Date.now(),
+    });
+    const oversizedId = saveMessage({
+      id: "m".repeat(257),
+      documentId: "doc-bad",
+      userId: "author",
+      role: "assistant",
+      content: "Hello",
+      createdAt: Date.now(),
+    });
     const oversizedContent = saveMessage({
       id: "msg-oversized-content",
       documentId: "doc-bad",
@@ -155,6 +171,8 @@ describe("ai chat store", () => {
     expect(invalidRole).toBeNull();
     expect(blankContent).toBeNull();
     expect(blankId).toBeNull();
+    expect(controlCharId).toBeNull();
+    expect(oversizedId).toBeNull();
     expect(oversizedContent).toBeNull();
     expect(listMessagesByDocument("doc-bad")).toEqual([]);
   });
@@ -201,6 +219,22 @@ describe("ai chat store", () => {
             userId: "u-1",
             role: "assistant",
             content: "Bad doc",
+            createdAt: 3,
+          },
+          {
+            id: "bad\nid",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            role: "assistant",
+            content: "Bad id",
+            createdAt: 3,
+          },
+          {
+            id: "m".repeat(257),
+            documentId: "doc-legacy",
+            userId: "u-1",
+            role: "assistant",
+            content: "Bad long id",
             createdAt: 3,
           },
           {

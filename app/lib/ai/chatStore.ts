@@ -1,8 +1,9 @@
-import { MAX_MESSAGE_CONTENT_LENGTH } from "@/lib/ai/constraints";
+import { MAX_MESSAGE_CONTENT_LENGTH, MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { normalizeAIUserId } from "@/lib/ai/identity";
 import { getModelConfig } from "@/lib/ai/models";
 import type { AIMessage } from "@/lib/types";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.aiMessages.v1";
 
@@ -107,6 +108,8 @@ function normalizeMessage(message: AIMessage): AIMessage | null {
   const normalizedMessageId = message.id?.trim();
   if (
     !normalizedMessageId ||
+    normalizedMessageId.length > MAX_USER_ID_LENGTH ||
+    hasControlChars(normalizedMessageId) ||
     !isValidDocumentId(normalizedDocumentId) ||
     !ALLOWED_MESSAGE_ROLES.has(message.role) ||
     typeof message.content !== "string" ||
