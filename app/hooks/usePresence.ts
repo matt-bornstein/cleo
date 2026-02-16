@@ -37,10 +37,15 @@ export function filterStalePresence<
   const safeMaxAge =
     Number.isFinite(maxAgeMs) && maxAgeMs >= 0 ? maxAgeMs : 10_000;
   return entries.filter(
-    (entry) =>
+    (entry) => {
+      const ageMs = safeNow - entry.updatedAt;
+      return (
       Number.isFinite(entry.updatedAt) &&
       entry.updatedAt >= 0 &&
-      safeNow - entry.updatedAt < safeMaxAge,
+        ageMs < safeMaxAge &&
+        ageMs >= -safeMaxAge
+      );
+    },
   );
 }
 

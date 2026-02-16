@@ -42,6 +42,17 @@ describe("filterStalePresence", () => {
     const active = filterStalePresence(entries, Number.NaN, Number.NaN);
     expect(active).toEqual([{ id: "fresh", updatedAt: 5_000 }]);
   });
+
+  it("filters out entries with timestamps too far in the future", () => {
+    const now = 10_000;
+    const entries = [
+      { id: "near-future", updatedAt: now + 2_000 },
+      { id: "far-future", updatedAt: now + 20_000 },
+    ];
+
+    const active = filterStalePresence(entries, now, 10_000);
+    expect(active).toEqual([{ id: "near-future", updatedAt: now + 2_000 }]);
+  });
 });
 
 describe("usePresence", () => {
