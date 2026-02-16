@@ -306,4 +306,32 @@ describe("useDocuments", () => {
     ]);
     expect(result.current.documents[0]?.content).toContain('"type":"doc"');
   });
+
+  it("returns safe fallbacks when document operation return payload getters throw", () => {
+    const malformedOperationDocument = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(malformedOperationDocument, "id", {
+      get() {
+        throw new Error("id getter failed");
+      },
+    });
+    createDocumentMock.mockReturnValue(malformedOperationDocument);
+    getDocumentByIdMock.mockReturnValue(malformedOperationDocument);
+    updateDocumentTitleMock.mockReturnValue(malformedOperationDocument);
+    updateDocumentContentMock.mockReturnValue(malformedOperationDocument);
+    setDocumentChatClearedAtMock.mockReturnValue(malformedOperationDocument);
+
+    const { result } = renderHook(() => useDocuments(undefined, "me@example.com"));
+    expect(listDocumentsMock).toHaveBeenCalledTimes(1);
+
+    expect(() => {
+      act(() => {
+        expect(result.current.create("Title", "owner@example.com")).toBeNull();
+        expect(result.current.getById("doc-1")).toBeUndefined();
+        expect(result.current.updateTitle("doc-1", "Next")).toBeUndefined();
+        expect(result.current.updateContent("doc-1", "{}")).toBeUndefined();
+        expect(result.current.setChatClearedAt("doc-1", 1)).toBeUndefined();
+      });
+    }).not.toThrow();
+    expect(listDocumentsMock).toHaveBeenCalledTimes(1);
+  });
 });

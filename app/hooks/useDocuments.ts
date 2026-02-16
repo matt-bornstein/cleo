@@ -59,12 +59,13 @@ export function useDocuments(
       const normalizedTitle = typeof title === "string" ? title : "";
       const normalizedOwnerEmail =
         typeof ownerEmail === "string" ? ownerEmail : undefined;
-      const document = safeCreateDocument(normalizedTitle, normalizedOwnerEmail);
-      if (!document) {
+      const createdDocument = safeCreateDocument(normalizedTitle, normalizedOwnerEmail);
+      const normalizedDocument = safeNormalizeListedDocument(createdDocument);
+      if (!normalizedDocument) {
         return null;
       }
       refresh();
-      return document;
+      return normalizedDocument;
     },
     [refresh],
   );
@@ -72,7 +73,8 @@ export function useDocuments(
   const getById = useCallback((documentId: unknown): AppDocument | undefined => {
     const normalizedDocumentId =
       typeof documentId === "string" ? documentId : "";
-    return safeGetDocumentById(normalizedDocumentId);
+    const document = safeGetDocumentById(normalizedDocumentId);
+    return safeNormalizeListedDocument(document) ?? undefined;
   }, []);
 
   const updateContent = useCallback(
@@ -84,10 +86,11 @@ export function useDocuments(
         normalizedDocumentId,
         normalizedContent,
       );
-      if (updated) {
+      const normalizedUpdatedDocument = safeNormalizeListedDocument(updated);
+      if (normalizedUpdatedDocument) {
         refresh();
       }
-      return updated;
+      return normalizedUpdatedDocument ?? undefined;
     },
     [refresh],
   );
@@ -97,11 +100,12 @@ export function useDocuments(
       const normalizedDocumentId =
         typeof documentId === "string" ? documentId : "";
       const normalizedTitle = typeof title === "string" ? title : "";
-      const updated = safeUpdateDocumentTitle(normalizedDocumentId, normalizedTitle);
-      if (updated) {
+      const updatedDocument = safeUpdateDocumentTitle(normalizedDocumentId, normalizedTitle);
+      const normalizedUpdatedDocument = safeNormalizeListedDocument(updatedDocument);
+      if (normalizedUpdatedDocument) {
         refresh();
       }
-      return updated;
+      return normalizedUpdatedDocument ?? undefined;
     },
     [refresh],
   );
@@ -116,10 +120,11 @@ export function useDocuments(
         normalizedDocumentId,
         normalizedTimestamp,
       );
-      if (updated) {
+      const normalizedUpdatedDocument = safeNormalizeListedDocument(updated);
+      if (normalizedUpdatedDocument) {
         refresh();
       }
-      return updated;
+      return normalizedUpdatedDocument ?? undefined;
     },
     [refresh],
   );
