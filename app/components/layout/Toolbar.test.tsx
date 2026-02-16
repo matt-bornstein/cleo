@@ -99,4 +99,28 @@ describe("Toolbar", () => {
     expect(screen.getByText("Untitled")).toBeInTheDocument();
     expect(screen.queryByText("editor\nbad")).not.toBeInTheDocument();
   });
+
+  it("does not throw when rename prompt throws", async () => {
+    const user = userEvent.setup();
+    const onRenameDocument = vi.fn();
+    vi.spyOn(window, "prompt").mockImplementation(() => {
+      throw new Error("prompt failed");
+    });
+
+    render(
+      <Toolbar
+        documentTitle="Roadmap"
+        onRenameDocument={onRenameDocument}
+        onNewDocument={vi.fn()}
+        onOpenDocument={vi.fn()}
+        onHistory={vi.fn()}
+        onExport={vi.fn()}
+        onShare={vi.fn()}
+        onSettings={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    expect(onRenameDocument).not.toHaveBeenCalled();
+  });
 });

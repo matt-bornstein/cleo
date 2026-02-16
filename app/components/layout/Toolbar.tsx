@@ -69,7 +69,7 @@ export function Toolbar({
           variant="outline"
           size="sm"
           onClick={() => {
-            const nextTitle = window.prompt("Rename document", normalizedDocumentTitle);
+            const nextTitle = safePrompt("Rename document", normalizedDocumentTitle);
             if (nextTitle === null) return;
             if (typeof onRenameDocument === "function") {
               onRenameDocument(nextTitle);
@@ -136,4 +136,16 @@ export function Toolbar({
       </div>
     </header>
   );
+}
+
+function safePrompt(message: string, defaultValue: string) {
+  if (typeof window === "undefined" || typeof window.prompt !== "function") {
+    return null;
+  }
+
+  try {
+    return window.prompt(message, defaultValue);
+  } catch {
+    return null;
+  }
 }
