@@ -25,14 +25,18 @@ type StreamRequestPayload = {
   }>;
 };
 
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function parsePayload(value: unknown): StreamRequestPayload | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
 
   if (
-    typeof candidate.documentId !== "string" ||
-    typeof candidate.model !== "string" ||
-    typeof candidate.prompt !== "string" ||
+    !hasText(candidate.documentId) ||
+    !hasText(candidate.model) ||
+    !hasText(candidate.prompt) ||
     typeof candidate.documentContent !== "string"
   ) {
     return null;
