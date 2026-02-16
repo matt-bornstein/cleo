@@ -44,9 +44,9 @@ export function AIPanel({ documentId }: AIPanelProps) {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-muted/30">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-3 py-2">
+      <div className="flex items-center justify-between border-b bg-background px-3 py-2">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">AI Assistant</h3>

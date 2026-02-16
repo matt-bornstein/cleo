@@ -38,25 +38,30 @@ export function ChatInput({
   };
 
   return (
-    <div className="flex gap-2 p-3">
-      <Textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        disabled={disabled}
-        className="min-h-[60px] max-h-[120px] resize-none text-sm"
-        rows={2}
-      />
-      <Button
-        size="sm"
-        onClick={handleSubmit}
-        disabled={!value.trim() || disabled}
-        className="self-end"
-      >
-        <Send className="h-4 w-4" />
-      </Button>
+    <div className="space-y-1 p-3">
+      <div className="flex gap-2">
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="min-h-[60px] max-h-[120px] resize-none text-sm"
+          rows={2}
+        />
+        <Button
+          size="sm"
+          onClick={handleSubmit}
+          disabled={!value.trim() || disabled}
+          className="self-end"
+        >
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        Enter to send · Shift+Enter for new line
+      </p>
     </div>
   );
 }
