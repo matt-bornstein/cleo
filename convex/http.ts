@@ -8,6 +8,7 @@ import { getServerSchema } from "./lib/schema";
 import { prosemirrorSync } from "./prosemirrorSync";
 import { Node } from "@tiptap/pm/model";
 import { Transform } from "@tiptap/pm/transform";
+import { recreateTransform } from "@technik-sde/prosemirror-recreate-transform";
 
 const http = httpRouter();
 
@@ -154,18 +155,26 @@ http.route({
                       // Build the new ProseMirror Node from our JSON
                       const targetDoc = Node.fromJSON(schema, newDocJson);
 
-                      // Create a transform that replaces the entire content
-                      // with the new doc's content
-                      const tr = new Transform(currentDoc);
-                      tr.replaceWith(
-                        0,
-                        currentDoc.content.size,
-                        targetDoc.content
-                      );
-
-                      // Only return the transform if it has steps (changes)
-                      if (tr.steps.length === 0) return null;
-                      return tr;
+                      // Use recreateTransform for MINIMAL steps that preserve
+                      // collaborator cursor positions outside changed regions.
+                      // This is critical: a full replaceWith(0, size, newContent)
+                      // would map ALL cursor positions to the end of the doc.
+                      try {
+                        const tr = recreateTransform(currentDoc, targetDoc, {
+                          complexSteps: true,
+                          wordDiffs: false,
+                          simplifyDiff: true,
+                        });
+                        if (tr.steps.length === 0) return null;
+                        return tr;
+                      } catch (e) {
+                        // Fallback to full replace if recreateTransform fails
+                        console.error("recreateTransform failed, using full replace:", e);
+                        const tr = new Transform(currentDoc);
+                        tr.replaceWith(0, currentDoc.content.size, targetDoc.content);
+                        if (tr.steps.length === 0) return null;
+                        return tr;
+                      }
                     }
                   );
                   transformApplied = true;
