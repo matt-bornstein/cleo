@@ -123,16 +123,22 @@ describe("permissions store", () => {
             email: "user@example.com",
             role: "admin",
           },
+          {
+            id: "duplicate",
+            documentId: "doc-valid",
+            email: "user@example.com",
+            role: "editor",
+          },
         ],
       }),
     );
 
     expect(listPermissions("doc-valid")).toEqual([
       {
-        id: "valid-id",
+        id: "duplicate",
         documentId: "doc-valid",
         email: "user@example.com",
-        role: "viewer",
+        role: "editor",
       },
     ]);
   });

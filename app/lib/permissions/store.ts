@@ -32,8 +32,7 @@ function loadState(): PermissionState {
       return { permissions: [] };
     }
 
-    return {
-      permissions: parsed.permissions.flatMap((entry) => {
+    const sanitizedPermissions = parsed.permissions.flatMap((entry) => {
         const normalizedDocumentId = normalizeDocumentId(entry.documentId);
         const normalizedEmail = normalizeEmailOrUndefined(entry.email);
         if (
@@ -54,7 +53,18 @@ function loadState(): PermissionState {
             role: entry.role,
           },
         ];
-      }),
+      });
+
+    const dedupedByDocumentAndEmail = new Map<string, PermissionState["permissions"][number]>();
+    for (const permission of sanitizedPermissions) {
+      dedupedByDocumentAndEmail.set(
+        `${permission.documentId}::${permission.email}`,
+        permission,
+      );
+    }
+
+    return {
+      permissions: Array.from(dedupedByDocumentAndEmail.values()),
     };
   } catch {
     return { permissions: [] };
