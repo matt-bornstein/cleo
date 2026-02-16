@@ -1,5 +1,6 @@
 import type { AppUserSettings } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
+import { normalizeEmailOrFallback } from "@/lib/user/email";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 const STORAGE_KEY = "plan00.settings.v1";
@@ -35,7 +36,10 @@ function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettin
     settings.editorLineSpacing > 0
       ? settings.editorLineSpacing
       : defaultSettings.editorLineSpacing;
-  const normalizedEmail = settings?.userEmail?.trim().toLowerCase();
+  const normalizedEmail = normalizeEmailOrFallback(
+    settings?.userEmail,
+    DEFAULT_LOCAL_USER_EMAIL,
+  );
 
   return {
     ...defaultSettings,
@@ -46,10 +50,7 @@ function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettin
         : defaultSettings.defaultModel,
     editorFontSize: normalizedFontSize,
     editorLineSpacing: normalizedLineSpacing,
-    userEmail:
-      normalizedEmail && !hasControlChars(normalizedEmail)
-        ? normalizedEmail
-        : DEFAULT_LOCAL_USER_EMAIL,
+    userEmail: normalizedEmail,
   };
 }
 

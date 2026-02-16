@@ -1,6 +1,6 @@
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { Role } from "@/lib/types";
-import { hasControlChars } from "@/lib/validators/controlChars";
+import { normalizeEmailOrUndefined } from "@/lib/user/email";
 
 const STORAGE_KEY = "plan00.permissions.v1";
 
@@ -60,15 +60,11 @@ export function getRoleForUser(
     return "viewer";
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail || hasControlChars(normalizedEmail)) {
+  const normalizedEmail = normalizeEmailOrUndefined(email);
+  if (!normalizedEmail) {
     return "viewer";
   }
-  const normalizedOwnerEmailRaw = ownerEmail?.trim().toLowerCase();
-  const normalizedOwnerEmail =
-    normalizedOwnerEmailRaw && !hasControlChars(normalizedOwnerEmailRaw)
-      ? normalizedOwnerEmailRaw
-      : undefined;
+  const normalizedOwnerEmail = normalizeEmailOrUndefined(ownerEmail);
 
   if (normalizedOwnerEmail && normalizedEmail === normalizedOwnerEmail) {
     return "owner";
@@ -92,15 +88,11 @@ export function hasDocumentAccess(
     return false;
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail || hasControlChars(normalizedEmail)) {
+  const normalizedEmail = normalizeEmailOrUndefined(email);
+  if (!normalizedEmail) {
     return false;
   }
-  const normalizedOwnerEmailRaw = ownerEmail?.trim().toLowerCase();
-  const normalizedOwnerEmail =
-    normalizedOwnerEmailRaw && !hasControlChars(normalizedOwnerEmailRaw)
-      ? normalizedOwnerEmailRaw
-      : undefined;
+  const normalizedOwnerEmail = normalizeEmailOrUndefined(ownerEmail);
   if (normalizedOwnerEmail && normalizedOwnerEmail === normalizedEmail) {
     return true;
   }
@@ -118,8 +110,8 @@ export function upsertPermission(documentId: string, email: string, role: Role) 
     return null;
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail || hasControlChars(normalizedEmail)) {
+  const normalizedEmail = normalizeEmailOrUndefined(email);
+  if (!normalizedEmail) {
     return null;
   }
 

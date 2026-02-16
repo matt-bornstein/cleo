@@ -1,7 +1,7 @@
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
-import { hasControlChars } from "@/lib/validators/controlChars";
+import { normalizeEmailOrFallback } from "@/lib/user/email";
 
 const STORAGE_KEY = "plan00.documents.v1";
 
@@ -60,12 +60,7 @@ function persistState(state: DocumentStoreState) {
 }
 
 function normalizeOwnerEmail(ownerEmail: string | undefined) {
-  const normalizedOwnerEmail = ownerEmail?.trim().toLowerCase();
-  if (!normalizedOwnerEmail || hasControlChars(normalizedOwnerEmail)) {
-    return DEFAULT_OWNER_EMAIL;
-  }
-
-  return normalizedOwnerEmail;
+  return normalizeEmailOrFallback(ownerEmail, DEFAULT_OWNER_EMAIL);
 }
 
 export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL): AppDocument {
