@@ -30,6 +30,7 @@ import {
 import { hasPermission } from "@/lib/permissions";
 import { sanitizeShareRole } from "@/lib/permissions/shareLink";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
+import { normalizeEmailOrUndefined } from "@/lib/user/email";
 
 type EditorShellProps = {
   documentId: unknown;
@@ -40,7 +41,8 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings, refreshSettings } = useSettings();
-  const currentUserEmail = settings.userEmail ?? DEFAULT_LOCAL_USER_EMAIL;
+  const currentUserEmail =
+    normalizeEmailOrUndefined(settings.userEmail) ?? DEFAULT_LOCAL_USER_EMAIL;
   const {
     documents,
     create,
@@ -80,7 +82,9 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const canEdit = hasPermission(myRole, "editor");
   const canComment = hasPermission(myRole, "commenter");
   const canShare = hasPermission(myRole, "owner");
-  const requestedShareRole = sanitizeShareRole(searchParams.get("share"));
+  const requestedShareRole = sanitizeShareRole(
+    readSearchParam(searchParams, "share"),
+  );
   const content =
     currentDocument?.content ??
     JSON.stringify({
@@ -128,13 +132,13 @@ export function EditorShell({ documentId }: EditorShellProps) {
     if (!requestedShareRole) return;
     if (!(myRole === "owner" || myRole === requestedShareRole)) return;
 
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(readSearchParamsString(searchParams));
     params.delete("share");
     const cleaned = params.toString();
     const nextPath = cleaned
       ? `/editor/${normalizedDocumentId}?${cleaned}`
       : `/editor/${normalizedDocumentId}`;
-    router.replace(nextPath);
+    safeRouterReplace(router, nextPath);
   }, [normalizedDocumentId, myRole, requestedShareRole, router, searchParams]);
 
   useEffect(() => {
@@ -173,7 +177,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
           <button
             type="button"
             className="mt-4 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white"
-            onClick={() => router.push("/editor")}
+            onClick={() => safeRouterPush(router, "/editor")}
           >
             Return to document list
           </button>
@@ -276,7 +280,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
             documentId: newDocument.id,
             snapshot: newDocument.content,
           });
-          router.push(`/editor/${newDocument.id}`);
+          safeRouterPush(router, `/editor/${newDocument.id}`);
         }}
       />
       <OpenDocModal
@@ -284,13 +288,13 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenChange={setOpenModalOpen}
         documents={documents}
         onOpenDocument={(nextDocumentId: string) =>
-          router.push(`/editor/${nextDocumentId}`)
+          safeRouterPush(router, `/editor/${nextDocumentId}`)
         }
         onDeleteDocument={(targetDocumentId: string) => {
           const removed = remove(targetDocumentId);
           if (!removed) return;
           if (targetDocumentId === normalizedDocumentId) {
-            router.push("/editor");
+            safeRouterPush(router, "/editor");
           }
         }}
       />
@@ -326,11 +330,81 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenChange={setSettingsModalOpen}
         onSaved={refreshSettings}
         onSignOut={async () => {
-          await fetch("/api/auth/local-signout", { method: "POST" });
-          router.push("/sign-in");
-          router.refresh();
+          await safeSignOutRequest();
+          safeRouterPush(router, "/sign-in");
+          safeRouterRefresh(router);
         }}
       />
     </div>
   );
+}
+
+function readSearchParam(searchParams: unknown, key: string) {
+  if (
+    !searchParams ||
+    typeof searchParams !== "object" ||
+    !("get" in searchParams) ||
+    typeof (searchParams as { get?: unknown }).get !== "function"
+  ) {
+    return null;
+  }
+
+  try {
+    return (searchParams as { get: (name: string) => string | null }).get(key);
+  } catch {
+    return null;
+  }
+}
+
+function readSearchParamsString(searchParams: unknown) {
+  if (!searchParams) {
+    return "";
+  }
+
+  try {
+    return String(searchParams);
+  } catch {
+    return "";
+  }
+}
+
+async function safeSignOutRequest() {
+  try {
+    await fetch("/api/auth/local-signout", { method: "POST" });
+  } catch {
+    return;
+  }
+}
+
+function safeRouterPush(router: unknown, path: string) {
+  if (
+    router &&
+    typeof router === "object" &&
+    "push" in router &&
+    typeof (router as { push?: unknown }).push === "function"
+  ) {
+    (router as { push: (nextPath: string) => void }).push(path);
+  }
+}
+
+function safeRouterReplace(router: unknown, path: string) {
+  if (
+    router &&
+    typeof router === "object" &&
+    "replace" in router &&
+    typeof (router as { replace?: unknown }).replace === "function"
+  ) {
+    (router as { replace: (nextPath: string) => void }).replace(path);
+  }
+}
+
+function safeRouterRefresh(router: unknown) {
+  if (
+    router &&
+    typeof router === "object" &&
+    "refresh" in router &&
+    typeof (router as { refresh?: unknown }).refresh === "function"
+  ) {
+    (router as { refresh: () => void }).refresh();
+  }
 }

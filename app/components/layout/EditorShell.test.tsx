@@ -10,14 +10,16 @@ import { saveSettings } from "@/lib/settings/store";
 
 const pushMock = vi.fn();
 const replaceMock = vi.fn();
-let mockedSearchParams = new URLSearchParams();
+const refreshMock = vi.fn();
+let mockedSearchParams: unknown = new URLSearchParams();
+let mockedRouter: unknown = {
+  push: pushMock,
+  replace: replaceMock,
+  refresh: refreshMock,
+};
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: pushMock,
-    replace: replaceMock,
-    refresh: vi.fn(),
-  }),
+  useRouter: () => mockedRouter,
   useSearchParams: () => mockedSearchParams,
 }));
 
@@ -31,9 +33,15 @@ describe("EditorShell", () => {
   beforeEach(() => {
     pushMock.mockReset();
     replaceMock.mockReset();
+    refreshMock.mockReset();
     resetDocumentsForTests();
     window.localStorage.clear();
     mockedSearchParams = new URLSearchParams();
+    mockedRouter = {
+      push: pushMock,
+      replace: replaceMock,
+      refresh: refreshMock,
+    };
     Object.defineProperty(window.navigator, "onLine", {
       configurable: true,
       get: () => true,
@@ -172,5 +180,21 @@ describe("EditorShell", () => {
     render(<EditorShell documentId={123} />);
 
     expect(screen.getByText("Access required")).toBeInTheDocument();
+  });
+
+  it("does not throw when router and search params payloads are malformed", () => {
+    const document = createDocument("Malformed runtime payloads");
+    mockedRouter = {};
+    mockedSearchParams = {
+      get: () => {
+        throw new Error("get failed");
+      },
+      toString: () => {
+        throw new Error("toString failed");
+      },
+    };
+
+    expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
+    expect(screen.getAllByText("Malformed runtime payloads").length).toBeGreaterThan(0);
   });
 });
