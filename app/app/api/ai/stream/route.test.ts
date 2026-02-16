@@ -52,6 +52,43 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toBe("Invalid request payload");
   });
 
+  it("returns bad request when required payload getters throw", async () => {
+    const payloadWithThrowingPrompt = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(payloadWithThrowingPrompt, "documentId", {
+      value: "doc-throw-required-getter",
+      enumerable: true,
+    });
+    Object.defineProperty(payloadWithThrowingPrompt, "model", {
+      value: "gpt-4o",
+      enumerable: true,
+    });
+    Object.defineProperty(payloadWithThrowingPrompt, "documentContent", {
+      value: JSON.stringify({
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Initial" }] }],
+      }),
+      enumerable: true,
+    });
+    Object.defineProperty(payloadWithThrowingPrompt, "messages", {
+      value: [],
+      enumerable: true,
+    });
+    Object.defineProperty(payloadWithThrowingPrompt, "prompt", {
+      enumerable: true,
+      get() {
+        throw new Error("prompt getter failed");
+      },
+    });
+
+    const malformedRequest = {
+      json: async () => payloadWithThrowingPrompt,
+    } as unknown as Request;
+    const response = await POST(malformedRequest);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
   it("streams successfully when request headers getter throws", async () => {
     const requestWithThrowingHeaders = {
       json: async () => createRequestBody({ documentId: "doc-throw-headers" }),
@@ -374,6 +411,33 @@ describe("POST /api/ai/stream", () => {
       const payload = (await response.json()) as { error: string };
       expect(payload.error).toBe("Invalid request payload");
     }
+  });
+
+  it("returns bad request when message property getters throw", async () => {
+    const throwingMessage = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(throwingMessage, "role", {
+      enumerable: true,
+      get() {
+        throw new Error("role getter failed");
+      },
+    });
+    Object.defineProperty(throwingMessage, "content", {
+      value: "hello",
+      enumerable: true,
+    });
+
+    const malformedRequest = {
+      json: async () =>
+        createRequestBody({
+          documentId: "doc-throw-message-getter",
+          messages: [throwingMessage],
+        }),
+    } as unknown as Request;
+
+    const response = await POST(malformedRequest);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
   });
 
   it("returns bad request when message history exceeds limit", async () => {

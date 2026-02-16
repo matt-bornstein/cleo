@@ -45,23 +45,27 @@ function hasText(value: unknown): value is string {
 function parsePayload(value: unknown): StreamRequestPayload | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
+  const rawDocumentId = safeReadProperty(candidate, "documentId");
+  const rawModel = safeReadProperty(candidate, "model");
+  const rawPrompt = safeReadProperty(candidate, "prompt");
+  const rawDocumentContent = safeReadProperty(candidate, "documentContent");
 
   if (
-    !hasText(candidate.documentId) ||
-    !hasText(candidate.model) ||
-    !hasText(candidate.prompt) ||
-    !isValidDocumentContentJson(candidate.documentContent)
+    !hasText(rawDocumentId) ||
+    !hasText(rawModel) ||
+    !hasText(rawPrompt) ||
+    !isValidDocumentContentJson(rawDocumentContent)
   ) {
     return null;
   }
 
-  const rawMessages = candidate.messages;
-  const documentId = normalizeDocumentId(candidate.documentId);
+  const rawMessages = safeReadProperty(candidate, "messages");
+  const documentId = normalizeDocumentId(rawDocumentId);
   if (!isValidDocumentId(documentId)) {
     return null;
   }
-  const model = candidate.model.trim();
-  const prompt = candidate.prompt.trim();
+  const model = rawModel.trim();
+  const prompt = rawPrompt.trim();
   if (
     prompt.length > MAX_PROMPT_LENGTH ||
     hasDisallowedTextControlChars(prompt)
@@ -77,7 +81,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
       documentId,
       model,
       prompt,
-      documentContent: candidate.documentContent,
+      documentContent: rawDocumentContent,
       messages: [],
     };
   }
@@ -87,29 +91,31 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
   const messages = rawMessages.map((message) => {
     if (!message || typeof message !== "object") return null;
     const item = message as Record<string, unknown>;
-    const role = item.role;
+    const role = safeReadProperty(item, "role");
     if (role !== "user" && role !== "assistant" && role !== "system") return null;
-    if (!hasText(item.content)) return null;
-    if (item.content.length > MAX_MESSAGE_CONTENT_LENGTH) return null;
-    if (hasDisallowedTextControlChars(item.content)) return null;
-    if (item.userId !== undefined && !hasText(item.userId)) return null;
+    const content = safeReadProperty(item, "content");
+    if (!hasText(content)) return null;
+    if (content.length > MAX_MESSAGE_CONTENT_LENGTH) return null;
+    if (hasDisallowedTextControlChars(content)) return null;
+    const userId = safeReadProperty(item, "userId");
+    if (userId !== undefined && !hasText(userId)) return null;
     if (
-      typeof item.userId === "string" &&
-      item.userId.trim().length > MAX_USER_ID_LENGTH
+      typeof userId === "string" &&
+      userId.trim().length > MAX_USER_ID_LENGTH
     ) {
       return null;
     }
     if (
-      typeof item.userId === "string" &&
-      hasControlChars(item.userId.trim())
+      typeof userId === "string" &&
+      hasControlChars(userId.trim())
     ) {
       return null;
     }
 
     return {
       role,
-      content: item.content,
-      userId: typeof item.userId === "string" ? item.userId.trim() : undefined,
+      content,
+      userId: typeof userId === "string" ? userId.trim() : undefined,
     };
   });
 
@@ -119,7 +125,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     documentId,
     model,
     prompt,
-    documentContent: candidate.documentContent,
+    documentContent: rawDocumentContent,
     messages: messages as StreamRequestPayload["messages"],
   };
 }
@@ -376,5 +382,13 @@ function readModelConfigSafely(model: string) {
     return getModelConfig(model);
   } catch {
     return null;
+  }
+}
+
+function safeReadProperty(record: Record<string, unknown>, key: string) {
+  try {
+    return record[key];
+  } catch {
+    return undefined;
   }
 }
