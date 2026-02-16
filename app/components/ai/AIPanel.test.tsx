@@ -112,4 +112,40 @@ describe("AIPanel", () => {
 
     expect(screen.getByRole("button", { name: "Clear chat" })).toBeDisabled();
   });
+
+  it("enables clear chat action when messages exist and not loading", () => {
+    useAILockStatusMock.mockReturnValue({
+      locked: false,
+    });
+    useAIChatMock.mockReturnValue({
+      messages: [
+        {
+          id: "m-1",
+          documentId: "doc-1",
+          userId: "bob@example.com",
+          role: "user",
+          content: "hello",
+          createdAt: 1,
+        },
+      ],
+      selectedModel: "gpt-4o",
+      selectedModelLabel: "OpenAI GPT-4o",
+      setSelectedModel: vi.fn(),
+      sendPrompt: vi.fn(),
+      isLoading: false,
+      error: null,
+      clearChat: vi.fn(),
+    });
+
+    render(
+      <AIPanel
+        documentId="doc-1"
+        currentDocumentContent="{}"
+        currentUserId="bob@example.com"
+        onApplyContent={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Clear chat" })).not.toBeDisabled();
+  });
 });
