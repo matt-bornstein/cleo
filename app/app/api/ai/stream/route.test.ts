@@ -490,6 +490,13 @@ describe("POST /api/ai/stream", () => {
 });
 
 describe("GET /api/ai/stream", () => {
+  it("returns bad request for malformed request url payload", async () => {
+    const response = await GET({ url: 123 } as unknown as Request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("documentId is required");
+  });
+
   it("requires documentId query parameter", async () => {
     const response = await GET(new Request("http://localhost/api/ai/stream"));
     expect(response.status).toBe(400);

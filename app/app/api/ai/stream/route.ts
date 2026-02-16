@@ -125,7 +125,20 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+  const normalizedUrl =
+    request && typeof request === "object" && "url" in request
+      ? (request as { url?: unknown }).url
+      : "";
+  if (typeof normalizedUrl !== "string") {
+    return Response.json({ error: "documentId is required" }, { status: 400 });
+  }
+  let searchParams: URLSearchParams;
+  try {
+    searchParams = new URL(normalizedUrl).searchParams;
+  } catch {
+    return Response.json({ error: "documentId is required" }, { status: 400 });
+  }
+
   const documentId = normalizeDocumentId(searchParams.get("documentId") ?? "");
   if (!isValidDocumentId(documentId)) {
     return Response.json({ error: "documentId is required" }, { status: 400 });
