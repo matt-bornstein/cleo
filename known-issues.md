@@ -25,5 +25,8 @@
 9. `npx convex dev --once` still immediately fails in non-interactive mode with the login prompt (`Would you like to login to your account?`).
 10. Re-ran `npx convex login status`; still reports `Convex account token found in: /home/ubuntu/.convex/config.json` plus `Status: Not logged in`.
 11. Re-ran `npx convex dev --once`; still fails instantly in non-interactive mode with `Cannot prompt for input in non-interactive terminals. (Welcome to Convex! Would you like to login to your account?)`.
+12. Inspected CLI docs via `npx convex dev --help && npx convex codegen --help && npx convex login --help`; no non-interactive flag was found for passing an access token directly to `convex dev`.
+13. Checked runtime environment for pre-provisioned Convex credentials (`env | rg "^CONVEX"` and repo search for `CONVEX_DEPLOY_KEY`); no Convex auth/deployment env vars are currently configured.
+14. Tried `npx convex codegen --dry-run --typecheck disable`; still blocked with `No CONVEX_DEPLOYMENT set`, confirming that even dry-run codegen requires deployment configuration.
 
-**Revisit result:** Still unresolved in this environment. Convex CLI setup cannot complete without an interactive token entry mechanism or pre-provisioned machine token.
+**Revisit result:** Still unresolved in this environment. Convex CLI setup cannot complete without an interactive token entry mechanism or pre-provisioned machine token/deploy key.
