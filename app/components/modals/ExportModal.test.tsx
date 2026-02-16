@@ -121,6 +121,25 @@ describe("ExportModal", () => {
     );
   });
 
+  it("falls back to untitled for symbol-only titles", async () => {
+    const user = userEvent.setup();
+    render(
+      <ExportModal
+        open
+        onOpenChange={vi.fn()}
+        documentTitle="!!!___---"
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Markdown" }));
+    expect(downloadFileMock).toHaveBeenCalledWith(
+      "# markdown",
+      "untitled.md",
+      "text/markdown;charset=utf-8",
+    );
+  });
+
   it("no-ops pdf export when print window cannot open", async () => {
     const user = userEvent.setup();
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
