@@ -288,7 +288,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
         open={historyModalOpen}
         onOpenChange={setHistoryModalOpen}
         documentId={documentId}
-        onRestoreSnapshot={(snapshot) => {
+        onRestoreSnapshot={(snapshot: string) => {
           const result = restoreVersion({
             documentId,
             snapshot,

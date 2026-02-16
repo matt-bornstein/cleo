@@ -13,10 +13,10 @@ import {
 import { listDiffsByDocument } from "@/lib/diffs/store";
 
 type VersionHistoryModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  documentId: string;
-  onRestoreSnapshot: (snapshot: string) => void;
+  open: unknown;
+  onOpenChange: unknown;
+  documentId: unknown;
+  onRestoreSnapshot: unknown;
 };
 
 export function VersionHistoryModal({
@@ -25,12 +25,20 @@ export function VersionHistoryModal({
   documentId,
   onRestoreSnapshot,
 }: VersionHistoryModalProps) {
+  const normalizedOpen = open === true;
   const [selectedDiffId, setSelectedDiffId] = useState<string | null>(null);
   const diffs = useMemo(() => listDiffsByDocument(documentId), [documentId]);
   const selectedDiff = diffs.find((diff) => diff.id === selectedDiffId) ?? diffs[0];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={normalizedOpen}
+      onOpenChange={(nextOpen) => {
+        if (typeof onOpenChange === "function") {
+          onOpenChange(nextOpen);
+        }
+      }}
+    >
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Version history</DialogTitle>
@@ -67,8 +75,12 @@ export function VersionHistoryModal({
                 disabled={!selectedDiff}
                 onClick={() => {
                   if (!selectedDiff) return;
-                  onRestoreSnapshot(selectedDiff.snapshotAfter);
-                  onOpenChange(false);
+                  if (typeof onRestoreSnapshot === "function") {
+                    onRestoreSnapshot(selectedDiff.snapshotAfter);
+                  }
+                  if (typeof onOpenChange === "function") {
+                    onOpenChange(false);
+                  }
                 }}
               >
                 Restore selected version
