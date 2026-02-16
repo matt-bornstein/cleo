@@ -86,11 +86,17 @@ export function useAIChat({
 
   const sendPrompt = useCallback(
     async (prompt: string) => {
+      const normalizedPrompt = prompt.trim();
+      if (!normalizedPrompt) {
+        setError("Prompt is required.");
+        return;
+      }
+
       const userMessage = createMessage(
         documentId,
         normalizedCurrentUserId,
         "user",
-        prompt,
+        normalizedPrompt,
       );
       const assistantDraft = createMessage(
         documentId,
@@ -113,7 +119,7 @@ export function useAIChat({
           },
           body: JSON.stringify({
             documentId,
-            prompt,
+            prompt: normalizedPrompt,
             model: selectedModel,
             documentContent: currentDocumentContent,
             messages: getRecentMessages(
@@ -153,7 +159,7 @@ export function useAIChat({
                   userId: normalizedCurrentUserId,
                   snapshotAfter: payload.nextContent,
                   source: "ai",
-                  aiPrompt: prompt,
+                  aiPrompt: normalizedPrompt,
                   aiModel: selectedModel,
                 })
               : undefined;

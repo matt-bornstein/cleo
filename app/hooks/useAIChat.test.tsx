@@ -376,6 +376,32 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("rejects blank prompts without sending requests", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-empty-prompt",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("   ");
+    });
+
+    expect(result.current.error).toBe("Prompt is required.");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(saveMessageMock).not.toHaveBeenCalled();
+    expect(result.current.messages).toEqual([]);
+
+    vi.unstubAllGlobals();
+  });
+
   it("clears visible errors when chat history is cleared", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi
