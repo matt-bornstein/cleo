@@ -186,6 +186,36 @@ describe("usePresence", () => {
     );
   });
 
+  it("normalizes update payload data getters when they throw", () => {
+    const malformedData = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(malformedData, "name", {
+      get() {
+        throw new Error("name getter failed");
+      },
+    });
+    Object.defineProperty(malformedData, "color", {
+      get() {
+        throw new Error("color getter failed");
+      },
+    });
+
+    const { result } = renderHook(() => usePresence("doc-presence"));
+    updatePresenceMock.mockClear();
+
+    act(() => {
+      result.current.updateMyPresence(malformedData);
+    });
+
+    expect(updatePresenceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "You",
+          color: "#3b82f6",
+        }),
+      }),
+    );
+  });
+
   it("does not throw when setInterval throws at runtime", () => {
     vi.spyOn(globalThis, "setInterval").mockImplementation(() => {
       throw new Error("setInterval failed");
@@ -262,5 +292,40 @@ describe("usePresence", () => {
     const { result } = renderHook(() => usePresence("doc-presence"));
     expect(result.current.others).toEqual([]);
     expect(result.current.me).toBeUndefined();
+  });
+
+  it("normalizes listed presence data when getter traps are present", () => {
+    const malformedData = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(malformedData, "name", {
+      get() {
+        throw new Error("name getter failed");
+      },
+    });
+    Object.defineProperty(malformedData, "color", {
+      get() {
+        throw new Error("color getter failed");
+      },
+    });
+    listPresenceMock.mockReturnValue([
+      {
+        id: "presence-2",
+        documentId: "doc-presence",
+        visitorId: "visitor-2",
+        userId: "teammate@example.com",
+        data: malformedData,
+        updatedAt: Date.now(),
+      },
+    ]);
+
+    const { result } = renderHook(() => usePresence("doc-presence"));
+    expect(result.current.others).toEqual([
+      expect.objectContaining({
+        visitorId: "visitor-2",
+        data: expect.objectContaining({
+          name: "You",
+          color: "#3b82f6",
+        }),
+      }),
+    ]);
   });
 });

@@ -27,13 +27,38 @@ const CURRENT_USER = {
 };
 
 function normalizePresenceData(data: unknown): PresenceData {
-  if (data && typeof data === "object") {
-    return data as PresenceData;
+  if (!data || typeof data !== "object") {
+    return {
+      name: CURRENT_USER.name,
+      color: CURRENT_USER.color,
+    };
   }
 
+  const name = readPresenceDataField(data, "name");
+  const color = readPresenceDataField(data, "color");
+  const cursor = readPresenceDataField(data, "cursor");
+  const selection = readPresenceDataField(data, "selection");
+  const normalizedName =
+    typeof name === "string" &&
+    name.trim().length > 0 &&
+    !hasControlChars(name.trim())
+      ? name.trim()
+      : CURRENT_USER.name;
+  const normalizedColor =
+    typeof color === "string" && color.trim().length > 0
+      ? color.trim()
+      : CURRENT_USER.color;
+  const normalizedCursor =
+    typeof cursor === "number" && Number.isFinite(cursor) && cursor >= 0
+      ? cursor
+      : undefined;
+  const normalizedSelection = normalizeSelection(selection);
+
   return {
-    name: CURRENT_USER.name,
-    color: CURRENT_USER.color,
+    name: normalizedName,
+    color: normalizedColor,
+    cursor: normalizedCursor,
+    selection: normalizedSelection,
   };
 }
 
@@ -196,6 +221,46 @@ function safeRemovePresence(visitorId: string) {
   } catch {
     return;
   }
+}
+
+function readPresenceDataField(data: unknown, key: keyof PresenceData) {
+  if (!data || typeof data !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (data as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeSelection(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  let from: unknown;
+  let to: unknown;
+  try {
+    from = (value as { from?: unknown }).from;
+    to = (value as { to?: unknown }).to;
+  } catch {
+    return undefined;
+  }
+
+  if (
+    typeof from !== "number" ||
+    !Number.isFinite(from) ||
+    from < 0 ||
+    typeof to !== "number" ||
+    !Number.isFinite(to) ||
+    to < from
+  ) {
+    return undefined;
+  }
+
+  return { from, to };
 }
 
 function readEntryUpdatedAt(entry: unknown) {
