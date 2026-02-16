@@ -81,12 +81,12 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
     const role = item.role;
     if (role !== "user" && role !== "assistant" && role !== "system") return null;
     if (typeof item.content !== "string") return null;
-    if (item.userId !== undefined && typeof item.userId !== "string") return null;
+    if (item.userId !== undefined && !hasText(item.userId)) return null;
 
     return {
       role,
       content: item.content,
-      userId: item.userId,
+      userId: typeof item.userId === "string" ? item.userId.trim() : undefined,
     };
   });
 

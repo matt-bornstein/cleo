@@ -228,6 +228,10 @@ describe("POST /api/ai/stream", () => {
         ...createRequestBody(),
         messages: [{ role: "user", content: "hello", userId: 123 }],
       },
+      {
+        ...createRequestBody(),
+        messages: [{ role: "user", content: "hello", userId: "   " }],
+      },
     ];
 
     for (const body of invalidBodies) {
