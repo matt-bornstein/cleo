@@ -33,6 +33,9 @@ describe("document store", () => {
 
     const controlCharOwner = createDocument("Bad owner", "owner\nname@example.com");
     expect(controlCharOwner.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
+
+    const malformedOwner = createDocument("Malformed owner", "not-an-email");
+    expect(malformedOwner.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
 
   it("lists documents sorted by updatedAt desc and searchable", async () => {

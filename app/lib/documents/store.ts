@@ -2,7 +2,8 @@ import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
 import type { AppDocument } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
-import { normalizeEmailOrFallback } from "@/lib/user/email";
+import { normalizeEmailOrUndefined } from "@/lib/user/email";
+import { isValidEmail } from "@/lib/validators/email";
 
 const STORAGE_KEY = "plan00.documents.v1";
 
@@ -126,7 +127,12 @@ function persistState(state: DocumentStoreState) {
 }
 
 function normalizeOwnerEmail(ownerEmail: string | undefined) {
-  return normalizeEmailOrFallback(ownerEmail, DEFAULT_OWNER_EMAIL);
+  const normalizedEmail = normalizeEmailOrUndefined(ownerEmail);
+  if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+    return DEFAULT_OWNER_EMAIL;
+  }
+
+  return normalizedEmail;
 }
 
 export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL): AppDocument {

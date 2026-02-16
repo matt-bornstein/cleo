@@ -65,6 +65,18 @@ describe("settings store", () => {
     expect(saved.editorLineSpacing).toBe(3);
   });
 
+  it("falls back to default user email for invalid email format", () => {
+    const saved = saveSettings({
+      theme: "dark",
+      defaultModel: "gpt-4o",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: "not-an-email",
+    });
+
+    expect(saved.userEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
+  });
+
   it("falls back to default model for unknown model ids", () => {
     const saved = saveSettings({
       theme: "dark",
@@ -93,7 +105,7 @@ describe("settings store", () => {
         defaultModel: "model\ninvalid",
         editorFontSize: "big",
         editorLineSpacing: -1,
-        userEmail: "owner\n@example.com",
+        userEmail: "owner-without-at",
       }),
     );
 

@@ -1,8 +1,9 @@
 import { getModelConfig } from "@/lib/ai/models";
 import type { AppUserSettings } from "@/lib/types";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
-import { normalizeEmailOrFallback } from "@/lib/user/email";
+import { normalizeEmailOrUndefined } from "@/lib/user/email";
 import { hasControlChars } from "@/lib/validators/controlChars";
+import { isValidEmail } from "@/lib/validators/email";
 
 const STORAGE_KEY = "plan00.settings.v1";
 
@@ -43,10 +44,7 @@ function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettin
     MAX_EDITOR_LINE_SPACING,
     defaultSettings.editorLineSpacing ?? 1.6,
   );
-  const normalizedEmail = normalizeEmailOrFallback(
-    settings?.userEmail,
-    DEFAULT_LOCAL_USER_EMAIL,
-  );
+  const normalizedEmail = normalizeEmailOrUndefined(settings?.userEmail);
 
   return {
     ...defaultSettings,
@@ -57,7 +55,10 @@ function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettin
         : defaultSettings.defaultModel,
     editorFontSize: normalizedFontSize,
     editorLineSpacing: normalizedLineSpacing,
-    userEmail: normalizedEmail,
+    userEmail:
+      normalizedEmail && isValidEmail(normalizedEmail)
+        ? normalizedEmail
+        : DEFAULT_LOCAL_USER_EMAIL,
   };
 }
 
