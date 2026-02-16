@@ -102,6 +102,25 @@ describe("ExportModal", () => {
     );
   });
 
+  it("uses untitled fallback filename when title is malformed non-string", async () => {
+    const user = userEvent.setup();
+    render(
+      <ExportModal
+        open
+        onOpenChange={vi.fn()}
+        documentTitle={123 as unknown as string}
+        content='{"type":"doc","content":[]}'
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "HTML" }));
+    expect(downloadFileMock).toHaveBeenCalledWith(
+      "<p>html</p>",
+      "untitled.html",
+      "text/html;charset=utf-8",
+    );
+  });
+
   it("sanitizes non-filename characters in export title", async () => {
     const user = userEvent.setup();
     render(

@@ -17,8 +17,10 @@ type ExportModalProps = {
   content: string;
 };
 
-function toSafeTitle(documentTitle: string) {
-  const normalized = documentTitle
+function toSafeTitle(documentTitle: unknown) {
+  const normalizedTitle =
+    typeof documentTitle === "string" ? documentTitle : "";
+  const normalized = normalizedTitle
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
