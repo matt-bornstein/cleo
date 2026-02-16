@@ -28,5 +28,8 @@
 12. Inspected CLI docs via `npx convex dev --help && npx convex codegen --help && npx convex login --help`; no non-interactive flag was found for passing an access token directly to `convex dev`.
 13. Checked runtime environment for pre-provisioned Convex credentials (`env | rg "^CONVEX"` and repo search for `CONVEX_DEPLOY_KEY`); no Convex auth/deployment env vars are currently configured.
 14. Tried `npx convex codegen --dry-run --typecheck disable`; still blocked with `No CONVEX_DEPLOYMENT set`, confirming that even dry-run codegen requires deployment configuration.
+15. Reviewed Convex CLI docs for CI/non-interactive auth path; docs indicate `CONVEX_DEPLOY_KEY` is the supported non-interactive credential for CLI commands.
+16. Re-checked runtime environment (`env | rg "^CONVEX"`); still no `CONVEX_DEPLOY_KEY` or deployment variables are present.
+17. Re-ran `npx convex login status`; CLI still reports `Status: Not logged in` and remains unable to proceed non-interactively.
 
 **Revisit result:** Still unresolved in this environment. Convex CLI setup cannot complete without an interactive token entry mechanism or pre-provisioned machine token/deploy key.
