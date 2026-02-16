@@ -46,4 +46,15 @@ describe("EditorDocumentPage", () => {
       expect.objectContaining({ documentId: undefined }),
     );
   });
+
+  it("passes undefined for blank trimmed document id params", async () => {
+    const view = await EditorDocumentPage({
+      params: Promise.resolve({ documentId: "   " }),
+    });
+    render(view);
+
+    expect(editorShellMock).toHaveBeenCalledWith(
+      expect.objectContaining({ documentId: undefined }),
+    );
+  });
 });

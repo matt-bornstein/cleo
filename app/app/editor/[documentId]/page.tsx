@@ -17,7 +17,12 @@ export default async function EditorDocumentPage({
 }
 
 function normalizeRouteDocumentId(value: unknown) {
-  return typeof value === "string" ? value.trim() : undefined;
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 async function resolveParams(params: unknown) {
