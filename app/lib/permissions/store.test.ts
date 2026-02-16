@@ -88,6 +88,55 @@ describe("permissions store", () => {
     expect(listPermissions("doc-legacy")).toHaveLength(1);
   });
 
+  it("filters malformed persisted permission entries on load", () => {
+    window.localStorage.setItem(
+      "plan00.permissions.v1",
+      JSON.stringify({
+        permissions: [
+          {
+            id: "valid-id",
+            documentId: "  doc-valid  ",
+            email: " USER@EXAMPLE.COM ",
+            role: "viewer",
+          },
+          {
+            id: "",
+            documentId: "doc-invalid",
+            email: "user@example.com",
+            role: "viewer",
+          },
+          {
+            id: "bad-doc",
+            documentId: "doc-\ninvalid",
+            email: "user@example.com",
+            role: "editor",
+          },
+          {
+            id: "bad-email",
+            documentId: "doc-valid",
+            email: "bad\nemail@example.com",
+            role: "editor",
+          },
+          {
+            id: "bad-role",
+            documentId: "doc-valid",
+            email: "user@example.com",
+            role: "admin",
+          },
+        ],
+      }),
+    );
+
+    expect(listPermissions("doc-valid")).toEqual([
+      {
+        id: "valid-id",
+        documentId: "doc-valid",
+        email: "user@example.com",
+        role: "viewer",
+      },
+    ]);
+  });
+
   it("rejects invalid document ids and malformed user emails", () => {
     expect(upsertPermission("   ", "user@example.com", "viewer")).toBeNull();
     expect(upsertPermission("doc-1", "bad\nemail@example.com", "viewer")).toBeNull();

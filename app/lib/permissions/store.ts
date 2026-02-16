@@ -3,6 +3,7 @@ import type { Role } from "@/lib/types";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
 
 const STORAGE_KEY = "plan00.permissions.v1";
+const ALLOWED_ROLES = new Set<Role>(["owner", "editor", "commenter", "viewer"]);
 
 export type PermissionEntry = {
   id: string;
@@ -27,7 +28,34 @@ function loadState(): PermissionState {
   if (!raw) return { permissions: [] };
   try {
     const parsed = JSON.parse(raw) as PermissionState;
-    return parsed.permissions ? parsed : { permissions: [] };
+    if (!parsed.permissions) {
+      return { permissions: [] };
+    }
+
+    return {
+      permissions: parsed.permissions.flatMap((entry) => {
+        const normalizedDocumentId = normalizeDocumentId(entry.documentId);
+        const normalizedEmail = normalizeEmailOrUndefined(entry.email);
+        if (
+          !isValidDocumentId(normalizedDocumentId) ||
+          !normalizedEmail ||
+          !ALLOWED_ROLES.has(entry.role) ||
+          typeof entry.id !== "string" ||
+          entry.id.trim().length === 0
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            id: entry.id,
+            documentId: normalizedDocumentId,
+            email: normalizedEmail,
+            role: entry.role,
+          },
+        ];
+      }),
+    };
   } catch {
     return { permissions: [] };
   }
