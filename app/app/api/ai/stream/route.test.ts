@@ -205,11 +205,38 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toContain("alice");
     aiLockManager.release("doc-trim", "alice");
   });
+
+  it("normalizes blank user header to default lock identity", async () => {
+    aiLockManager.acquire("doc-user-normalize", "local-dev-user");
+
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": "   ",
+      },
+      body: JSON.stringify(createRequestBody({ documentId: "doc-user-normalize" })),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    await readStream(response);
+    expect(aiLockManager.getStatus("doc-user-normalize")).toEqual({ locked: false });
+  });
 });
 
 describe("GET /api/ai/stream", () => {
   it("requires documentId query parameter", async () => {
     const response = await GET(new Request("http://localhost/api/ai/stream"));
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("documentId is required");
+  });
+
+  it("requires non-empty documentId query parameter", async () => {
+    const response = await GET(
+      new Request("http://localhost/api/ai/stream?documentId=%20%20%20"),
+    );
     expect(response.status).toBe(400);
     const payload = (await response.json()) as { error: string };
     expect(payload.error).toBe("documentId is required");

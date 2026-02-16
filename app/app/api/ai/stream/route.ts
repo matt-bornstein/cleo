@@ -29,6 +29,11 @@ function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function normalizeUserId(value: string | null) {
+  const normalized = value?.trim();
+  return normalized ? normalized : "local-dev-user";
+}
+
 function parsePayload(value: unknown): StreamRequestPayload | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
@@ -86,7 +91,7 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const documentId = searchParams.get("documentId");
+  const documentId = searchParams.get("documentId")?.trim();
   if (!documentId) {
     return Response.json({ error: "documentId is required" }, { status: 400 });
   }
@@ -183,7 +188,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request payload" }, { status: 400 });
   }
 
-  const userId = request.headers.get("x-user-id") ?? "local-dev-user";
+  const userId = normalizeUserId(request.headers.get("x-user-id"));
   const lockResult = aiLockManager.acquire(payload.documentId, userId);
 
   if (!lockResult.acquired) {
