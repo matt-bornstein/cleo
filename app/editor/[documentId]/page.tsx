@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { api } from "@/convex/_generated/api";
@@ -18,35 +18,14 @@ import {
 } from "@/components/editor/EditorContext";
 import { Bot, X } from "lucide-react";
 
-export default function EditorPage({
-  params,
-}: {
-  params: Promise<{ documentId: string }>;
-}) {
-  const { documentId } = use(params);
-  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+function RedirectToSignIn() {
   const router = useRouter();
+  useEffect(() => { router.push("/sign-in"); }, [router]);
+  return null;
+}
 
-  const document = useQuery(
-    api.documents.get,
-    isAuthenticated ? { id: documentId as Id<"documents"> } : "skip"
-  );
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/sign-in");
-    }
-  }, [isAuthenticated, authLoading, router]);
-
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) return null;
+function AuthenticatedEditorPage({ documentId }: { documentId: Id<"documents"> }) {
+  const document = useQuery(api.documents.get, { id: documentId });
 
   if (document === undefined) {
     return (
@@ -73,9 +52,33 @@ export default function EditorPage({
     <EditorContextProvider>
       <EditorPageContent
         document={document}
-        documentId={documentId as Id<"documents">}
+        documentId={documentId}
       />
     </EditorContextProvider>
+  );
+}
+
+export default function EditorPage({
+  params,
+}: {
+  params: Promise<{ documentId: string }>;
+}) {
+  const { documentId } = use(params);
+
+  return (
+    <>
+      <AuthLoading>
+        <div className="flex min-h-screen items-center justify-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </AuthLoading>
+      <Unauthenticated>
+        <RedirectToSignIn />
+      </Unauthenticated>
+      <Authenticated>
+        <AuthenticatedEditorPage documentId={documentId as Id<"documents">} />
+      </Authenticated>
+    </>
   );
 }
 
