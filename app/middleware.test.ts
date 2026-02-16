@@ -12,6 +12,25 @@ describe("middleware auth guard", () => {
     expect(response.status).toBe(200);
   });
 
+  it("falls back to localhost base when request url is malformed", () => {
+    const malformedRequest = {
+      url: "not a valid absolute url",
+      nextUrl: {
+        pathname: "/editor/doc-1",
+        search: "?from=share",
+      },
+      cookies: {
+        get: () => undefined,
+      },
+    } as unknown as NextRequest;
+
+    const response = middleware(malformedRequest);
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain(
+      "http://localhost/sign-in?next=%2Feditor%2Fdoc-1%3Ffrom%3Dshare",
+    );
+  });
+
   it("redirects unauthenticated editor requests to sign-in", () => {
     const request = new NextRequest("http://localhost/editor/doc-1?from=share");
     const response = middleware(request);
