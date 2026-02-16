@@ -12,6 +12,10 @@ function createDeferred<T>() {
 }
 
 describe("useAILockStatus", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("fetches lock status on mount", async () => {
     const fetchMock = vi
       .fn()
@@ -297,6 +301,43 @@ describe("useAILockStatus", () => {
       expect(result.current.locked).toBe(true);
       expect(result.current.lockedBy).toBe("bob");
     });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("does not throw when polling interval setup throws", async () => {
+    const setIntervalSpy = vi
+      .spyOn(globalThis, "setInterval")
+      .mockImplementationOnce(() => {
+        throw new Error("setInterval failed");
+      });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ locked: false }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(() => renderHook(() => useAILockStatus("doc-hook"))).not.toThrow();
+    setIntervalSpy.mockRestore();
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith("/api/ai/stream?documentId=doc-hook");
+    });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("does not throw when polling interval cleanup throws", () => {
+    vi.spyOn(globalThis, "clearInterval").mockImplementation(() => {
+      throw new Error("clearInterval failed");
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ locked: false }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { unmount } = renderHook(() => useAILockStatus("doc-hook"));
+    expect(() => unmount()).not.toThrow();
 
     vi.unstubAllGlobals();
   });

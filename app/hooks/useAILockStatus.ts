@@ -60,14 +60,14 @@ export function useAILockStatus(documentId: unknown) {
       };
     }
 
-    intervalId = setInterval(() => {
+    intervalId = safeSetInterval(() => {
       void fetchStatus();
     }, 2000);
 
     return () => {
       isMounted = false;
       if (intervalId) {
-        clearInterval(intervalId);
+        safeClearInterval(intervalId);
       }
     };
   }, [hasValidDocumentId, normalizedDocumentId]);
@@ -145,5 +145,21 @@ async function readResponseJson(response: unknown) {
     return await Reflect.apply(jsonFn, response, []);
   } catch {
     return null;
+  }
+}
+
+function safeSetInterval(callback: () => void, intervalMs: number) {
+  try {
+    return setInterval(callback, intervalMs);
+  } catch {
+    return null;
+  }
+}
+
+function safeClearInterval(intervalId: ReturnType<typeof setInterval>) {
+  try {
+    clearInterval(intervalId);
+  } catch {
+    return;
   }
 }
