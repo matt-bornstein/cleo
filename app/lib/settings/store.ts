@@ -20,9 +20,11 @@ function canUseStorage() {
 }
 
 function normalizeSettings(settings: AppUserSettings | undefined): AppUserSettings {
+  const normalizedThemeCandidate =
+    typeof settings?.theme === "string" ? settings.theme.trim().toLowerCase() : "";
   const normalizedTheme =
-    settings?.theme && VALID_THEMES.has(settings.theme)
-      ? settings.theme
+    normalizedThemeCandidate && VALID_THEMES.has(normalizedThemeCandidate)
+      ? (normalizedThemeCandidate as AppUserSettings["theme"])
       : defaultSettings.theme;
   const normalizedModel = settings?.defaultModel?.trim();
   const normalizedFontSize =

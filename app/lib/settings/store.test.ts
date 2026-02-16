@@ -38,13 +38,14 @@ describe("settings store", () => {
 
   it("normalizes settings values before persisting", () => {
     const saved = saveSettings({
-      theme: "dark",
+      theme: " DARK " as never,
       defaultModel: "  gpt-4.1  ",
       editorFontSize: Number.NaN,
       editorLineSpacing: 0,
       userEmail: "  TEST@EXAMPLE.COM  ",
     });
 
+    expect(saved.theme).toBe("dark");
     expect(saved.defaultModel).toBe("gpt-4.1");
     expect(saved.editorFontSize).toBe(16);
     expect(saved.editorLineSpacing).toBe(1.6);
