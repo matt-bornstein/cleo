@@ -11,14 +11,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import type { AppDocument } from "@/lib/types";
+import { hasControlChars } from "@/lib/validators/controlChars";
 
 type OpenDocModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  documents: AppDocument[];
-  onOpenDocument: (documentId: string) => void;
-  onDeleteDocument: (documentId: string) => void;
+  open: unknown;
+  onOpenChange: unknown;
+  documents: unknown;
+  onOpenDocument: unknown;
+  onDeleteDocument: unknown;
 };
 
 export function OpenDocModal({
@@ -28,17 +30,65 @@ export function OpenDocModal({
   onOpenDocument,
   onDeleteDocument,
 }: OpenDocModalProps) {
+  const normalizedOpen = open === true;
+  const normalizedDocuments = useMemo(() => {
+    if (!Array.isArray(documents)) {
+      return [] as AppDocument[];
+    }
+
+    return documents.flatMap((document) => {
+      if (!document || typeof document !== "object") {
+        return [];
+      }
+      const candidate = document as Partial<AppDocument>;
+      const normalizedDocumentId = normalizeDocumentId(candidate.id);
+      if (!isValidDocumentId(normalizedDocumentId)) {
+        return [];
+      }
+
+      const normalizedTitle =
+        typeof candidate.title === "string" &&
+        candidate.title.trim().length > 0 &&
+        !hasControlChars(candidate.title.trim())
+          ? candidate.title.trim()
+          : "Untitled";
+      const normalizedUpdatedAt =
+        typeof candidate.updatedAt === "number" &&
+        Number.isFinite(candidate.updatedAt) &&
+        candidate.updatedAt >= 0
+          ? candidate.updatedAt
+          : 0;
+
+      return [
+        {
+          id: normalizedDocumentId,
+          title: normalizedTitle,
+          content: typeof candidate.content === "string" ? candidate.content : "{}",
+          createdAt:
+            typeof candidate.createdAt === "number" &&
+            Number.isFinite(candidate.createdAt) &&
+            candidate.createdAt >= 0
+              ? candidate.createdAt
+              : normalizedUpdatedAt,
+          updatedAt: normalizedUpdatedAt,
+          ownerEmail:
+            typeof candidate.ownerEmail === "string" ? candidate.ownerEmail : undefined,
+        },
+      ];
+    });
+  }, [documents]);
+
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
   const filteredDocuments = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    if (!normalizedSearch) return documents;
-    return documents.filter((doc) =>
+    if (!normalizedSearch) return normalizedDocuments;
+    return normalizedDocuments.filter((doc) =>
       doc.title.toLowerCase().includes(normalizedSearch),
     );
-  }, [documents, search]);
+  }, [normalizedDocuments, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / pageSize));
   const paginatedDocuments = filteredDocuments.slice(
@@ -48,12 +98,14 @@ export function OpenDocModal({
 
   return (
     <Dialog
-      open={open}
+      open={normalizedOpen}
       onOpenChange={(nextOpen) => {
         if (nextOpen) {
           setPage(1);
         }
-        onOpenChange(nextOpen);
+        if (typeof onOpenChange === "function") {
+          onOpenChange(nextOpen);
+        }
       }}
     >
       <DialogContent>
@@ -82,8 +134,12 @@ export function OpenDocModal({
                   type="button"
                   className="min-w-0 flex-1 text-left text-sm hover:text-blue-700"
                   onClick={() => {
-                    onOpenDocument(document.id);
-                    onOpenChange(false);
+                    if (typeof onOpenDocument === "function") {
+                      onOpenDocument(document.id);
+                    }
+                    if (typeof onOpenChange === "function") {
+                      onOpenChange(false);
+                    }
                   }}
                 >
                   <div className="truncate font-medium text-slate-700">{document.title}</div>
@@ -99,7 +155,9 @@ export function OpenDocModal({
                       `Delete "${document.title}"? This action cannot be undone.`,
                     );
                     if (!confirmed) return;
-                    onDeleteDocument(document.id);
+                    if (typeof onDeleteDocument === "function") {
+                      onDeleteDocument(document.id);
+                    }
                   }}
                 >
                   Delete
@@ -136,7 +194,14 @@ export function OpenDocModal({
             </div>
           </div>
           <div className="flex justify-end">
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (typeof onOpenChange === "function") {
+                  onOpenChange(false);
+                }
+              }}
+            >
               Close
             </Button>
           </div>

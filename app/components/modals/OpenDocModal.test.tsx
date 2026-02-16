@@ -62,4 +62,60 @@ describe("OpenDocModal", () => {
     await user.click(screen.getByRole("button", { name: "Delete" }));
     expect(onDeleteDocument).not.toHaveBeenCalled();
   });
+
+  it("does not throw when callbacks are malformed non-functions", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <OpenDocModal
+        open
+        onOpenChange={123}
+        documents={[
+          {
+            id: "doc-1",
+            title: "Open Target",
+            content: "{}",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ]}
+        onOpenDocument={123}
+        onDeleteDocument={123}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(screen.getByRole("button", { name: /Open Target/i }));
+  });
+
+  it("filters malformed runtime document entries safely", () => {
+    render(
+      <OpenDocModal
+        open
+        onOpenChange={vi.fn()}
+        documents={[
+          null,
+          {
+            id: "doc-\ninvalid",
+            title: "Bad",
+            content: "{}",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+          {
+            id: "doc-2",
+            title: "  ",
+            content: "{}",
+            createdAt: 1,
+            updatedAt: Number.NaN,
+          },
+        ]}
+        onOpenDocument={vi.fn()}
+        onDeleteDocument={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Untitled")).toBeInTheDocument();
+    expect(screen.queryByText("Bad")).not.toBeInTheDocument();
+  });
 });

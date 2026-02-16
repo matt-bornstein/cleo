@@ -273,8 +273,10 @@ export function EditorShell({ documentId }: EditorShellProps) {
         open={openModalOpen}
         onOpenChange={setOpenModalOpen}
         documents={documents}
-        onOpenDocument={(nextDocumentId) => router.push(`/editor/${nextDocumentId}`)}
-        onDeleteDocument={(targetDocumentId) => {
+        onOpenDocument={(nextDocumentId: string) =>
+          router.push(`/editor/${nextDocumentId}`)
+        }
+        onDeleteDocument={(targetDocumentId: string) => {
           const removed = remove(targetDocumentId);
           if (!removed) return;
           if (targetDocumentId === documentId) {
