@@ -167,6 +167,14 @@ describe("ai chat store", () => {
       content: "a".repeat(8_001),
       createdAt: Date.now(),
     });
+    const negativeTimestamp = saveMessage({
+      id: "msg-negative-time",
+      documentId: "doc-bad",
+      userId: "author",
+      role: "assistant",
+      content: "Hello",
+      createdAt: -1,
+    });
 
     expect(invalidRole).toBeNull();
     expect(blankContent).toBeNull();
@@ -174,6 +182,7 @@ describe("ai chat store", () => {
     expect(controlCharId).toBeNull();
     expect(oversizedId).toBeNull();
     expect(oversizedContent).toBeNull();
+    expect(negativeTimestamp).toBeNull();
     expect(listMessagesByDocument("doc-bad")).toEqual([]);
   });
 
@@ -244,6 +253,14 @@ describe("ai chat store", () => {
             role: "moderator",
             content: "Bad role",
             createdAt: 4,
+          },
+          {
+            id: "bad-time",
+            documentId: "doc-legacy",
+            userId: "u-1",
+            role: "assistant",
+            content: "Bad time",
+            createdAt: -1,
           },
           {
             id: "bad-content",

@@ -116,7 +116,8 @@ function normalizeMessage(message: AIMessage): AIMessage | null {
     message.content.trim().length === 0 ||
     message.content.length > MAX_MESSAGE_CONTENT_LENGTH ||
     typeof message.createdAt !== "number" ||
-    !Number.isFinite(message.createdAt)
+    !Number.isFinite(message.createdAt) ||
+    message.createdAt < 0
   ) {
     return null;
   }
