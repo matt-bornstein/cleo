@@ -14,6 +14,7 @@ import {
 
 export const runtime = "nodejs";
 const MAX_MESSAGE_COUNT = 100;
+const MAX_PROMPT_LENGTH = 4_000;
 
 type StreamRequestPayload = {
   documentId: string;
@@ -61,6 +62,9 @@ function parsePayload(value: unknown): StreamRequestPayload | null {
   const documentId = candidate.documentId.trim();
   const model = candidate.model.trim();
   const prompt = candidate.prompt.trim();
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    return null;
+  }
   if (!isSupportedModel(model)) {
     return null;
   }

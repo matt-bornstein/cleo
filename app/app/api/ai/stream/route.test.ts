@@ -275,6 +275,25 @@ describe("POST /api/ai/stream", () => {
     expect(payload.error).toBe("Invalid request payload");
   });
 
+  it("returns bad request when prompt exceeds maximum length", async () => {
+    const request = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        createRequestBody({
+          prompt: "a".repeat(4_001),
+        }),
+      ),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: string };
+    expect(payload.error).toBe("Invalid request payload");
+  });
+
   it("normalizes trimmed fields before lock lookup", async () => {
     aiLockManager.acquire("doc-trim", "alice");
 
