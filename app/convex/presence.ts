@@ -9,7 +9,7 @@ export const update = mutation({
     data: v.any(),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
+    const now = Math.max(0, Date.now());
     const existing = (await ctx.db
       .query("presence")
       .withIndex("by_visitor", (q: { eq: (field: string, value: unknown) => unknown }) =>
@@ -50,7 +50,7 @@ export const heartbeat = mutation({
 
     if (!existing) return null;
     await ctx.db.patch(existing._id, {
-      updatedAt: Date.now(),
+      updatedAt: Math.max(0, Date.now()),
     });
     return existing._id;
   },
@@ -90,7 +90,7 @@ export const remove = mutation({
 export const cleanup = mutation({
   args: {},
   handler: async (ctx) => {
-    const threshold = Date.now() - 60_000;
+    const threshold = Math.max(0, Math.max(0, Date.now()) - 60_000);
     const entries = (await ctx.db.query("presence").collect()) as Array<{
       _id: string;
       updatedAt: number;

@@ -16,7 +16,7 @@ export const triggerIdleSave = mutation({
     snapshot: v.string(),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
+    const now = Math.max(0, Date.now());
     const document = (await ctx.db.get(args.documentId)) as
       | { lastDiffAt?: number; content: string }
       | null;

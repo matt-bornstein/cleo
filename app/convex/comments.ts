@@ -11,7 +11,7 @@ export const create = mutation({
     anchorText: v.string(),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
+    const now = Math.max(0, Date.now());
     return ctx.db.insert("comments", {
       ...args,
       userId: "dev-user",
@@ -43,7 +43,7 @@ export const resolve = mutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.commentId, {
       resolved: true,
-      updatedAt: Date.now(),
+      updatedAt: Math.max(0, Date.now()),
     });
     return args.commentId;
   },
@@ -55,7 +55,7 @@ export const reply = mutation({
     content: v.string(),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
+    const now = Math.max(0, Date.now());
     const parent = (await ctx.db.get(args.parentCommentId)) as
       | { documentId: string; anchorFrom: number; anchorTo: number; anchorText: string }
       | null;
