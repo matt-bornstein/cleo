@@ -23,7 +23,7 @@ type UseAIChatArgs = {
   onApplyContent: unknown;
   currentUserId: unknown;
   defaultModel?: unknown;
-  chatClearedAt?: number;
+  chatClearedAt?: unknown;
   onClearChat?: (clearedAt: number) => void;
 };
 
@@ -133,14 +133,23 @@ export function useAIChat({
     () => normalizeAIUserId(currentUserId),
     [currentUserId],
   );
+  const normalizedChatClearedAt = useMemo(
+    () =>
+      typeof chatClearedAt === "number" &&
+      Number.isFinite(chatClearedAt) &&
+      chatClearedAt >= 0
+        ? chatClearedAt
+        : undefined,
+    [chatClearedAt],
+  );
 
   useEffect(() => {
     if (!hasValidDocumentId) {
       setMessages([]);
       return;
     }
-    setMessages(listMessagesByDocument(normalizedDocumentId, chatClearedAt));
-  }, [chatClearedAt, hasValidDocumentId, normalizedDocumentId]);
+    setMessages(listMessagesByDocument(normalizedDocumentId, normalizedChatClearedAt));
+  }, [hasValidDocumentId, normalizedChatClearedAt, normalizedDocumentId]);
 
   useEffect(() => {
     if (defaultModel) {
@@ -209,7 +218,7 @@ export function useAIChat({
             model: selectedModel,
             documentContent: currentDocumentContent,
             messages: getRecentMessages(
-              listMessagesByDocument(normalizedDocumentId, chatClearedAt),
+              listMessagesByDocument(normalizedDocumentId, normalizedChatClearedAt),
             ),
           }),
         });
@@ -308,9 +317,9 @@ export function useAIChat({
     },
     [
       currentDocumentContent,
-      chatClearedAt,
       hasValidDocumentId,
       normalizedDocumentId,
+      normalizedChatClearedAt,
       normalizedCurrentUserId,
       onApplyContent,
       selectedModel,

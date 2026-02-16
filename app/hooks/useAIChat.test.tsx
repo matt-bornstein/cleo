@@ -688,6 +688,44 @@ describe("useAIChat", () => {
     vi.unstubAllGlobals();
   });
 
+  it("normalizes malformed non-number chatClearedAt before history lookup", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-cleared-at-normalized" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse([
+          {
+            type: "done",
+            assistantMessage: "Applied update",
+            nextContent: "<p>Updated</p>",
+          },
+        ]),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-chat-cleared-malformed",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent: vi.fn(),
+        currentUserId: "owner@example.com",
+        chatClearedAt: "bad" as unknown as number,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Apply update");
+    });
+
+    expect(listMessagesByDocumentMock).toHaveBeenCalledWith(
+      "doc-chat-cleared-malformed",
+      undefined,
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("rejects blank prompts without sending requests", async () => {
     listMessagesByDocumentMock.mockReturnValue([]);
     const fetchMock = vi.fn();
