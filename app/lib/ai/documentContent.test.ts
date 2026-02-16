@@ -1,4 +1,5 @@
 import { isValidDocumentContentJson } from "@/lib/ai/documentContent";
+import { vi } from "vitest";
 
 describe("isValidDocumentContentJson", () => {
   it("accepts valid ProseMirror doc json strings", () => {
@@ -26,5 +27,26 @@ describe("isValidDocumentContentJson", () => {
     expect(isValidDocumentContentJson(oversizedContent)).toBe(false);
     expect(isValidDocumentContentJson(null)).toBe(false);
     expect(isValidDocumentContentJson(123)).toBe(false);
+  });
+
+  it("returns false when parsed document content getters throw", () => {
+    const parsedWithThrowingGetters = Object.create(null) as {
+      type: unknown;
+      content: unknown;
+    };
+    Object.defineProperty(parsedWithThrowingGetters, "type", {
+      get() {
+        throw new Error("type getter failed");
+      },
+    });
+    Object.defineProperty(parsedWithThrowingGetters, "content", {
+      get() {
+        throw new Error("content getter failed");
+      },
+    });
+    vi.spyOn(JSON, "parse").mockReturnValue(parsedWithThrowingGetters);
+
+    expect(isValidDocumentContentJson("{\"type\":\"doc\",\"content\":[]}")).toBe(false);
+    vi.restoreAllMocks();
   });
 });

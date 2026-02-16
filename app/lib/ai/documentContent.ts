@@ -13,14 +13,31 @@ export function isValidDocumentContentJson(value: unknown): value is string {
     const parsed = JSON.parse(value) as
       | { type?: unknown; content?: unknown }
       | unknown;
+    const parsedType = readParsedDocumentContentField(parsed, "type");
+    const parsedContent = readParsedDocumentContentField(parsed, "content");
     return (
       typeof parsed === "object" &&
       parsed !== null &&
       "type" in parsed &&
-      (parsed as { type?: unknown }).type === "doc" &&
-      Array.isArray((parsed as { content?: unknown }).content)
+      parsedType === "doc" &&
+      Array.isArray(parsedContent)
     );
   } catch {
     return false;
+  }
+}
+
+function readParsedDocumentContentField(
+  parsed: unknown,
+  key: "type" | "content",
+) {
+  if (!parsed || typeof parsed !== "object") {
+    return undefined;
+  }
+
+  try {
+    return (parsed as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
   }
 }
