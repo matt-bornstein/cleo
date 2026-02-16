@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +40,7 @@ export function ShareModal({
   const [version, setVersion] = useState(0);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [addError, setAddError] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shareableLink = useMemo(() => {
     const path = `/editor/${documentId}?share=${linkRole}`;
@@ -51,6 +52,14 @@ export function ShareModal({
     void version;
     return listPermissions(documentId);
   }, [documentId, version]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -85,7 +94,13 @@ export function ShareModal({
                 onClick={async () => {
                   await navigator.clipboard?.writeText?.(shareableLink);
                   setCopyState("copied");
-                  setTimeout(() => setCopyState("idle"), 1500);
+                  if (copyTimeoutRef.current) {
+                    clearTimeout(copyTimeoutRef.current);
+                  }
+                  copyTimeoutRef.current = setTimeout(() => {
+                    setCopyState("idle");
+                    copyTimeoutRef.current = null;
+                  }, 1500);
                 }}
               >
                 {copyState === "copied" ? "Copied" : "Copy link"}

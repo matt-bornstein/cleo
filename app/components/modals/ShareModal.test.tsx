@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
@@ -20,6 +20,10 @@ describe("ShareModal", () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("copies shareable link to clipboard", async () => {
     const user = userEvent.setup();
     render(
@@ -33,6 +37,22 @@ describe("ShareModal", () => {
         "http://localhost/editor/doc-copy?share=viewer",
       );
     }
+  });
+
+  it("resets copy button label after copied timeout", async () => {
+    vi.useFakeTimers();
+    render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-copy-timeout" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
   });
 
   it("adds collaborator permission row", async () => {
