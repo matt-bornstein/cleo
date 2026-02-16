@@ -30,6 +30,12 @@ export function ShareModal({ open, onOpenChange, documentId }: ShareModalProps) 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("editor");
   const [version, setVersion] = useState(0);
+  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+
+  const shareableLink = useMemo(() => {
+    if (typeof window === "undefined") return `/editor/${documentId}`;
+    return `${window.location.origin}/editor/${documentId}`;
+  }, [documentId]);
 
   const permissions = useMemo(() => {
     void version;
@@ -46,6 +52,22 @@ export function ShareModal({ open, onOpenChange, documentId }: ShareModalProps) 
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 text-sm text-slate-600">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-slate-700">Shareable link</p>
+            <div className="flex gap-2">
+              <Input value={shareableLink} readOnly />
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await navigator.clipboard?.writeText?.(shareableLink);
+                  setCopyState("copied");
+                  setTimeout(() => setCopyState("idle"), 1500);
+                }}
+              >
+                {copyState === "copied" ? "Copied" : "Copy link"}
+              </Button>
+            </div>
+          </div>
           <div className="flex gap-2">
             <Input
               placeholder="user@example.com"
