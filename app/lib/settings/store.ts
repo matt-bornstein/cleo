@@ -80,7 +80,7 @@ export function getSettings(): AppUserSettings {
   }
 }
 
-export function saveSettings(settings: AppUserSettings) {
+export function saveSettings(settings: unknown) {
   const normalizedSettings = normalizeSettings(settings);
   if (!canUseStorage()) return normalizedSettings;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedSettings));

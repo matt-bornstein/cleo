@@ -127,4 +127,17 @@ describe("settings store", () => {
     expect(settings.editorLineSpacing).toBe(1.6);
     expect(settings.userEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);
   });
+
+  it("falls back to defaults when saving malformed non-object settings payload", () => {
+    const saved = saveSettings(123 as unknown as Parameters<typeof saveSettings>[0]);
+
+    expect(saved).toEqual({
+      theme: "system",
+      defaultModel: "gpt-4o",
+      editorFontSize: 16,
+      editorLineSpacing: 1.6,
+      userEmail: DEFAULT_LOCAL_USER_EMAIL,
+    });
+    expect(getSettings()).toEqual(saved);
+  });
 });
