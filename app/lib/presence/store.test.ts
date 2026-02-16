@@ -87,6 +87,12 @@ describe("presence store", () => {
     expect(listPresence("doc-valid")).toEqual([]);
   });
 
+  it("rejects malformed non-object presence updates", () => {
+    const updated = updatePresence(123 as unknown as never);
+
+    expect(updated).toBeNull();
+  });
+
   it("does not persist remove operations when visitor is absent", () => {
     const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
 
@@ -188,6 +194,18 @@ describe("presence store", () => {
     );
 
     expect(listPresence("doc-valid")).toEqual([]);
+  });
+
+  it("handles malformed non-string runtime ids for list and remove", () => {
+    updatePresence({
+      documentId: "doc-runtime-malformed",
+      visitorId: "visitor-runtime",
+      userId: "user-1",
+      data: {},
+    });
+
+    expect(listPresence(123 as unknown as string)).toEqual([]);
+    expect(() => removePresence(123 as unknown as string)).not.toThrow();
   });
 
   it("returns document presence ordered by latest update timestamp", () => {

@@ -95,9 +95,22 @@ function persistState(state: PresenceState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">) {
-  const normalizedDocumentId = normalizeDocumentId(record.documentId);
-  const normalizedVisitorId = normalizePresenceVisitorId(record.visitorId);
+export function updatePresence(record: unknown) {
+  const candidate =
+    record && typeof record === "object"
+      ? (record as {
+          documentId?: unknown;
+          visitorId?: unknown;
+          userId?: unknown;
+          data?: unknown;
+        })
+      : undefined;
+  if (!candidate) {
+    return null;
+  }
+
+  const normalizedDocumentId = normalizeDocumentId(candidate.documentId);
+  const normalizedVisitorId = normalizePresenceVisitorId(candidate.visitorId);
   if (!isValidDocumentId(normalizedDocumentId) || !normalizedVisitorId) {
     return null;
   }
@@ -107,16 +120,15 @@ export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">)
   const existingIndex = state.presence.findIndex(
     (entry) => entry.visitorId === normalizedVisitorId,
   );
-  const normalizedData = normalizePresenceData(record.data);
+  const normalizedData = normalizePresenceData(candidate.data);
   const normalizedExistingRecordId =
     existingIndex === -1
       ? undefined
       : normalizePresenceRecordId(state.presence[existingIndex]?.id);
   const nextRecord: PresenceRecord = {
-    ...record,
     documentId: normalizedDocumentId,
     visitorId: normalizedVisitorId,
-    userId: normalizePresenceUserId(record.userId),
+    userId: normalizePresenceUserId(candidate.userId),
     data: normalizedData,
     id:
       existingIndex === -1
@@ -136,7 +148,7 @@ export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">)
   return nextRecord;
 }
 
-export function removePresence(visitorId: string) {
+export function removePresence(visitorId: unknown) {
   const normalizedVisitorId = normalizePresenceVisitorId(visitorId);
   if (!normalizedVisitorId) {
     return;
@@ -152,7 +164,7 @@ export function removePresence(visitorId: string) {
   persistState(state);
 }
 
-export function listPresence(documentId: string) {
+export function listPresence(documentId: unknown) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   if (!isValidDocumentId(normalizedDocumentId)) {
     return [];
