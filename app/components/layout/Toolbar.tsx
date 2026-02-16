@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 type ToolbarProps = {
   documentTitle: string;
   roleLabel?: string;
+  onRenameDocument: (nextTitle: string) => void;
   onNewDocument: () => void;
   onOpenDocument: () => void;
   onHistory: () => void;
@@ -17,6 +18,7 @@ type ToolbarProps = {
 export function Toolbar({
   documentTitle,
   roleLabel,
+  onRenameDocument,
   onNewDocument,
   onOpenDocument,
   onHistory,
@@ -33,6 +35,17 @@ export function Toolbar({
         </Button>
         <Button variant="outline" size="sm" onClick={onOpenDocument}>
           Open
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const nextTitle = window.prompt("Rename document", documentTitle);
+            if (nextTitle === null) return;
+            onRenameDocument(nextTitle);
+          }}
+        >
+          Rename
         </Button>
         <Button variant="outline" size="sm" onClick={onHistory}>
           History

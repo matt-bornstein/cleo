@@ -30,8 +30,15 @@ type EditorShellProps = {
 
 export function EditorShell({ documentId }: EditorShellProps) {
   const router = useRouter();
-  const { documents, create, getById, updateContent, setChatClearedAt, remove } =
-    useDocuments();
+  const {
+    documents,
+    create,
+    getById,
+    updateTitle,
+    updateContent,
+    setChatClearedAt,
+    remove,
+  } = useDocuments();
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -114,6 +121,9 @@ export function EditorShell({ documentId }: EditorShellProps) {
       <Toolbar
         documentTitle={documentTitle}
         roleLabel={myRole}
+        onRenameDocument={(nextTitle) => {
+          updateTitle(documentId, nextTitle);
+        }}
         onNewDocument={() => setNewModalOpen(true)}
         onOpenDocument={() => setOpenModalOpen(true)}
         onHistory={() => setHistoryModalOpen(true)}

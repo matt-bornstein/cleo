@@ -5,6 +5,7 @@ import {
   listDocuments,
   resetDocumentsForTests,
   setDocumentChatClearedAt,
+  updateDocumentTitle,
 } from "@/lib/documents/store";
 
 describe("document store", () => {
@@ -55,5 +56,14 @@ describe("document store", () => {
     const removed = deleteDocument(created.id);
     expect(removed).toBe(true);
     expect(getDocumentById(created.id)).toBeUndefined();
+  });
+
+  it("updates document title and normalizes empty title", () => {
+    const created = createDocument("Old title");
+    const renamed = updateDocumentTitle(created.id, "  New title  ");
+    expect(renamed?.title).toBe("New title");
+
+    const untitled = updateDocumentTitle(created.id, "   ");
+    expect(untitled?.title).toBe("Untitled");
   });
 });

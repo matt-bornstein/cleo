@@ -8,6 +8,7 @@ import {
   getDocumentById,
   listDocuments,
   setDocumentChatClearedAt,
+  updateDocumentTitle,
   updateDocumentContent,
 } from "@/lib/documents/store";
 import type { AppDocument } from "@/lib/types";
@@ -46,6 +47,15 @@ export function useDocuments(search?: string) {
     [refresh],
   );
 
+  const updateTitle = useCallback(
+    (documentId: string, title: string) => {
+      const updated = updateDocumentTitle(documentId, title);
+      refresh();
+      return updated;
+    },
+    [refresh],
+  );
+
   const setChatClearedAt = useCallback(
     (documentId: string, timestamp: number) => {
       const updated = setDocumentChatClearedAt(documentId, timestamp);
@@ -68,6 +78,7 @@ export function useDocuments(search?: string) {
     documents,
     create,
     getById,
+    updateTitle,
     updateContent,
     setChatClearedAt,
     remove,

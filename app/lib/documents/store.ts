@@ -109,6 +109,25 @@ export function updateDocumentContent(
   return updated;
 }
 
+export function updateDocumentTitle(
+  documentId: string,
+  title: string,
+): AppDocument | undefined {
+  const state = loadState();
+  const index = state.documents.findIndex((doc) => doc.id === documentId);
+  if (index === -1) return undefined;
+
+  const normalizedTitle = title.trim() || "Untitled";
+  const updated: AppDocument = {
+    ...state.documents[index],
+    title: normalizedTitle,
+    updatedAt: Date.now(),
+  };
+  state.documents[index] = updated;
+  persistState(state);
+  return updated;
+}
+
 export function setDocumentLastDiffAt(
   documentId: string,
   timestamp: number,

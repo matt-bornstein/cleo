@@ -120,4 +120,16 @@ describe("EditorShell", () => {
       screen.getByText("You are offline. Reconnect to sync collaboration and AI features."),
     ).toBeInTheDocument();
   });
+
+  it("renames document title from toolbar action", async () => {
+    const user = userEvent.setup();
+    const promptSpy = vi.spyOn(window, "prompt").mockReturnValue("Renamed Doc");
+    const document = createDocument("Original Title");
+
+    render(<EditorShell documentId={document.id} />);
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    expect(screen.getAllByText("Renamed Doc").length).toBeGreaterThan(0);
+    promptSpy.mockRestore();
+  });
 });
