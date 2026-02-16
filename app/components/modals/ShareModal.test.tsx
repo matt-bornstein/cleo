@@ -195,6 +195,9 @@ describe("ShareModal", () => {
     render(<ShareModal open onOpenChange={vi.fn()} documentId="doc-invalid-clear" />);
 
     const input = screen.getByPlaceholderText("user@example.com");
+    const [linkRoleSelect, collaboratorRoleSelect] = screen.getAllByRole("combobox");
+    await user.selectOptions(linkRoleSelect, "editor");
+    await user.selectOptions(collaboratorRoleSelect, "commenter");
     await user.type(input, "not-an-email");
     await user.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
@@ -253,6 +256,12 @@ describe("ShareModal", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
     expect(screen.queryByText("Enter a valid email address.")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("user@example.com")).toHaveValue("");
+    expect((screen.getAllByRole("combobox")[0] as HTMLSelectElement).value).toBe(
+      "viewer",
+    );
+    expect((screen.getAllByRole("combobox")[1] as HTMLSelectElement).value).toBe(
+      "editor",
+    );
   });
 
   it("removes collaborator only after confirmation", async () => {

@@ -67,6 +67,8 @@ export function ShareModal({
       clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = null;
     }
+    setRole("editor");
+    setLinkRole("viewer");
     setEmail("");
     setAddError(null);
     setCopyState("idle");
