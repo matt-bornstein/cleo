@@ -3,6 +3,7 @@ import {
   resetMessagesForTests,
   saveMessage,
 } from "@/lib/ai/chatStore";
+import * as aiModels from "@/lib/ai/models";
 import { vi } from "vitest";
 
 describe("ai chat store", () => {
@@ -237,6 +238,25 @@ describe("ai chat store", () => {
 
     expect(saved?.model).toBe("gpt-4o");
     expect(listMessagesByDocument("doc-model")[0]?.model).toBe("gpt-4o");
+  });
+
+  it("drops message model metadata when model lookup throws", () => {
+    vi.spyOn(aiModels, "getModelConfig").mockImplementation(() => {
+      throw new Error("model lookup failed");
+    });
+
+    const saved = saveMessage({
+      id: "model-message-throw",
+      documentId: "doc-model-throw",
+      userId: "author",
+      role: "assistant",
+      content: "Response",
+      model: "gpt-4o",
+      createdAt: Date.now(),
+    });
+
+    expect(saved?.model).toBeUndefined();
+    expect(listMessagesByDocument("doc-model-throw")[0]?.model).toBeUndefined();
   });
 
   it("filters malformed persisted messages on load", () => {

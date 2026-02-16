@@ -167,10 +167,7 @@ function normalizeMessage(message: unknown): AIMessage | null {
     content: candidate.content,
     createdAt: candidate.createdAt,
     userId: normalizeAIUserId(candidate.userId),
-    model:
-      typeof candidate.model === "string" && candidate.model.trim().length > 0
-        ? getModelConfig(candidate.model.trim()).id
-        : undefined,
+    model: normalizeMessageModel(candidate.model),
   };
 }
 
@@ -187,5 +184,17 @@ function safeSetItem(storage: Storage, key: string, value: string) {
     storage.setItem(key, value);
   } catch {
     return;
+  }
+}
+
+function normalizeMessageModel(model: unknown) {
+  if (typeof model !== "string" || model.trim().length === 0) {
+    return undefined;
+  }
+
+  try {
+    return getModelConfig(model.trim()).id;
+  } catch {
+    return undefined;
   }
 }
