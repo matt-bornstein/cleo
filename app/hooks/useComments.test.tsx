@@ -309,4 +309,32 @@ describe("useComments", () => {
     expect(resolveCommentMock).toHaveBeenCalledWith("comment-1");
     expect(listCommentsMock).toHaveBeenCalledTimes(1);
   });
+
+  it("falls back safely when listComments throws", () => {
+    listCommentsMock.mockImplementation(() => {
+      throw new Error("list failed");
+    });
+
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+    expect(result.current.comments).toEqual([]);
+  });
+
+  it("does not throw when addComment and resolveComment throw", () => {
+    addCommentMock.mockImplementation(() => {
+      throw new Error("add failed");
+    });
+    resolveCommentMock.mockImplementation(() => {
+      throw new Error("resolve failed");
+    });
+
+    const { result } = renderHook(() => useComments("doc-1", "reviewer@example.com"));
+
+    expect(() => {
+      act(() => {
+        expect(result.current.createComment("Looks good", "Intro")).toBeNull();
+        expect(result.current.createReply("parent", "reply")).toBeNull();
+        expect(result.current.markResolved("comment-1")).toBeNull();
+      });
+    }).not.toThrow();
+  });
 });

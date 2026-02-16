@@ -27,7 +27,7 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
   const comments = useMemo(() => {
     void version;
     if (!hasValidDocumentId) return [];
-    return listComments(normalizedDocumentId);
+    return safeListComments(normalizedDocumentId);
   }, [hasValidDocumentId, normalizedDocumentId, version]);
 
   const createComment = useCallback(
@@ -42,7 +42,7 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
       const normalizedAnchorText = typeof anchorText === "string" ? anchorText : "";
       const normalizedParentCommentId =
         typeof parentCommentId === "string" ? parentCommentId : undefined;
-      const comment = addComment({
+      const comment = safeAddComment({
         documentId: normalizedDocumentId,
         content: normalizedContent,
         anchorText: normalizedAnchorText,
@@ -67,7 +67,7 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
         return null;
       }
       const existing = comments.find((comment) => comment.id === normalizedCommentId);
-      const updated = resolveComment(normalizedCommentId);
+      const updated = safeResolveComment(normalizedCommentId);
       if (updated && (!existing || !existing.resolved)) {
         refresh();
       }
@@ -93,7 +93,7 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
         parent && normalizedParentCommentId.length > 0
           ? normalizedParentCommentId
           : undefined;
-      const reply = addComment({
+      const reply = safeAddComment({
         documentId: normalizedDocumentId,
         content: normalizedContent,
         anchorText,
@@ -114,4 +114,28 @@ export function useComments(documentId: unknown, currentUserId?: unknown) {
     createReply,
     markResolved,
   };
+}
+
+function safeListComments(documentId: string) {
+  try {
+    return listComments(documentId);
+  } catch {
+    return [];
+  }
+}
+
+function safeAddComment(payload: Parameters<typeof addComment>[0]) {
+  try {
+    return addComment(payload);
+  } catch {
+    return null;
+  }
+}
+
+function safeResolveComment(commentId: string) {
+  try {
+    return resolveComment(commentId);
+  } catch {
+    return null;
+  }
 }
