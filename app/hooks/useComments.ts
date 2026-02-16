@@ -9,7 +9,8 @@ export function useComments(documentId: string, currentUserId?: string) {
   const [version, setVersion] = useState(0);
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
-  const normalizedCurrentUserId = currentUserId?.trim();
+  const normalizedCurrentUserId =
+    typeof currentUserId === "string" ? currentUserId.trim() : undefined;
 
   const refresh = useCallback(() => {
     setVersion((current) => current + 1);

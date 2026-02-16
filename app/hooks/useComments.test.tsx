@@ -40,6 +40,22 @@ describe("useComments", () => {
     );
   });
 
+  it("omits malformed non-string current user ids when creating comments", () => {
+    const { result } = renderHook(() =>
+      useComments("doc-1", 123 as unknown as string),
+    );
+
+    act(() => {
+      result.current.createComment("Looks good", "Intro");
+    });
+
+    expect(addCommentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: undefined,
+      }),
+    );
+  });
+
   it("uses parent anchor text and current user id for replies", () => {
     listCommentsMock.mockReturnValue([
       {
