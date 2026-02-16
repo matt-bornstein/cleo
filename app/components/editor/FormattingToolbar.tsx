@@ -47,14 +47,14 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
         onClick={() =>
           runToolbarAction(() => normalizedEditor.chain().focus().toggleBold().run())
         }
-        isActive={normalizedEditor.isActive("bold")}
+        isActive={readIsActive(normalizedEditor, "bold")}
       />
       <ToolbarAction
         label="I"
         onClick={() =>
           runToolbarAction(() => normalizedEditor.chain().focus().toggleItalic().run())
         }
-        isActive={normalizedEditor.isActive("italic")}
+        isActive={readIsActive(normalizedEditor, "italic")}
       />
       <ToolbarAction
         label="U"
@@ -63,14 +63,14 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleUnderline().run(),
           )
         }
-        isActive={normalizedEditor.isActive("underline")}
+        isActive={readIsActive(normalizedEditor, "underline")}
       />
       <ToolbarAction
         label="S"
         onClick={() =>
           runToolbarAction(() => normalizedEditor.chain().focus().toggleStrike().run())
         }
-        isActive={normalizedEditor.isActive("strike")}
+        isActive={readIsActive(normalizedEditor, "strike")}
       />
       <span className="mx-1 h-4 w-px bg-slate-200" />
       <ToolbarAction
@@ -80,7 +80,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleHeading({ level: 1 }).run(),
           )
         }
-        isActive={normalizedEditor.isActive("heading", { level: 1 })}
+        isActive={readIsActive(normalizedEditor, "heading", { level: 1 })}
       />
       <ToolbarAction
         label="H2"
@@ -89,7 +89,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleHeading({ level: 2 }).run(),
           )
         }
-        isActive={normalizedEditor.isActive("heading", { level: 2 })}
+        isActive={readIsActive(normalizedEditor, "heading", { level: 2 })}
       />
       <ToolbarAction
         label="H3"
@@ -98,7 +98,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleHeading({ level: 3 }).run(),
           )
         }
-        isActive={normalizedEditor.isActive("heading", { level: 3 })}
+        isActive={readIsActive(normalizedEditor, "heading", { level: 3 })}
       />
       <span className="mx-1 h-4 w-px bg-slate-200" />
       <ToolbarAction
@@ -108,7 +108,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleBulletList().run(),
           )
         }
-        isActive={normalizedEditor.isActive("bulletList")}
+        isActive={readIsActive(normalizedEditor, "bulletList")}
       />
       <ToolbarAction
         label="1. List"
@@ -117,7 +117,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleOrderedList().run(),
           )
         }
-        isActive={normalizedEditor.isActive("orderedList")}
+        isActive={readIsActive(normalizedEditor, "orderedList")}
       />
       <ToolbarAction
         label="Task"
@@ -126,7 +126,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleTaskList().run(),
           )
         }
-        isActive={normalizedEditor.isActive("taskList")}
+        isActive={readIsActive(normalizedEditor, "taskList")}
       />
       <span className="mx-1 h-4 w-px bg-slate-200" />
       <ToolbarAction
@@ -136,7 +136,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleCodeBlock().run(),
           )
         }
-        isActive={normalizedEditor.isActive("codeBlock")}
+        isActive={readIsActive(normalizedEditor, "codeBlock")}
       />
       <ToolbarAction
         label="Quote"
@@ -145,7 +145,7 @@ export function FormattingToolbar({ editor }: FormattingToolbarProps) {
             normalizedEditor.chain().focus().toggleBlockquote().run(),
           )
         }
-        isActive={normalizedEditor.isActive("blockquote")}
+        isActive={readIsActive(normalizedEditor, "blockquote")}
       />
       <ToolbarAction
         label="Rule"
@@ -184,9 +184,21 @@ function isEditorLike(value: unknown): value is Editor {
     return false;
   }
 
-  const candidate = value as {
-    chain?: unknown;
-    isActive?: unknown;
-  };
-  return typeof candidate.chain === "function" && typeof candidate.isActive === "function";
+  try {
+    const candidate = value as {
+      chain?: unknown;
+      isActive?: unknown;
+    };
+    return typeof candidate.chain === "function" && typeof candidate.isActive === "function";
+  } catch {
+    return false;
+  }
+}
+
+function readIsActive(editor: Editor, name: string, attributes?: Record<string, unknown>) {
+  try {
+    return editor.isActive(name, attributes);
+  } catch {
+    return false;
+  }
 }

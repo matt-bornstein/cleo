@@ -40,6 +40,23 @@ describe("FormattingToolbar", () => {
     expect(screen.getByText("Loading editor...")).toBeInTheDocument();
   });
 
+  it("renders loading state when editor method getters throw", () => {
+    const malformedEditor = Object.create(null) as { chain: unknown; isActive: unknown };
+    Object.defineProperty(malformedEditor, "chain", {
+      get() {
+        throw new Error("chain getter failed");
+      },
+    });
+    Object.defineProperty(malformedEditor, "isActive", {
+      get() {
+        throw new Error("isActive getter failed");
+      },
+    });
+
+    render(<FormattingToolbar editor={malformedEditor} />);
+    expect(screen.getByText("Loading editor...")).toBeInTheDocument();
+  });
+
   it("invokes editor chain commands from toolbar actions", async () => {
     const user = userEvent.setup();
     const editor = createEditorMock();
@@ -62,5 +79,15 @@ describe("FormattingToolbar", () => {
 
     render(<FormattingToolbar editor={editor} />);
     await user.click(screen.getByRole("button", { name: "B" }));
+  });
+
+  it("does not throw when isActive checks throw during render", () => {
+    const editor = createEditorMock();
+    editor.isActive.mockImplementation(() => {
+      throw new Error("isActive failed");
+    });
+
+    expect(() => render(<FormattingToolbar editor={editor} />)).not.toThrow();
+    expect(screen.getByRole("button", { name: "B" })).toBeInTheDocument();
   });
 });
