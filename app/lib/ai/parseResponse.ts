@@ -48,22 +48,49 @@ export function applyParsedEditsToHtml(
     parsed && typeof parsed === "object"
       ? (parsed as { fullHtml?: unknown; blocks?: unknown })
       : undefined;
+  const fullHtml = readParsedField(safeParsed, "fullHtml");
   const safeFullHtml =
-    safeParsed && typeof safeParsed.fullHtml === "string"
-      ? safeParsed.fullHtml
+    typeof fullHtml === "string"
+      ? fullHtml
       : undefined;
   if (safeFullHtml) {
     return safeFullHtml;
   }
 
-  const safeBlocks = Array.isArray(safeParsed?.blocks) ? safeParsed.blocks : [];
+  const blocks = readParsedField(safeParsed, "blocks");
+  const safeBlocks = Array.isArray(blocks) ? blocks : [];
   let nextHtml = safeOriginalHtml;
   for (const block of safeBlocks) {
     if (!block || typeof block !== "object") continue;
-    const search = typeof block.search === "string" ? block.search : "";
-    const replace = typeof block.replace === "string" ? block.replace : "";
-    if (!search) continue;
-    nextHtml = nextHtml.replace(search, replace);
+    const search = readBlockField(block, "search");
+    const replace = readBlockField(block, "replace");
+    const normalizedSearch = typeof search === "string" ? search : "";
+    const normalizedReplace = typeof replace === "string" ? replace : "";
+    if (!normalizedSearch) continue;
+    nextHtml = nextHtml.replace(normalizedSearch, normalizedReplace);
   }
   return nextHtml;
+}
+
+function readParsedField(
+  parsed: { fullHtml?: unknown; blocks?: unknown } | undefined,
+  key: "fullHtml" | "blocks",
+) {
+  if (!parsed) {
+    return undefined;
+  }
+
+  try {
+    return parsed[key];
+  } catch {
+    return undefined;
+  }
+}
+
+function readBlockField(block: object, key: "search" | "replace") {
+  try {
+    return (block as Record<string, unknown>)[key];
+  } catch {
+    return undefined;
+  }
 }

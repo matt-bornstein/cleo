@@ -57,4 +57,56 @@ Rewrote section.
     const nextHtml = applyParsedEditsToHtml("<p>Old</p>", 123);
     expect(nextHtml).toBe("<p>Old</p>");
   });
+
+  it("returns original html when parsed payload getters throw", () => {
+    const parsedWithThrowingGetters = Object.create(null) as {
+      fullHtml: unknown;
+      blocks: unknown;
+    };
+    Object.defineProperty(parsedWithThrowingGetters, "fullHtml", {
+      get() {
+        throw new Error("fullHtml getter failed");
+      },
+    });
+    Object.defineProperty(parsedWithThrowingGetters, "blocks", {
+      get() {
+        throw new Error("blocks getter failed");
+      },
+    });
+
+    expect(() =>
+      applyParsedEditsToHtml("<p>Old</p>", parsedWithThrowingGetters),
+    ).not.toThrow();
+    expect(applyParsedEditsToHtml("<p>Old</p>", parsedWithThrowingGetters)).toBe(
+      "<p>Old</p>",
+    );
+  });
+
+  it("skips malformed blocks when search/replace getters throw", () => {
+    const blockWithThrowingGetters = Object.create(null) as {
+      search: unknown;
+      replace: unknown;
+    };
+    Object.defineProperty(blockWithThrowingGetters, "search", {
+      get() {
+        throw new Error("search getter failed");
+      },
+    });
+    Object.defineProperty(blockWithThrowingGetters, "replace", {
+      get() {
+        throw new Error("replace getter failed");
+      },
+    });
+
+    expect(() =>
+      applyParsedEditsToHtml("<p>Old</p>", {
+        blocks: [blockWithThrowingGetters],
+      }),
+    ).not.toThrow();
+    expect(
+      applyParsedEditsToHtml("<p>Old</p>", {
+        blocks: [blockWithThrowingGetters],
+      }),
+    ).toBe("<p>Old</p>");
+  });
 });
