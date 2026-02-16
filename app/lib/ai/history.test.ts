@@ -68,6 +68,11 @@ describe("getRecentMessages", () => {
     expect(recent).toEqual([]);
   });
 
+  it("returns empty for malformed non-finite limits", () => {
+    const recent = getRecentMessages([], Number.NaN);
+    expect(recent).toEqual([]);
+  });
+
   it("uses deterministic id tie-breaker when timestamps are equal", () => {
     const messages: AIMessage[] = [
       {
@@ -91,6 +96,55 @@ describe("getRecentMessages", () => {
     expect(getRecentMessages(messages, 2)).toEqual([
       { role: "user", content: "first", userId: "user-1" },
       { role: "assistant", content: "second", userId: "user-1" },
+    ]);
+  });
+
+  it("filters malformed runtime history entries", () => {
+    const messages = [
+      {
+        id: "valid",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "assistant",
+        content: "ok",
+        createdAt: 1,
+      },
+      {
+        id: "",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "assistant",
+        content: "bad id",
+        createdAt: 2,
+      },
+      {
+        id: "bad-created-at",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "assistant",
+        content: "bad time",
+        createdAt: -1,
+      },
+      {
+        id: "bad-role",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "system",
+        content: "bad role",
+        createdAt: 3,
+      },
+      {
+        id: "bad-content",
+        documentId: "doc-1",
+        userId: "user-1",
+        role: "assistant",
+        content: 123,
+        createdAt: 4,
+      },
+    ] as unknown as AIMessage[];
+
+    expect(getRecentMessages(messages, 5)).toEqual([
+      { role: "assistant", content: "ok", userId: "user-1" },
     ]);
   });
 });
