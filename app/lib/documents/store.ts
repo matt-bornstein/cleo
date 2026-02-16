@@ -49,7 +49,7 @@ function loadState(): DocumentStoreState {
         }
 
         const normalizedTitle = normalizeDocumentTitle(doc.title);
-        const now = Date.now();
+        const now = Math.max(0, Date.now());
         const hasValidCreatedAt =
           typeof doc.createdAt === "number" &&
           Number.isFinite(doc.createdAt) &&
@@ -142,7 +142,7 @@ function normalizeOwnerEmail(ownerEmail: string | undefined) {
 }
 
 export function createDocument(title: string, ownerEmail = DEFAULT_OWNER_EMAIL): AppDocument {
-  const now = Date.now();
+  const now = Math.max(0, Date.now());
   const normalizedTitle = normalizeDocumentTitle(title);
   const state = loadState();
   const document: AppDocument = {

@@ -168,7 +168,7 @@ export function createDiff(params: {
     source: params.source,
     aiPrompt: normalizedMetadata.aiPrompt,
     aiModel: normalizedMetadata.aiModel,
-    createdAt: Date.now(),
+    createdAt: Math.max(0, Date.now()),
   };
 
   state.diffs = [diffRecord, ...state.diffs];
@@ -226,7 +226,7 @@ export function restoreVersion(params: {
     return { restored: false as const, reason: "missing_document" as const };
   }
 
-  const now = Date.now();
+  const now = Math.max(0, Date.now());
   updateDocumentContent(normalizedDocumentId, params.snapshot);
   setDocumentLastDiffAt(normalizedDocumentId, now);
   const diff = createDiff({
@@ -261,7 +261,7 @@ export function triggerIdleSave(params: {
     params.dedupWindowMs >= 0
       ? params.dedupWindowMs
       : 4000;
-  const now = Date.now();
+  const now = Math.max(0, Date.now());
   const document = getDocumentById(normalizedDocumentId);
   if (!document) {
     return { skipped: true, reason: "missing_document" as const };

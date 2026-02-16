@@ -117,4 +117,17 @@ describe("AILockManager", () => {
     expect(blocked.acquired).toBe(false);
     nowSpy.mockRestore();
   });
+
+  it("floors lock timestamps at zero for negative system clocks", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(-1000);
+    const manager = new AILockManager();
+
+    expect(manager.acquire("doc-6", "alice")).toEqual({ acquired: true });
+    expect(manager.getStatus("doc-6")).toEqual({
+      locked: true,
+      lockedBy: "alice",
+      lockedAt: 0,
+    });
+    nowSpy.mockRestore();
+  });
 });

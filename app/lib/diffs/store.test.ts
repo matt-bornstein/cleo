@@ -13,6 +13,7 @@ import {
   triggerIdleSave,
 } from "@/lib/diffs/store";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
+import { vi } from "vitest";
 
 describe("diff store triggerIdleSave", () => {
   beforeEach(() => {
@@ -61,6 +62,21 @@ describe("diff store triggerIdleSave", () => {
     expect(diffs).toHaveLength(1);
     expect(diffs[0].snapshotAfter).toBe(changedSnapshot);
     expect(getDocumentById(document.id)?.content).toBe(changedSnapshot);
+  });
+
+  it("floors diff createdAt timestamps at zero for negative clocks", () => {
+    const document = createDocument("Diff clock floor");
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(-1000);
+    const diff = createDiff({
+      documentId: document.id,
+      userId: "u-1",
+      snapshotAfter: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+      source: "manual",
+    });
+
+    expect(diff).not.toBeNull();
+    expect(diff?.createdAt).toBe(0);
+    nowSpy.mockRestore();
   });
 
   it("builds new diff patches from latest historical snapshot by timestamp", () => {

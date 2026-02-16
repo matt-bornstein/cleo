@@ -30,6 +30,15 @@ describe("document store", () => {
     expect(controlCharTitle.title).toBe("Untitled");
   });
 
+  it("floors created timestamps at zero when system clock is negative", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(-1000);
+    const document = createDocument("Clock floor");
+
+    expect(document.createdAt).toBe(0);
+    expect(document.updatedAt).toBe(0);
+    nowSpy.mockRestore();
+  });
+
   it("falls back to default owner email for invalid owner input", () => {
     const blankOwner = createDocument("Blank owner", "   ");
     expect(blankOwner.ownerEmail).toBe(DEFAULT_LOCAL_USER_EMAIL);

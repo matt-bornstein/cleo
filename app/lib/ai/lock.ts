@@ -27,7 +27,7 @@ export class AILockManager {
 
     const normalizedUserId = normalizeAIUserId(userId);
     const staleWindowMs = normalizeStaleAfterMs(staleAfterMs);
-    const now = Date.now();
+    const now = Math.max(0, Date.now());
     const existing = this.locks.get(normalizedDocumentId);
 
     if (
@@ -71,7 +71,7 @@ export class AILockManager {
       return { locked: false as const };
     }
 
-    const isStale = Date.now() - lock.lockedAt >= staleWindowMs;
+    const isStale = Math.max(0, Date.now()) - lock.lockedAt >= staleWindowMs;
     if (isStale) {
       this.locks.delete(normalizedDocumentId);
       return { locked: false as const };

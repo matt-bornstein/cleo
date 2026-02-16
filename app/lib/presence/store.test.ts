@@ -29,6 +29,20 @@ describe("presence store", () => {
     expect(listPresence("  doc-presence  ")).toHaveLength(1);
   });
 
+  it("floors updated timestamps at zero for negative clocks", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(-1000);
+    const updated = updatePresence({
+      documentId: "doc-presence-floor",
+      visitorId: "visitor-floor",
+      userId: "user-1",
+      data: {},
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated?.updatedAt).toBe(0);
+    nowSpy.mockRestore();
+  });
+
   it("keeps updatedAt monotonic when clocks move backwards", () => {
     const first = updatePresence({
       documentId: "doc-clock",

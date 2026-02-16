@@ -94,7 +94,7 @@ export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">)
   }
 
   const state = loadState();
-  const now = Date.now();
+  const now = Math.max(0, Date.now());
   const existingIndex = state.presence.findIndex(
     (entry) => entry.visitorId === normalizedVisitorId,
   );

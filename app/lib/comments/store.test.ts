@@ -31,6 +31,20 @@ describe("comments store", () => {
     expect(comments[0].userId).toBe("local-dev-user");
   });
 
+  it("floors created timestamps at zero when clock is negative", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(-1000);
+    const comment = addComment({
+      documentId: "doc-clock-floor",
+      content: "Clock floor",
+      anchorText: "Line",
+    });
+
+    expect(comment).not.toBeNull();
+    expect(comment?.createdAt).toBe(0);
+    expect(comment?.updatedAt).toBe(0);
+    nowSpy.mockRestore();
+  });
+
   it("marks comments as resolved", () => {
     const comment = addComment({
       documentId: "doc-1",

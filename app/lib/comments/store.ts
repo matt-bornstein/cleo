@@ -188,7 +188,7 @@ export function addComment(params: {
     )
       ? normalizedParentCommentId
       : undefined;
-  const now = Date.now();
+  const now = Math.max(0, Date.now());
   const normalizedUserId = params.userId?.trim();
   const comment: CommentRecord = {
     id: crypto.randomUUID(),
@@ -226,7 +226,7 @@ export function resolveComment(commentId: string) {
   state.comments[index] = {
     ...state.comments[index],
     resolved: true,
-    updatedAt: Math.max(Date.now(), state.comments[index].updatedAt),
+    updatedAt: Math.max(Math.max(0, Date.now()), state.comments[index].updatedAt),
   };
   persistState(state);
   return state.comments[index];
