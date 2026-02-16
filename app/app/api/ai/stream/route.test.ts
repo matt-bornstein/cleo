@@ -66,6 +66,33 @@ describe("POST /api/ai/stream", () => {
     aiLockManager.release("doc-lock", "alice");
   });
 
+  it("releases lock after stream completion", async () => {
+    const firstRequest = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": "alice",
+      },
+      body: JSON.stringify(createRequestBody({ documentId: "doc-release" })),
+    });
+
+    const firstResponse = await POST(firstRequest);
+    expect(firstResponse.status).toBe(200);
+    await readStream(firstResponse);
+    expect(aiLockManager.getStatus("doc-release")).toEqual({ locked: false });
+
+    const secondRequest = new Request("http://localhost/api/ai/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": "bob",
+      },
+      body: JSON.stringify(createRequestBody({ documentId: "doc-release" })),
+    });
+    const secondResponse = await POST(secondRequest);
+    expect(secondResponse.status).toBe(200);
+  });
+
   it("returns bad request for invalid payload", async () => {
     const request = new Request("http://localhost/api/ai/stream", {
       method: "POST",
