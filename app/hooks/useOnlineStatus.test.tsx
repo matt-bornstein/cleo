@@ -22,4 +22,14 @@ describe("useOnlineStatus", () => {
     });
     expect(result.current).toBe(true);
   });
+
+  it("falls back to online when navigator.onLine is malformed non-boolean", () => {
+    Object.defineProperty(window.navigator, "onLine", {
+      configurable: true,
+      get: () => undefined,
+    });
+
+    const { result } = renderHook(() => useOnlineStatus());
+    expect(result.current).toBe(true);
+  });
 });
