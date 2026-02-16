@@ -1,0 +1,43 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+
+import {
+  createDocument,
+  getDocumentById,
+  listDocuments,
+} from "@/lib/documents/store";
+import type { AppDocument } from "@/lib/types";
+
+export function useDocuments(search?: string) {
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  const refresh = useCallback(() => {
+    setRefreshCounter((value) => value + 1);
+  }, []);
+
+  const documents = useMemo(() => {
+    void refreshCounter;
+    return listDocuments(search);
+  }, [refreshCounter, search]);
+
+  const create = useCallback(
+    (title: string) => {
+      const document = createDocument(title);
+      refresh();
+      return document;
+    },
+    [refresh],
+  );
+
+  const getById = useCallback((documentId: string): AppDocument | undefined => {
+    return getDocumentById(documentId);
+  }, []);
+
+  return {
+    documents,
+    create,
+    getById,
+    refresh,
+  };
+}
