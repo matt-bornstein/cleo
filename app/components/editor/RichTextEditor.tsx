@@ -11,7 +11,7 @@ type RichTextEditorProps = {
   documentId: string;
   content: string;
   onContentChange: (content: string) => void;
-  onLocalUpdate?: () => void;
+  onLocalUpdate?: unknown;
   fontSize?: number;
   lineSpacing?: number;
   editable?: boolean;
@@ -89,7 +89,9 @@ function LocalRichTextEditor({
     editable,
     onUpdate: ({ editor: nextEditor }) => {
       onContentChange(JSON.stringify(nextEditor.getJSON()));
-      onLocalUpdate?.();
+      if (typeof onLocalUpdate === "function") {
+        onLocalUpdate();
+      }
     },
   });
 
@@ -138,7 +140,9 @@ function SyncedRichTextEditor({
     editable,
     onUpdate: ({ editor: nextEditor }) => {
       onContentChange(JSON.stringify(nextEditor.getJSON()));
-      onLocalUpdate?.();
+      if (typeof onLocalUpdate === "function") {
+        onLocalUpdate();
+      }
     },
   });
 
