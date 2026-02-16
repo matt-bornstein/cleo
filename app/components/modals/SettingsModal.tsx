@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { AI_MODELS } from "@/lib/ai/models";
 import { getSettings, saveSettings } from "@/lib/settings/store";
 import type { AppUserSettings, ThemeSetting } from "@/lib/types";
+import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 type SettingsModalProps = {
   open: unknown;
@@ -29,7 +30,7 @@ export function SettingsModal({
   onSignOut,
 }: SettingsModalProps) {
   const normalizedOpen = open === true;
-  const [settings, setSettings] = useState<AppUserSettings>(getSettings());
+  const [settings, setSettings] = useState<AppUserSettings>(readSettingsSafely);
   const hasSignOutHandler = typeof onSignOut === "function";
 
   return (
@@ -37,7 +38,7 @@ export function SettingsModal({
       open={normalizedOpen}
       onOpenChange={(nextOpen) => {
         if (nextOpen) {
-          setSettings(getSettings());
+          setSettings(readSettingsSafely());
         }
         if (typeof onOpenChange === "function") {
           onOpenChange(nextOpen);
@@ -152,7 +153,7 @@ export function SettingsModal({
             </Button>
             <Button
               onClick={() => {
-                saveSettings(settings);
+                saveSettingsSafely(settings);
                 if (typeof onSaved === "function") {
                   onSaved();
                 }
@@ -168,4 +169,30 @@ export function SettingsModal({
       </DialogContent>
     </Dialog>
   );
+}
+
+function readSettingsSafely() {
+  try {
+    return getSettings();
+  } catch {
+    return createFallbackSettings();
+  }
+}
+
+function saveSettingsSafely(settings: AppUserSettings) {
+  try {
+    saveSettings(settings);
+  } catch {
+    return;
+  }
+}
+
+function createFallbackSettings(): AppUserSettings {
+  return {
+    theme: "system",
+    defaultModel: "gpt-4o",
+    editorFontSize: 16,
+    editorLineSpacing: 1.6,
+    userEmail: DEFAULT_LOCAL_USER_EMAIL,
+  };
 }

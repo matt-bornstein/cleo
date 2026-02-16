@@ -4,10 +4,12 @@ import { vi } from "vitest";
 
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { getSettings } from "@/lib/settings/store";
+import * as settingsStore from "@/lib/settings/store";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 
 describe("SettingsModal", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     window.localStorage.clear();
   });
 
@@ -91,5 +93,36 @@ describe("SettingsModal", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(getSettings().userEmail).toBe("owner@example.com");
+  });
+
+  it("falls back to default settings when store read throws", () => {
+    vi.spyOn(settingsStore, "getSettings").mockImplementation(() => {
+      throw new Error("getSettings failed");
+    });
+
+    render(
+      <SettingsModal
+        open
+        onOpenChange={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByDisplayValue(DEFAULT_LOCAL_USER_EMAIL)).toBeInTheDocument();
+  });
+
+  it("does not throw when store save throws", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    vi.spyOn(settingsStore, "saveSettings").mockImplementation(() => {
+      throw new Error("saveSettings failed");
+    });
+
+    render(
+      <SettingsModal open onOpenChange={onOpenChange} onSaved={vi.fn()} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
