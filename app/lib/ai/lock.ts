@@ -1,3 +1,6 @@
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
+import { normalizeAIUserId } from "@/lib/ai/identity";
+
 export type LockResult =
   | { acquired: true }
   | { acquired: false; reason: string };
@@ -14,13 +17,22 @@ export class AILockManager {
   private locks = new Map<string, { lockedBy: string; lockedAt: number }>();
 
   acquire(documentId: string, userId: string, staleAfterMs = 120_000): LockResult {
+    const normalizedDocumentId = normalizeDocumentId(documentId);
+    if (!isValidDocumentId(normalizedDocumentId)) {
+      return {
+        acquired: false,
+        reason: "Document is unavailable.",
+      };
+    }
+
+    const normalizedUserId = normalizeAIUserId(userId);
     const staleWindowMs = normalizeStaleAfterMs(staleAfterMs);
     const now = Date.now();
-    const existing = this.locks.get(documentId);
+    const existing = this.locks.get(normalizedDocumentId);
 
     if (
       existing &&
-      existing.lockedBy !== userId &&
+      existing.lockedBy !== normalizedUserId &&
       now - existing.lockedAt < staleWindowMs
     ) {
       return {
@@ -29,30 +41,39 @@ export class AILockManager {
       };
     }
 
-    this.locks.set(documentId, {
+    this.locks.set(normalizedDocumentId, {
       lockedAt: now,
-      lockedBy: userId,
+      lockedBy: normalizedUserId,
     });
     return { acquired: true };
   }
 
   release(documentId: string, userId: string) {
-    const existing = this.locks.get(documentId);
+    const normalizedDocumentId = normalizeDocumentId(documentId);
+    if (!isValidDocumentId(normalizedDocumentId)) return;
+
+    const normalizedUserId = normalizeAIUserId(userId);
+    const existing = this.locks.get(normalizedDocumentId);
     if (!existing) return;
-    if (existing.lockedBy !== userId) return;
-    this.locks.delete(documentId);
+    if (existing.lockedBy !== normalizedUserId) return;
+    this.locks.delete(normalizedDocumentId);
   }
 
   getStatus(documentId: string, staleAfterMs = 120_000) {
+    const normalizedDocumentId = normalizeDocumentId(documentId);
+    if (!isValidDocumentId(normalizedDocumentId)) {
+      return { locked: false as const };
+    }
+
     const staleWindowMs = normalizeStaleAfterMs(staleAfterMs);
-    const lock = this.locks.get(documentId);
+    const lock = this.locks.get(normalizedDocumentId);
     if (!lock) {
       return { locked: false as const };
     }
 
     const isStale = Date.now() - lock.lockedAt >= staleWindowMs;
     if (isStale) {
-      this.locks.delete(documentId);
+      this.locks.delete(normalizedDocumentId);
       return { locked: false as const };
     }
 

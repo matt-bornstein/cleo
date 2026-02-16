@@ -75,6 +75,30 @@ describe("AILockManager", () => {
     nowSpy.mockRestore();
   });
 
+  it("normalizes document and user identifiers for lock lifecycle", () => {
+    const manager = new AILockManager();
+    expect(manager.acquire("  doc-trim  ", "  alice  ")).toEqual({ acquired: true });
+
+    expect(manager.getStatus("doc-trim")).toEqual({
+      locked: true,
+      lockedBy: "alice",
+      lockedAt: expect.any(Number),
+    });
+
+    manager.release(" doc-trim ", "alice");
+    expect(manager.getStatus("doc-trim")).toEqual({ locked: false });
+  });
+
+  it("rejects invalid document ids safely", () => {
+    const manager = new AILockManager();
+    expect(manager.acquire("doc-\ninvalid", "alice")).toEqual({
+      acquired: false,
+      reason: "Document is unavailable.",
+    });
+
+    expect(manager.getStatus("doc-\ninvalid")).toEqual({ locked: false });
+  });
+
   it("falls back to default stale window for invalid staleAfterMs values", () => {
     const nowSpy = vi.spyOn(Date, "now");
     nowSpy.mockReturnValue(1_000);
