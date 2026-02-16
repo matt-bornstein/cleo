@@ -16,11 +16,23 @@ export function useAILockStatus(documentId: string) {
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     async function fetchStatus() {
+      if (!documentId) {
+        if (isMounted) {
+          setStatus({ locked: false });
+        }
+        return;
+      }
+
       try {
         const response = await fetch(
           `/api/ai/stream?documentId=${encodeURIComponent(documentId)}`,
         );
-        if (!response.ok) return;
+        if (!response.ok) {
+          if (isMounted) {
+            setStatus({ locked: false });
+          }
+          return;
+        }
         const payload = (await response.json()) as LockStatus;
         if (isMounted) {
           setStatus(payload);
@@ -33,6 +45,12 @@ export function useAILockStatus(documentId: string) {
     }
 
     void fetchStatus();
+    if (!documentId) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
     intervalId = setInterval(() => {
       void fetchStatus();
     }, 2000);

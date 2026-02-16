@@ -24,4 +24,39 @@ describe("useAILockStatus", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("resets status when lock status request fails", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ locked: true, lockedBy: "alice" }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ error: "bad request" }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result, rerender } = renderHook(
+      ({ documentId }) => useAILockStatus(documentId),
+      {
+        initialProps: { documentId: "doc-hook" },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.locked).toBe(true);
+    });
+
+    rerender({ documentId: "doc-hook-2" });
+
+    await waitFor(() => {
+      expect(result.current.locked).toBe(false);
+      expect(result.current.lockedBy).toBeUndefined();
+    });
+
+    vi.unstubAllGlobals();
+  });
 });
