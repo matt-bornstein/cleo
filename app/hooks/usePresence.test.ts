@@ -61,6 +61,18 @@ describe("usePresence", () => {
     expect(listPresenceMock).not.toHaveBeenCalled();
   });
 
+  it("does not heartbeat when document id is invalid", () => {
+    const { result } = renderHook(() => usePresence("doc-\ninvalid"));
+
+    act(() => {
+      result.current.updateMyPresence({ name: "Me", color: "#000" });
+      vi.advanceTimersByTime(15_000);
+    });
+
+    expect(updatePresenceMock).not.toHaveBeenCalled();
+    expect(listPresenceMock).not.toHaveBeenCalled();
+  });
+
   it("normalizes document id for presence list and heartbeat updates", () => {
     renderHook(() => usePresence("  doc-presence  "));
 

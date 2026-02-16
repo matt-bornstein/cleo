@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import {
   listPresence,
   removePresence,
@@ -35,7 +36,8 @@ export function filterStalePresence<
 }
 
 export function usePresence(documentId: string) {
-  const normalizedDocumentId = documentId.trim();
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  const hasValidDocumentId = isValidDocumentId(normalizedDocumentId);
   const [visitorId] = useState(createVisitorId);
   const [version, setVersion] = useState(0);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -46,7 +48,7 @@ export function usePresence(documentId: string) {
   }, []);
 
   useEffect(() => {
-    if (!normalizedDocumentId) {
+    if (!hasValidDocumentId) {
       removePresence(visitorId);
       return;
     }
@@ -69,20 +71,20 @@ export function usePresence(documentId: string) {
       removePresence(visitorId);
       refresh();
     };
-  }, [normalizedDocumentId, refresh, visitorId]);
+  }, [hasValidDocumentId, normalizedDocumentId, refresh, visitorId]);
 
   const allPresence = useMemo(() => {
     void version;
-    if (!normalizedDocumentId) return [];
+    if (!hasValidDocumentId) return [];
     return filterStalePresence(listPresence(normalizedDocumentId), currentTime);
-  }, [currentTime, normalizedDocumentId, version]);
+  }, [currentTime, hasValidDocumentId, normalizedDocumentId, version]);
 
   const me = allPresence.find((entry) => entry.visitorId === visitorId);
   const others = allPresence.filter((entry) => entry.visitorId !== visitorId);
 
   const updateMyPresence = useCallback(
     (data: PresenceData) => {
-      if (!normalizedDocumentId) return;
+      if (!hasValidDocumentId) return;
       updatePresence({
         documentId: normalizedDocumentId,
         visitorId,
@@ -91,7 +93,7 @@ export function usePresence(documentId: string) {
       });
       refresh();
     },
-    [normalizedDocumentId, refresh, visitorId],
+    [hasValidDocumentId, normalizedDocumentId, refresh, visitorId],
   );
 
   return {
