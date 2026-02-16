@@ -109,9 +109,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   });
 
   useEffect(() => {
-    if (settings.theme) {
-      document.documentElement.dataset.theme = settings.theme;
-    }
+    applyThemeSafely(settings.theme);
   }, [settings.theme]);
 
   useEffect(() => {
@@ -162,8 +160,12 @@ export function EditorShell({ documentId }: EditorShellProps) {
         setHistoryModalOpen(true);
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    const target = getWindowEventTarget();
+    if (!target) {
+      return;
+    }
+    safeAddWindowListener(target, "keydown", handler);
+    return () => safeRemoveWindowListener(target, "keydown", handler);
   }, []);
 
   if (!hasAccess && !requestedShareRole) {
@@ -422,5 +424,59 @@ function safeRouterRefresh(router: unknown) {
     typeof (router as { refresh?: unknown }).refresh === "function"
   ) {
     (router as { refresh: () => void }).refresh();
+  }
+}
+
+function applyThemeSafely(theme: unknown) {
+  const normalizedTheme = typeof theme === "string" ? theme.trim() : "";
+  if (!normalizedTheme || typeof document === "undefined") {
+    return;
+  }
+
+  try {
+    if (document.documentElement?.dataset) {
+      document.documentElement.dataset.theme = normalizedTheme;
+    }
+  } catch {
+    return;
+  }
+}
+
+function getWindowEventTarget() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return typeof window.addEventListener === "function" &&
+      typeof window.removeEventListener === "function"
+      ? window
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeAddWindowListener(
+  target: Pick<Window, "addEventListener">,
+  eventType: string,
+  listener: (event: KeyboardEvent) => void,
+) {
+  try {
+    target.addEventListener(eventType, listener as EventListener);
+  } catch {
+    return;
+  }
+}
+
+function safeRemoveWindowListener(
+  target: Pick<Window, "removeEventListener">,
+  eventType: string,
+  listener: (event: KeyboardEvent) => void,
+) {
+  try {
+    target.removeEventListener(eventType, listener as EventListener);
+  } catch {
+    return;
   }
 }

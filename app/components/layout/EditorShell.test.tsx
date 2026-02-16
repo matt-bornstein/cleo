@@ -197,4 +197,5 @@ describe("EditorShell", () => {
     expect(() => render(<EditorShell documentId={document.id} />)).not.toThrow();
     expect(screen.getAllByText("Malformed runtime payloads").length).toBeGreaterThan(0);
   });
+
 });
