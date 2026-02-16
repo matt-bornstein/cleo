@@ -65,4 +65,32 @@ describe("RemoteCursors", () => {
     ).not.toThrow();
     expect(screen.getByText("No other collaborators online.")).toBeInTheDocument();
   });
+
+  it("does not throw when presence data field getters throw", () => {
+    const throwingData = Object.create(null) as { name: unknown; color: unknown };
+    Object.defineProperty(throwingData, "name", {
+      get() {
+        throw new Error("name getter failed");
+      },
+    });
+    Object.defineProperty(throwingData, "color", {
+      get() {
+        throw new Error("color getter failed");
+      },
+    });
+
+    expect(() =>
+      render(
+        <RemoteCursors
+          others={[
+            {
+              id: "presence-3",
+              data: throwingData,
+            },
+          ]}
+        />,
+      ),
+    ).not.toThrow();
+    expect(screen.getByText("Collaborator")).toBeInTheDocument();
+  });
 });

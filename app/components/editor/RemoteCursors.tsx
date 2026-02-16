@@ -16,15 +16,17 @@ export function RemoteCursors({ others }: RemoteCursorsProps) {
           return [];
         }
         const data = normalizedPresence.data;
+        const rawName = readPresenceDataField(data, "name");
         const normalizedName =
-          typeof data?.name === "string" &&
-          data.name.trim().length > 0 &&
-          !hasControlChars(data.name.trim())
-            ? data.name.trim()
+          typeof rawName === "string" &&
+          rawName.trim().length > 0 &&
+          !hasControlChars(rawName.trim())
+            ? rawName.trim()
             : "Collaborator";
+        const rawColor = readPresenceDataField(data, "color");
         const normalizedColor =
-          typeof data?.color === "string" && data.color.trim().length > 0
-            ? data.color.trim()
+          typeof rawColor === "string" && rawColor.trim().length > 0
+            ? rawColor.trim()
             : "#64748b";
 
         return [
@@ -82,6 +84,21 @@ function normalizePresenceEntry(presence: unknown) {
           ? (candidate.data as { name?: unknown; color?: unknown })
           : undefined,
     };
+  } catch {
+    return undefined;
+  }
+}
+
+function readPresenceDataField(
+  data: { name?: unknown; color?: unknown } | undefined,
+  key: "name" | "color",
+) {
+  if (!data) {
+    return undefined;
+  }
+
+  try {
+    return data[key];
   } catch {
     return undefined;
   }

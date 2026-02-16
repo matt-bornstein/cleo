@@ -45,4 +45,34 @@ describe("MessageBubble", () => {
     expect(screen.getByText("Assistant")).toBeInTheDocument();
     expect(screen.getByText("…")).toBeInTheDocument();
   });
+
+  it("does not throw when message field getters throw", () => {
+    const messageWithThrowingGetters = Object.create(null) as Record<string, unknown>;
+    Object.defineProperty(messageWithThrowingGetters, "role", {
+      get() {
+        throw new Error("role getter failed");
+      },
+    });
+    Object.defineProperty(messageWithThrowingGetters, "model", {
+      get() {
+        throw new Error("model getter failed");
+      },
+    });
+    Object.defineProperty(messageWithThrowingGetters, "content", {
+      get() {
+        throw new Error("content getter failed");
+      },
+    });
+    Object.defineProperty(messageWithThrowingGetters, "diffId", {
+      get() {
+        throw new Error("diffId getter failed");
+      },
+    });
+
+    expect(() =>
+      render(<MessageBubble message={messageWithThrowingGetters} />),
+    ).not.toThrow();
+    expect(screen.getByText("Assistant")).toBeInTheDocument();
+    expect(screen.getByText("…")).toBeInTheDocument();
+  });
 });

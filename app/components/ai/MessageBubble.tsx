@@ -15,19 +15,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           diffId?: unknown;
         })
       : undefined;
-  const normalizedRole = candidate?.role === "user" ? "user" : "assistant";
+  const normalizedRole = readMessageRole(candidate);
+  const model = readMessageField(candidate, "model");
   const normalizedModel =
-    typeof candidate?.model === "string" &&
-    candidate.model.trim().length > 0 &&
-    !hasControlChars(candidate.model.trim())
-      ? candidate.model.trim()
+    typeof model === "string" &&
+    model.trim().length > 0 &&
+    !hasControlChars(model.trim())
+      ? model.trim()
       : undefined;
+  const content = readMessageField(candidate, "content");
   const normalizedContent =
-    typeof candidate?.content === "string" ? candidate.content : "";
+    typeof content === "string" ? content : "";
+  const diffId = readMessageField(candidate, "diffId");
   const hasDiffId =
-    typeof candidate?.diffId === "string" &&
-    candidate.diffId.trim().length > 0 &&
-    !hasControlChars(candidate.diffId.trim());
+    typeof diffId === "string" &&
+    diffId.trim().length > 0 &&
+    !hasControlChars(diffId.trim());
   const isUser = normalizedRole === "user";
 
   return (
@@ -51,4 +54,44 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       ) : null}
     </article>
   );
+}
+
+function readMessageRole(
+  candidate:
+    | {
+        role?: unknown;
+      }
+    | undefined,
+) {
+  if (!candidate) {
+    return "assistant";
+  }
+
+  try {
+    return candidate.role === "user" ? "user" : "assistant";
+  } catch {
+    return "assistant";
+  }
+}
+
+function readMessageField(
+  candidate:
+    | {
+        role?: unknown;
+        model?: unknown;
+        content?: unknown;
+        diffId?: unknown;
+      }
+    | undefined,
+  key: "model" | "content" | "diffId",
+) {
+  if (!candidate) {
+    return undefined;
+  }
+
+  try {
+    return candidate[key];
+  } catch {
+    return undefined;
+  }
 }
