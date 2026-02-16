@@ -18,7 +18,13 @@ describe("isValidDocumentContentJson", () => {
 
     expect(isValidDocumentContentJson("")).toBe(false);
     expect(isValidDocumentContentJson("not-json")).toBe(false);
+    expect(isValidDocumentContentJson(JSON.stringify({ type: "doc" }))).toBe(false);
+    expect(isValidDocumentContentJson(JSON.stringify({ type: "doc", content: {} }))).toBe(
+      false,
+    );
     expect(isValidDocumentContentJson(JSON.stringify({ type: "paragraph" }))).toBe(false);
     expect(isValidDocumentContentJson(oversizedContent)).toBe(false);
+    expect(isValidDocumentContentJson(null)).toBe(false);
+    expect(isValidDocumentContentJson(123)).toBe(false);
   });
 });

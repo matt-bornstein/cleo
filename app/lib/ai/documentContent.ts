@@ -10,12 +10,15 @@ export function isValidDocumentContentJson(value: unknown): value is string {
   }
 
   try {
-    const parsed = JSON.parse(value) as { type?: unknown } | unknown;
+    const parsed = JSON.parse(value) as
+      | { type?: unknown; content?: unknown }
+      | unknown;
     return (
       typeof parsed === "object" &&
       parsed !== null &&
       "type" in parsed &&
-      (parsed as { type?: unknown }).type === "doc"
+      (parsed as { type?: unknown }).type === "doc" &&
+      Array.isArray((parsed as { content?: unknown }).content)
     );
   } catch {
     return false;
