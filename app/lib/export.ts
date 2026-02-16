@@ -28,11 +28,22 @@ export function downloadFile(content: unknown, filename: unknown, mimeType: unkn
       ? mimeType.trim()
       : "text/plain;charset=utf-8";
 
-  const blob = new Blob([normalizedContent], { type: normalizedMimeType });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = normalizedFilename;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  let objectUrl: string | undefined;
+
+  try {
+    const blob = new Blob([normalizedContent], { type: normalizedMimeType });
+    objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = normalizedFilename;
+    if (typeof anchor.click === "function") {
+      anchor.click();
+    }
+  } catch {
+    return;
+  } finally {
+    if (typeof objectUrl === "string" && objectUrl.length > 0) {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
 }

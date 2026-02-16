@@ -16,6 +16,10 @@ const sampleContent = JSON.stringify({
 });
 
 describe("export helpers", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("exports html from ProseMirror JSON", () => {
     const html = exportHtml(sampleContent);
     expect(html).toContain("<h2>Title</h2>");
@@ -36,9 +40,7 @@ describe("export helpers", () => {
   it("normalizes malformed download arguments", () => {
     const click = vi.fn();
     const anchor = { href: "", download: "", click } as unknown as HTMLAnchorElement;
-    const createElementSpy = vi
-      .spyOn(document, "createElement")
-      .mockReturnValue(anchor as HTMLElementTagNameMap["a"]);
+    vi.spyOn(document, "createElement").mockReturnValue(anchor as HTMLElementTagNameMap["a"]);
     const createObjectURLSpy = vi
       .spyOn(URL, "createObjectURL")
       .mockReturnValue("blob:local-test");
@@ -51,8 +53,26 @@ describe("export helpers", () => {
     expect(click).toHaveBeenCalledTimes(1);
     expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:local-test");
 
-    createElementSpy.mockRestore();
-    createObjectURLSpy.mockRestore();
-    revokeObjectURLSpy.mockRestore();
+  });
+
+  it("does not throw when object URL creation fails", () => {
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+      throw new Error("createObjectURL failed");
+    });
+
+    expect(() => downloadFile("content", "file.txt", "text/plain")).not.toThrow();
+  });
+
+  it("revokes object URL when anchor click throws", () => {
+    const click = vi.fn(() => {
+      throw new Error("click failed");
+    });
+    const anchor = { href: "", download: "", click } as unknown as HTMLAnchorElement;
+    vi.spyOn(document, "createElement").mockReturnValue(anchor as HTMLElementTagNameMap["a"]);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:local-test");
+    const revokeObjectURLSpy = vi.spyOn(URL, "revokeObjectURL");
+
+    expect(() => downloadFile("content", "file.txt", "text/plain")).not.toThrow();
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:local-test");
   });
 });
