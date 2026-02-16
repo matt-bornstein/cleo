@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Toolbar } from "@/components/layout/Toolbar";
 import { DocumentList } from "@/components/layout/DocumentList";
+import { Loader2 } from "lucide-react";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -19,7 +20,10 @@ export default function Home() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
