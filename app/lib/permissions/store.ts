@@ -28,13 +28,22 @@ type PermissionState = {
 
 const inMemoryState: PermissionState = { permissions: [] };
 
-function canUseStorage() {
-  return typeof window !== "undefined" && !!window.localStorage;
+function getStorage() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function loadState(): PermissionState {
-  if (!canUseStorage()) return inMemoryState;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
+  const storage = getStorage();
+  if (!storage) return inMemoryState;
+  const raw = safeGetItem(storage, STORAGE_KEY);
   if (!raw) return { permissions: [] };
   try {
     const parsed = JSON.parse(raw) as { permissions?: unknown };
@@ -102,11 +111,12 @@ function loadState(): PermissionState {
 }
 
 function persistState(state: PermissionState) {
-  if (!canUseStorage()) {
-    inMemoryState.permissions = state.permissions;
+  inMemoryState.permissions = [...state.permissions];
+  const storage = getStorage();
+  if (!storage) {
     return;
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  safeSetItem(storage, STORAGE_KEY, JSON.stringify(state));
 }
 
 export function listPermissions(documentId: unknown) {
@@ -244,6 +254,7 @@ export function removePermission(permissionId: unknown) {
 }
 
 export function resetPermissionsForTests() {
+  inMemoryState.permissions = [];
   persistState({ permissions: [] });
 }
 
@@ -267,4 +278,20 @@ function normalizePermissionRole(value: unknown): Role | undefined {
     value === "viewer"
     ? value
     : undefined;
+}
+
+function safeGetItem(storage: Storage, key: string) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    return;
+  }
 }

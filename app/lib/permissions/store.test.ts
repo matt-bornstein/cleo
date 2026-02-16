@@ -9,7 +9,16 @@ import {
 import { vi } from "vitest";
 
 describe("permissions store", () => {
+  const localStorageDescriptor = Object.getOwnPropertyDescriptor(
+    window,
+    "localStorage",
+  );
+
   beforeEach(() => {
+    vi.restoreAllMocks();
+    if (localStorageDescriptor) {
+      Object.defineProperty(window, "localStorage", localStorageDescriptor);
+    }
     resetPermissionsForTests();
     window.localStorage.clear();
   });
@@ -245,6 +254,47 @@ describe("permissions store", () => {
     expect(getRoleForUser("doc-1", "not-an-email")).toBe("viewer");
     expect(hasDocumentAccess("doc-\ninvalid", "user@example.com")).toBe(false);
     expect(hasDocumentAccess("doc-1", "not-an-email")).toBe(false);
+  });
+
+  it("falls back to in-memory permissions when localStorage getter throws", () => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      get() {
+        throw new Error("localStorage getter failed");
+      },
+    });
+
+    const created = upsertPermission("doc-1", "user@example.com", "viewer");
+    expect(created).not.toBeNull();
+    expect(listPermissions("doc-1")).toEqual([
+      expect.objectContaining({
+        email: "user@example.com",
+        role: "viewer",
+      }),
+    ]);
+  });
+
+  it("returns empty list when localStorage getItem throws", () => {
+    upsertPermission("doc-1", "user@example.com", "viewer");
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("getItem failed");
+    });
+
+    expect(listPermissions("doc-1")).toEqual([]);
+  });
+
+  it("returns normalized permission writes when localStorage setItem throws", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("setItem failed");
+    });
+
+    const created = upsertPermission("doc-1", " user@example.com ", "viewer");
+    expect(created).toEqual(
+      expect.objectContaining({
+        email: "user@example.com",
+        role: "viewer",
+      }),
+    );
   });
 
   it("handles malformed non-string runtime inputs safely", () => {
