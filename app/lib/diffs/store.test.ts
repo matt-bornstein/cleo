@@ -1,4 +1,9 @@
-import { createDocument, getDocumentById, resetDocumentsForTests } from "@/lib/documents/store";
+import {
+  createDocument,
+  getDocumentById,
+  resetDocumentsForTests,
+  setDocumentLastDiffAt,
+} from "@/lib/documents/store";
 import {
   createDiff,
   ensureCreatedDiff,
@@ -131,6 +136,26 @@ describe("diff store triggerIdleSave", () => {
       dedupWindowMs: Number.NaN,
     });
     expect(immediateRetry).toEqual({
+      skipped: true,
+      reason: "dedup_window",
+    });
+  });
+
+  it("treats zero lastDiffAt as a valid dedup boundary", () => {
+    const document = createDocument("Zero timestamp dedup doc");
+    const changedSnapshot = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "hello" }] }],
+    });
+    setDocumentLastDiffAt(document.id, 0);
+
+    const result = triggerIdleSave({
+      documentId: document.id,
+      snapshot: changedSnapshot,
+      dedupWindowMs: Number.MAX_SAFE_INTEGER,
+    });
+
+    expect(result).toEqual({
       skipped: true,
       reason: "dedup_window",
     });

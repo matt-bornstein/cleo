@@ -267,7 +267,10 @@ export function triggerIdleSave(params: {
     return { skipped: true, reason: "missing_document" as const };
   }
 
-  if (document.lastDiffAt && now - document.lastDiffAt < dedupWindowMs) {
+  if (
+    typeof document.lastDiffAt === "number" &&
+    now - document.lastDiffAt < dedupWindowMs
+  ) {
     return { skipped: true, reason: "dedup_window" as const };
   }
 
