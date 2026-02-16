@@ -110,7 +110,12 @@ export function removePresence(visitorId: string) {
   }
 
   const state = loadState();
+  const beforeCount = state.presence.length;
   state.presence = state.presence.filter((entry) => entry.visitorId !== normalizedVisitorId);
+  if (state.presence.length === beforeCount) {
+    return;
+  }
+
   persistState(state);
 }
 

@@ -211,8 +211,12 @@ export function removePermission(permissionId: string) {
   state.permissions = state.permissions.filter(
     (entry) => entry.id !== normalizedPermissionId,
   );
+  if (state.permissions.length === beforeCount) {
+    return false;
+  }
+
   persistState(state);
-  return state.permissions.length !== beforeCount;
+  return true;
 }
 
 export function resetPermissionsForTests() {

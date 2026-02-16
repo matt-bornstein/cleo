@@ -270,8 +270,12 @@ export function deleteDocument(documentId: string) {
   const state = loadState();
   const beforeCount = state.documents.length;
   state.documents = state.documents.filter((doc) => doc.id !== normalizedDocumentId);
+  if (state.documents.length === beforeCount) {
+    return false;
+  }
+
   persistState(state);
-  return state.documents.length !== beforeCount;
+  return true;
 }
 
 export function resetDocumentsForTests() {

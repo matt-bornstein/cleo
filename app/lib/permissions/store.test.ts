@@ -6,6 +6,7 @@ import {
   resetPermissionsForTests,
   upsertPermission,
 } from "@/lib/permissions/store";
+import { vi } from "vitest";
 
 describe("permissions store", () => {
   beforeEach(() => {
@@ -43,9 +44,12 @@ describe("permissions store", () => {
   });
 
   it("returns false when removing unknown permission id", () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
     expect(removePermission("missing-id")).toBe(false);
     expect(removePermission("   ")).toBe(false);
     expect(removePermission("bad\nid")).toBe(false);
+    expect(setItemSpy).not.toHaveBeenCalled();
   });
 
   it("returns owner role for document owner and viewer by default otherwise", () => {

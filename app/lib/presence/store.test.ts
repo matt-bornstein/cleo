@@ -4,6 +4,7 @@ import {
   resetPresenceForTests,
   updatePresence,
 } from "@/lib/presence/store";
+import { vi } from "vitest";
 
 describe("presence store", () => {
   beforeEach(() => {
@@ -48,6 +49,14 @@ describe("presence store", () => {
 
     removePresence("bad\nvisitor");
     expect(listPresence("doc-valid")).toEqual([]);
+  });
+
+  it("does not persist remove operations when visitor is absent", () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    removePresence("missing-visitor");
+    removePresence("bad\nvisitor");
+    expect(setItemSpy).not.toHaveBeenCalled();
   });
 
   it("filters malformed persisted presence entries and normalizes user fallback", () => {

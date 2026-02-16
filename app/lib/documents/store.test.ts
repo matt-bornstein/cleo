@@ -10,6 +10,7 @@ import {
   updateDocumentTitle,
 } from "@/lib/documents/store";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
+import { vi } from "vitest";
 
 describe("document store", () => {
   beforeEach(() => {
@@ -200,6 +201,14 @@ describe("document store", () => {
     const removed = deleteDocument(created.id);
     expect(removed).toBe(true);
     expect(getDocumentById(created.id)).toBeUndefined();
+  });
+
+  it("does not persist delete operations when target is missing", () => {
+    const setItemSpy = vi.spyOn(Storage.prototype, "setItem");
+
+    expect(deleteDocument("missing-doc")).toBe(false);
+    expect(deleteDocument("   ")).toBe(false);
+    expect(setItemSpy).not.toHaveBeenCalled();
   });
 
   it("rejects invalid document ids for document operations", () => {
