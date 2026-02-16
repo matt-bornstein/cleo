@@ -89,6 +89,14 @@ describe("document store", () => {
             createdAt: 1,
             updatedAt: 1,
           },
+          {
+            id: "doc-legacy",
+            title: "Latest title",
+            content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
+            ownerEmail: "latest@example.com",
+            createdAt: 20,
+            updatedAt: 30,
+          },
         ],
       }),
     );
@@ -98,14 +106,14 @@ describe("document store", () => {
     expect(documents[0]).toEqual(
       expect.objectContaining({
         id: "doc-legacy",
-        title: "Untitled",
-        ownerEmail: "user@example.com",
+        title: "Latest title",
+        ownerEmail: "latest@example.com",
         content: JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] }),
         lastDiffAt: undefined,
-        chatClearedAt: 10,
+        chatClearedAt: undefined,
       }),
     );
-    expect(documents[0].createdAt).toEqual(expect.any(Number));
+    expect(documents[0].createdAt).toBe(20);
     expect(documents[0].updatedAt).toBeGreaterThanOrEqual(documents[0].createdAt);
   });
 

@@ -40,8 +40,7 @@ function loadState(): DocumentStoreState {
       return { documents: [] };
     }
 
-    return {
-      documents: parsed.documents.flatMap((doc) => {
+    const sanitizedDocuments = parsed.documents.flatMap((doc) => {
         const normalizedDocumentId = normalizeDocumentId(doc.id);
         if (!isValidDocumentId(normalizedDocumentId)) {
           return [];
@@ -82,7 +81,15 @@ function loadState(): DocumentStoreState {
                 : undefined,
           },
         ];
-      }),
+      });
+
+    const dedupedByDocumentId = new Map<string, AppDocument>();
+    for (const document of sanitizedDocuments) {
+      dedupedByDocumentId.set(document.id, document);
+    }
+
+    return {
+      documents: Array.from(dedupedByDocumentId.values()),
     };
   } catch {
     return { documents: [] };
