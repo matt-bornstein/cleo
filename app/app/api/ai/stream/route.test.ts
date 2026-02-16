@@ -253,6 +253,10 @@ describe("POST /api/ai/stream", () => {
       },
       {
         ...createRequestBody(),
+        messages: [{ role: "assistant", content: "   ", userId: "assistant" }],
+      },
+      {
+        ...createRequestBody(),
         messages: [
           { role: "user", content: "hello", userId: "u".repeat(257) },
         ],
