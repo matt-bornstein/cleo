@@ -110,6 +110,47 @@ export function useAIChat({
         const decoder = new TextDecoder();
         let buffer = "";
         let assistantContent = "";
+        const applyStreamPayload = (
+          payload:
+            | { type: "token"; text: string }
+            | { type: "done"; assistantMessage: string; nextContent: string }
+            | { type: "error"; error: string },
+        ) => {
+          if (payload.type === "token") {
+            assistantContent += payload.text;
+            setMessages((prev) =>
+              updateMessageContent(prev, assistantDraft.id, assistantContent),
+            );
+            return;
+          }
+
+          if (payload.type === "done") {
+            const didContentChange = payload.nextContent !== currentDocumentContent;
+            const diff = didContentChange
+              ? createDiff({
+                  documentId,
+                  userId: currentUserId,
+                  snapshotAfter: payload.nextContent,
+                  source: "ai",
+                  aiPrompt: prompt,
+                  aiModel: selectedModel,
+                })
+              : undefined;
+
+            setMessages((prev) =>
+              updateMessageContent(prev, assistantDraft.id, payload.assistantMessage),
+            );
+            saveMessage({
+              ...assistantDraft,
+              content: payload.assistantMessage,
+              diffId: diff?.id,
+            });
+            onApplyContent(payload.nextContent);
+            return;
+          }
+
+          throw new Error(payload.error);
+        };
 
         while (true) {
           const { done, value } = await reader.read();
@@ -120,46 +161,22 @@ export function useAIChat({
 
           for (const line of lines) {
             if (!line.trim()) continue;
-            const payload = JSON.parse(line) as
+            applyStreamPayload(
+              JSON.parse(line) as
+                | { type: "token"; text: string }
+                | { type: "done"; assistantMessage: string; nextContent: string }
+                | { type: "error"; error: string },
+            );
+          }
+        }
+
+        if (buffer.trim()) {
+          applyStreamPayload(
+            JSON.parse(buffer) as
               | { type: "token"; text: string }
               | { type: "done"; assistantMessage: string; nextContent: string }
-              | { type: "error"; error: string };
-
-            if (payload.type === "token") {
-              assistantContent += payload.text;
-              setMessages((prev) =>
-                updateMessageContent(prev, assistantDraft.id, assistantContent),
-              );
-            }
-
-            if (payload.type === "done") {
-              const didContentChange = payload.nextContent !== currentDocumentContent;
-              const diff = didContentChange
-                ? createDiff({
-                    documentId,
-                    userId: currentUserId,
-                    snapshotAfter: payload.nextContent,
-                    source: "ai",
-                    aiPrompt: prompt,
-                    aiModel: selectedModel,
-                  })
-                : undefined;
-
-              setMessages((prev) =>
-                updateMessageContent(prev, assistantDraft.id, payload.assistantMessage),
-              );
-              saveMessage({
-                ...assistantDraft,
-                content: payload.assistantMessage,
-                diffId: diff?.id,
-              });
-              onApplyContent(payload.nextContent);
-            }
-
-            if (payload.type === "error") {
-              throw new Error(payload.error);
-            }
-          }
+              | { type: "error"; error: string },
+          );
         }
       } catch (requestError) {
         const message =

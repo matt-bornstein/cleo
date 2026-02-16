@@ -28,12 +28,21 @@ vi.mock("@/lib/ai/models", () => ({
   getModelConfig: getModelConfigMock,
 }));
 
-function createStreamResponse(events: Array<Record<string, unknown>>) {
+function createStreamResponse(
+  events: Array<Record<string, unknown>>,
+  options?: { trailingNewline?: boolean },
+) {
+  const trailingNewline = options?.trailingNewline ?? true;
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      for (const event of events) {
-        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      events.forEach((event, index) => {
+        const isLast = index === events.length - 1;
+        const suffix = trailingNewline || !isLast ? "\n" : "";
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}${suffix}`));
+      });
+      if (events.length === 0) {
+        controller.enqueue(encoder.encode(""));
       }
       controller.close();
     },
@@ -166,6 +175,56 @@ describe("useAIChat", () => {
         content: "No edits needed.",
       }),
     );
+
+    vi.unstubAllGlobals();
+  });
+
+  it("parses final stream event without trailing newline", async () => {
+    listMessagesByDocumentMock.mockReturnValue([]);
+    createDiffMock.mockReturnValue({ id: "diff-nl" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        createStreamResponse(
+          [
+            {
+              type: "done",
+              assistantMessage: "Applied final event.",
+              nextContent: "<p>Updated without newline</p>",
+            },
+          ],
+          { trailingNewline: false },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const onApplyContent = vi.fn();
+    const { result } = renderHook(() =>
+      useAIChat({
+        documentId: "doc-3",
+        currentDocumentContent: "<p>Original</p>",
+        onApplyContent,
+        currentUserId: "owner@example.com",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.sendPrompt("Apply with no newline");
+    });
+
+    expect(createDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: "doc-3",
+        userId: "owner@example.com",
+      }),
+    );
+    expect(saveMessageMock.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        content: "Applied final event.",
+        diffId: "diff-nl",
+      }),
+    );
+    expect(onApplyContent).toHaveBeenCalledWith("<p>Updated without newline</p>");
 
     vi.unstubAllGlobals();
   });
