@@ -26,7 +26,9 @@ export function useComments(documentId: string, currentUserId?: string) {
         parentCommentId,
         userId: normalizedCurrentUserId,
       });
-      refresh();
+      if (comment) {
+        refresh();
+      }
       return comment;
     },
     [documentId, normalizedCurrentUserId, refresh],
@@ -52,7 +54,9 @@ export function useComments(documentId: string, currentUserId?: string) {
         parentCommentId,
         userId: normalizedCurrentUserId,
       });
-      refresh();
+      if (reply) {
+        refresh();
+      }
       return reply;
     },
     [comments, documentId, normalizedCurrentUserId, refresh],

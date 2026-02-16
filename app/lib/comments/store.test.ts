@@ -17,6 +17,7 @@ describe("comments store", () => {
       content: "Looks good",
       anchorText: "Intro paragraph",
     });
+    expect(comment).not.toBeNull();
     addComment({
       documentId: "doc-2",
       content: "Different doc",
@@ -25,7 +26,7 @@ describe("comments store", () => {
 
     const comments = listComments("doc-1");
     expect(comments).toHaveLength(1);
-    expect(comments[0].id).toBe(comment.id);
+    expect(comments[0].id).toBe(comment!.id);
     expect(comments[0].userId).toBe("local-dev-user");
   });
 
@@ -35,7 +36,8 @@ describe("comments store", () => {
       content: "Please clarify this line",
       anchorText: "Line",
     });
-    const resolved = resolveComment(comment.id);
+    expect(comment).not.toBeNull();
+    const resolved = resolveComment(comment!.id);
     expect(resolved?.resolved).toBe(true);
   });
 
@@ -45,15 +47,16 @@ describe("comments store", () => {
       content: "Parent",
       anchorText: "Anchor",
     });
+    expect(parent).not.toBeNull();
     addComment({
       documentId: "doc-1",
       content: "Reply",
       anchorText: "Anchor",
-      parentCommentId: parent.id,
+      parentCommentId: parent!.id,
     });
 
     const comments = listComments("doc-1");
-    const reply = comments.find((comment) => comment.parentCommentId === parent.id);
+    const reply = comments.find((comment) => comment.parentCommentId === parent!.id);
     expect(reply?.content).toBe("Reply");
   });
 
@@ -79,5 +82,16 @@ describe("comments store", () => {
 
     const comments = listComments("doc-4");
     expect(comments[0]?.userId).toBe("local-dev-user");
+  });
+
+  it("rejects comment creation for invalid document ids", () => {
+    const created = addComment({
+      documentId: "   ",
+      content: "Should fail",
+      anchorText: "Line",
+    });
+
+    expect(created).toBeNull();
+    expect(listComments("doc-5")).toEqual([]);
   });
 });

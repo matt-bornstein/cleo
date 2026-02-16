@@ -1,4 +1,5 @@
 import type { CommentRecord } from "@/lib/types";
+import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { DEFAULT_LOCAL_USER_ID } from "@/lib/user/defaults";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
@@ -35,8 +36,11 @@ function persistState(state: CommentState) {
 }
 
 export function listComments(documentId: string) {
+  const normalizedDocumentId = normalizeDocumentId(documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) return [];
+
   return loadState()
-    .comments.filter((comment) => comment.documentId === documentId)
+    .comments.filter((comment) => comment.documentId === normalizedDocumentId)
     .sort((a, b) => a.createdAt - b.createdAt);
 }
 
@@ -47,12 +51,17 @@ export function addComment(params: {
   parentCommentId?: string;
   userId?: string;
 }) {
+  const normalizedDocumentId = normalizeDocumentId(params.documentId);
+  if (!isValidDocumentId(normalizedDocumentId)) {
+    return null;
+  }
+
   const state = loadState();
   const now = Date.now();
   const normalizedUserId = params.userId?.trim();
   const comment: CommentRecord = {
     id: crypto.randomUUID(),
-    documentId: params.documentId,
+    documentId: normalizedDocumentId,
     userId:
       normalizedUserId && !hasControlChars(normalizedUserId)
         ? normalizedUserId
