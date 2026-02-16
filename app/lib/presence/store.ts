@@ -28,7 +28,7 @@ function loadState(): PresenceState {
 
     const sanitizedPresence = parsed.presence.flatMap((entry) => {
         const normalizedDocumentId = normalizeDocumentId(entry.documentId);
-        const normalizedPresenceId = entry.id?.trim();
+        const normalizedPresenceId = normalizePresenceRecordId(entry.id);
         const normalizedVisitorId = normalizePresenceVisitorId(entry.visitorId);
         if (
           !normalizedPresenceId ||
@@ -98,13 +98,20 @@ export function updatePresence(record: Omit<PresenceRecord, "id" | "updatedAt">)
     (entry) => entry.visitorId === normalizedVisitorId,
   );
   const normalizedData = normalizePresenceData(record.data);
+  const normalizedExistingRecordId =
+    existingIndex === -1
+      ? undefined
+      : normalizePresenceRecordId(state.presence[existingIndex]?.id);
   const nextRecord: PresenceRecord = {
     ...record,
     documentId: normalizedDocumentId,
     visitorId: normalizedVisitorId,
     userId: normalizePresenceUserId(record.userId),
     data: normalizedData,
-    id: existingIndex === -1 ? crypto.randomUUID() : state.presence[existingIndex].id,
+    id:
+      existingIndex === -1
+        ? crypto.randomUUID()
+        : normalizedExistingRecordId ?? crypto.randomUUID(),
     updatedAt: now,
   };
   if (existingIndex === -1) {
@@ -152,6 +159,19 @@ export function resetPresenceForTests() {
 }
 
 function normalizePresenceVisitorId(value: string | undefined) {
+  const normalizedValue = value?.trim();
+  if (
+    !normalizedValue ||
+    normalizedValue.length > MAX_USER_ID_LENGTH ||
+    hasControlChars(normalizedValue)
+  ) {
+    return undefined;
+  }
+
+  return normalizedValue;
+}
+
+function normalizePresenceRecordId(value: string | undefined) {
   const normalizedValue = value?.trim();
   if (
     !normalizedValue ||
