@@ -4,6 +4,7 @@
  */
 
 import TurndownService from "turndown";
+import { prosemirrorJsonToHtml } from "./editor/htmlSerializer";
 
 /**
  * Export as HTML - renders ProseMirror JSON to basic HTML
@@ -20,7 +21,7 @@ export function exportAsHtml(
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${escapeHtml(title)}</title>
+  <title>${title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; }
     h1 { font-size: 2em; margin-top: 1em; }
@@ -106,89 +107,6 @@ export function exportAsText(contentJson: string): string {
 }
 
 /**
- * Convert ProseMirror JSON to HTML (simplified)
- */
-function prosemirrorJsonToHtml(node: any): string {
-  if (!node) return "";
-
-  if (node.type === "text") {
-    let text = escapeHtml(node.text || "");
-    if (node.marks) {
-      for (const mark of node.marks) {
-        switch (mark.type) {
-          case "bold":
-            text = `<strong>${text}</strong>`;
-            break;
-          case "italic":
-            text = `<em>${text}</em>`;
-            break;
-          case "underline":
-            text = `<u>${text}</u>`;
-            break;
-          case "strike":
-            text = `<s>${text}</s>`;
-            break;
-          case "code":
-            text = `<code>${text}</code>`;
-            break;
-          case "link":
-            text = `<a href="${escapeHtml(mark.attrs?.href || "")}">${text}</a>`;
-            break;
-        }
-      }
-    }
-    return text;
-  }
-
-  const children = (node.content || [])
-    .map((child: any) => prosemirrorJsonToHtml(child))
-    .join("");
-
-  switch (node.type) {
-    case "doc":
-      return children;
-    case "paragraph":
-      return `<p>${children || "<br>"}</p>\n`;
-    case "heading": {
-      const level = node.attrs?.level || 1;
-      return `<h${level}>${children}</h${level}>\n`;
-    }
-    case "bulletList":
-      return `<ul>\n${children}</ul>\n`;
-    case "orderedList":
-      return `<ol>\n${children}</ol>\n`;
-    case "listItem":
-      return `<li>${children}</li>\n`;
-    case "taskList":
-      return `<ul>\n${children}</ul>\n`;
-    case "taskItem": {
-      const checked = node.attrs?.checked ? "checked" : "";
-      return `<li><input type="checkbox" ${checked} disabled> ${children}</li>\n`;
-    }
-    case "blockquote":
-      return `<blockquote>\n${children}</blockquote>\n`;
-    case "codeBlock":
-      return `<pre><code>${children}</code></pre>\n`;
-    case "horizontalRule":
-      return `<hr>\n`;
-    case "hardBreak":
-      return `<br>`;
-    case "image":
-      return `<img src="${escapeHtml(node.attrs?.src || "")}" alt="${escapeHtml(node.attrs?.alt || "")}">\n`;
-    case "table":
-      return `<table>\n${children}</table>\n`;
-    case "tableRow":
-      return `<tr>${children}</tr>\n`;
-    case "tableCell":
-      return `<td>${children}</td>`;
-    case "tableHeader":
-      return `<th>${children}</th>`;
-    default:
-      return children;
-  }
-}
-
-/**
  * Convert ProseMirror JSON to plain text
  */
 function prosemirrorJsonToText(node: any): string {
@@ -232,11 +150,3 @@ function prosemirrorJsonToText(node: any): string {
   }
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
