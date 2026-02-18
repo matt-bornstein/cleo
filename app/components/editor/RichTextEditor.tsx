@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { JSONContent } from "@tiptap/core";
 
@@ -91,6 +91,50 @@ function safeOnLocalUpdate(onLocalUpdate: unknown) {
   }
 }
 
+function safeAreContentsEqual(currentContent: unknown, nextContent: JSONContent) {
+  try {
+    return JSON.stringify(currentContent) === JSON.stringify(nextContent);
+  } catch {
+    return false;
+  }
+}
+
+function safeReadEditorJson(editor: unknown) {
+  if (!editor || typeof editor !== "object" || !("getJSON" in editor)) {
+    return undefined;
+  }
+
+  try {
+    const getJSON = (editor as { getJSON?: unknown }).getJSON;
+    if (typeof getJSON !== "function") {
+      return undefined;
+    }
+    return Reflect.apply(getJSON, editor, []) as JSONContent;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeSetEditorContent(editor: unknown, nextContent: JSONContent) {
+  if (!editor || typeof editor !== "object" || !("commands" in editor)) {
+    return;
+  }
+
+  try {
+    const commands = (editor as { commands?: unknown }).commands;
+    if (!commands || typeof commands !== "object" || !("setContent" in commands)) {
+      return;
+    }
+    const setContent = (commands as { setContent?: unknown }).setContent;
+    if (typeof setContent !== "function") {
+      return;
+    }
+    Reflect.apply(setContent, commands, [nextContent, false]);
+  } catch {
+    return;
+  }
+}
+
 export function RichTextEditor({
   documentId,
   content,
@@ -159,6 +203,14 @@ function LocalRichTextEditor({
     },
   });
 
+  useEffect(() => {
+    const currentContent = safeReadEditorJson(editor);
+    if (safeAreContentsEqual(currentContent, parsedContent)) {
+      return;
+    }
+    safeSetEditorContent(editor, parsedContent);
+  }, [editor, parsedContent]);
+
   return (
     <div className="flex h-full flex-col">
       <FormattingToolbar editor={editor} />
@@ -210,6 +262,18 @@ function SyncedRichTextEditor({
       safeOnLocalUpdate(onLocalUpdate);
     },
   });
+
+  useEffect(() => {
+    // Collaborative extension owns document state; avoid stomping synced updates.
+    if (sync.extension) {
+      return;
+    }
+    const currentContent = safeReadEditorJson(editor);
+    if (safeAreContentsEqual(currentContent, parsedContent)) {
+      return;
+    }
+    safeSetEditorContent(editor, parsedContent);
+  }, [editor, parsedContent, sync.extension]);
 
   if (sync.isLoading) {
     return (

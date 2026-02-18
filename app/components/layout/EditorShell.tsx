@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AIPanel } from "@/components/ai/AIPanel";
@@ -41,6 +41,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const hasHydrated = useHasHydrated();
   const { settings, refreshSettings } = useSettings();
   const currentUserEmail =
     normalizeEmailOrUndefined(settings.userEmail) ?? DEFAULT_LOCAL_USER_EMAIL;
@@ -182,6 +183,10 @@ export function EditorShell({ documentId }: EditorShellProps) {
     safeAddWindowListener(target, "keydown", handler);
     return () => safeRemoveWindowListener(target, "keydown", handler);
   }, []);
+
+  if (!hasHydrated) {
+    return <div className="min-h-screen bg-slate-100" />;
+  }
 
   if (!hasAccess && !requestedShareRole) {
     return (
@@ -594,4 +599,20 @@ function safeRemoveWindowListener(
   } catch {
     return;
   }
+}
+
+function useHasHydrated() {
+  return useSyncExternalStore(subscribeNoop, getClientHydrationSnapshot, getServerHydrationSnapshot);
+}
+
+function subscribeNoop() {
+  return () => {};
+}
+
+function getClientHydrationSnapshot() {
+  return true;
+}
+
+function getServerHydrationSnapshot() {
+  return false;
 }
