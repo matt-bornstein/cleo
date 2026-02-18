@@ -47,7 +47,7 @@ Install dependencies:
 npm install
 ```
 
-Run app:
+Run app (minimum local mode):
 
 ```bash
 npm run dev
@@ -61,21 +61,121 @@ npm run typecheck
 npm run lint
 ```
 
-## Environment variables
+## Full setup (all external services)
 
-Create `.env.local` in `app/` if needed:
+For full functionality (real-time backend, AI providers, and Google sign-in), configure:
+
+- Convex deployment
+- At least one AI provider key (OpenAI, Anthropic, or Gemini)
+- Google OAuth client credentials
+
+The repo includes `app/.env.local.template` with all required keys. Copy it first:
 
 ```bash
-NEXT_PUBLIC_CONVEX_URL=<convex-deployment-url>
-OPENAI_API_KEY=<optional>
-ANTHROPIC_API_KEY=<optional>
-GEMINI_API_KEY=<optional>
-AUTH_GOOGLE_ID=<optional>
-AUTH_GOOGLE_SECRET=<optional>
+cp .env.local.template .env.local
 ```
 
-If `NEXT_PUBLIC_CONVEX_URL` is missing, the app runs in local fallback mode using browser storage.
+Do not commit `.env.local`.
 
-## Current known limitation
+### 1) Convex (required for realtime backend)
 
-Convex CLI deployment/codegen could not be fully initialized in this terminal environment due non-interactive login constraints. The codebase includes Convex schema/function scaffolding and local fallback implementations so development and tests remain functional.
+1. Create/sign in to a Convex account.
+2. From `app/`, run:
+   ```bash
+   npx convex dev
+   ```
+3. Complete the interactive prompts to create or connect a project.
+4. Confirm `.env.local` contains:
+   - `CONVEX_DEPLOYMENT`
+   - `NEXT_PUBLIC_CONVEX_URL`
+5. Keep `npx convex dev` running while developing so schema/functions stay synced.
+
+Notes:
+
+- If `NEXT_PUBLIC_CONVEX_URL` is missing, the app falls back to local browser storage mode.
+- For cloud-backed features and auth routes, Convex should be configured.
+
+### 2) AI provider keys (required for real AI edits)
+
+You need at least one provider key. If none are set, AI uses local fallback behavior.
+
+#### OpenAI
+
+1. Go to OpenAI platform and sign in:
+   - https://platform.openai.com/
+2. Create an API key.
+3. Add to `.env.local`:
+   ```bash
+   OPENAI_API_KEY=...
+   ```
+4. In app settings/model selector, choose an OpenAI model.
+
+#### Anthropic
+
+1. Go to Anthropic console and sign in:
+   - https://console.anthropic.com/
+2. Create an API key.
+3. Add to `.env.local`:
+   ```bash
+   ANTHROPIC_API_KEY=...
+   ```
+4. Choose an Anthropic model in the app.
+
+#### Gemini (Google AI)
+
+1. Open Google AI Studio / Gemini API console:
+   - https://aistudio.google.com/
+2. Create an API key.
+3. Add to `.env.local`:
+   ```bash
+   GEMINI_API_KEY=...
+   ```
+4. Choose a Gemini model in the app.
+
+### 3) Google OAuth (required for Google sign-in)
+
+1. In Google Cloud Console, create/select a project.
+   - https://console.cloud.google.com/
+2. Configure OAuth consent screen.
+3. Create OAuth Client ID credentials for a Web application.
+4. Add authorized origins/redirect URIs required by your Convex auth deployment.
+5. Copy credentials into `.env.local`:
+   ```bash
+   AUTH_GOOGLE_ID=...
+   AUTH_GOOGLE_SECRET=...
+   ```
+
+If sign-in fails, double-check OAuth origin/redirect settings match your current local/Convex URLs.
+
+## Environment variable reference
+
+`app/.env.local.template` includes:
+
+```bash
+# Convex
+CONVEX_DEPLOYMENT=
+NEXT_PUBLIC_CONVEX_URL=
+
+# AI providers (set at least one for real AI editing)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+
+# Google auth
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+```
+
+## Recommended local run flow
+
+In terminal 1 (Convex):
+
+```bash
+npx convex dev
+```
+
+In terminal 2 (Next.js app):
+
+```bash
+npm run dev
+```
