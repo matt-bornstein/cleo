@@ -126,9 +126,9 @@ describe("POST /api/ai/stream", () => {
     const doneEvent = events.find((event) => event.type === "done");
     expect(doneEvent).toBeDefined();
     expect(String(doneEvent?.assistantMessage)).toContain(
-      "Keeping the current document unchanged",
+      "No provider API key is configured",
     );
-    expect(String(doneEvent?.nextContent)).toContain("Initial");
+    expect(String(doneEvent?.nextContent)).toContain("AI note:");
   });
 
   it("falls back safely when model config lookup throws at runtime", async () => {
@@ -150,7 +150,7 @@ describe("POST /api/ai/stream", () => {
     const doneEvent = events.find((event) => event.type === "done");
     expect(doneEvent).toBeDefined();
     expect(String(doneEvent?.assistantMessage)).toContain(
-      "Keeping the current document unchanged",
+      "No provider API key is configured",
     );
     expect(events.some((event) => event.type === "error")).toBe(false);
   });

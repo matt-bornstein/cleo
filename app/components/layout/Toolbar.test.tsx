@@ -14,6 +14,7 @@ describe("Toolbar", () => {
     const onRenameDocument = vi.fn();
     const onNewDocument = vi.fn();
     const onOpenDocument = vi.fn();
+    const onToggleComments = vi.fn();
     const onHistory = vi.fn();
     const onExport = vi.fn();
     const onShare = vi.fn();
@@ -25,6 +26,7 @@ describe("Toolbar", () => {
         onRenameDocument={onRenameDocument}
         onNewDocument={onNewDocument}
         onOpenDocument={onOpenDocument}
+        onToggleComments={onToggleComments}
         onHistory={onHistory}
         onExport={onExport}
         onShare={onShare}
@@ -35,6 +37,7 @@ describe("Toolbar", () => {
     await user.click(screen.getByRole("button", { name: "New" }));
     await user.click(screen.getByRole("button", { name: "Open" }));
     await user.click(screen.getByRole("button", { name: "Rename" }));
+    await user.click(screen.getByRole("button", { name: "Show comments" }));
     await user.click(screen.getByRole("button", { name: "History" }));
     await user.click(screen.getByRole("button", { name: "Export" }));
     await user.click(screen.getByRole("button", { name: "Share" }));
@@ -43,6 +46,7 @@ describe("Toolbar", () => {
     expect(onNewDocument).toHaveBeenCalledTimes(1);
     expect(onOpenDocument).toHaveBeenCalledTimes(1);
     expect(onRenameDocument).toHaveBeenCalledTimes(1);
+    expect(onToggleComments).toHaveBeenCalledTimes(1);
     expect(onHistory).toHaveBeenCalledTimes(1);
     expect(onExport).toHaveBeenCalledTimes(1);
     expect(onShare).toHaveBeenCalledTimes(1);
@@ -58,6 +62,7 @@ describe("Toolbar", () => {
         onRenameDocument={123}
         onNewDocument={123}
         onOpenDocument={123}
+        onToggleComments={123}
         onHistory={123}
         onExport={123}
         onShare={123}
@@ -86,6 +91,7 @@ describe("Toolbar", () => {
         onRenameDocument={vi.fn()}
         onNewDocument={vi.fn()}
         onOpenDocument={vi.fn()}
+        onToggleComments={vi.fn()}
         onHistory={vi.fn()}
         onExport={vi.fn()}
         onShare={vi.fn()}
@@ -109,6 +115,7 @@ describe("Toolbar", () => {
         onRenameDocument={throwing}
         onNewDocument={throwing}
         onOpenDocument={throwing}
+        onToggleComments={throwing}
         onHistory={throwing}
         onExport={throwing}
         onShare={throwing}
@@ -124,6 +131,9 @@ describe("Toolbar", () => {
     ).resolves.toBeUndefined();
     await expect(
       user.click(screen.getByRole("button", { name: "Rename" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Show comments" })),
     ).resolves.toBeUndefined();
     await expect(
       user.click(screen.getByRole("button", { name: "History" })),

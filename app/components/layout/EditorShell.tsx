@@ -56,6 +56,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   } = useDocuments(undefined, currentUserEmail);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const [commentsVisible, setCommentsVisible] = useState(false);
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -210,6 +211,8 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onRenameDocument={() => setRenameModalOpen(true)}
         onNewDocument={() => setNewModalOpen(true)}
         onOpenDocument={() => setOpenModalOpen(true)}
+        commentsVisible={commentsVisible}
+        onToggleComments={() => setCommentsVisible((visible) => !visible)}
         onHistory={() => setHistoryModalOpen(true)}
         onExport={() => setExportModalOpen(true)}
         onShare={() => setShareModalOpen(true)}
@@ -255,15 +258,17 @@ export function EditorShell({ documentId }: EditorShellProps) {
                 }}
               />
             </div>
-            <CommentsSidebar
-              comments={comments}
-              onCreateComment={(commentText: string) =>
-                createComment(commentText, "Document selection")
-              }
-              onReplyComment={createReply}
-              onResolveComment={markResolved}
-              canComment={canComment}
-            />
+            {commentsVisible ? (
+              <CommentsSidebar
+                comments={comments}
+                onCreateComment={(commentText: string) =>
+                  createComment(commentText, "Document selection")
+                }
+                onReplyComment={createReply}
+                onResolveComment={markResolved}
+                canComment={canComment}
+              />
+            ) : null}
           </div>
         }
         aiPanel={

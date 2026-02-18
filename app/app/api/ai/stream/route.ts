@@ -153,8 +153,9 @@ async function callModel(
   systemPrompt: string,
   prompt: string,
   userPrompt: string,
+  documentHtml: string,
 ): Promise<string> {
-  const fallback = `I reviewed your request: "${userPrompt}". Keeping the current document unchanged in local fallback mode.`;
+  const fallback = buildLocalFallbackEditResponse(userPrompt, documentHtml);
   const config = readModelConfigSafely(model);
   if (!config) {
     return fallback;
@@ -233,6 +234,7 @@ export async function POST(request: Request) {
           systemPrompt,
           fullPrompt,
           payload.prompt,
+          documentHtml,
         );
         const parsed = parseAIResponse(modelResponse);
         const nextHtml = applyParsedEditsToHtml(documentHtml, parsed);
@@ -351,6 +353,37 @@ function readModelConfigSafely(model: string) {
   } catch {
     return null;
   }
+}
+
+function buildLocalFallbackEditResponse(userPrompt: string, documentHtml: string) {
+  const normalizedPrompt = userPrompt.trim();
+  const escapedPrompt = escapeHtml(normalizedPrompt.length > 0 ? normalizedPrompt : "No prompt");
+  const nextHtml = appendFallbackNote(documentHtml, escapedPrompt);
+
+  return [
+    "No provider API key is configured, so I applied a local fallback edit by appending a note.",
+    "```html",
+    nextHtml,
+    "```",
+  ].join("\n");
+}
+
+function appendFallbackNote(documentHtml: string, escapedPrompt: string) {
+  const normalizedDocumentHtml = documentHtml.trim();
+  const fallbackNote = `<p><strong>AI note:</strong> ${escapedPrompt}</p>`;
+  if (!normalizedDocumentHtml) {
+    return fallbackNote;
+  }
+  return `${normalizedDocumentHtml}\n${fallbackNote}`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function safeReadProperty(record: Record<string, unknown>, key: string) {

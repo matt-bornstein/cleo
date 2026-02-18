@@ -12,10 +12,12 @@ export type ParsedAIResponse = {
 const SEARCH_REPLACE_REGEX =
   /<<<SEARCH\s*([\s\S]*?)\s*===\s*([\s\S]*?)\s*>>>/g;
 const FULL_HTML_REGEX = /```html\s*([\s\S]*?)\s*```/i;
+const HTML_START_REGEX = /<[a-zA-Z][\w:-]*(\s[^<>]*)?>/;
 
 export function parseAIResponse(response: unknown): ParsedAIResponse {
   const safeResponse = typeof response === "string" ? response : "";
   const fullHtmlMatch = safeResponse.match(FULL_HTML_REGEX);
+  const inferredFullHtml = !fullHtmlMatch ? inferFullHtmlFromResponse(safeResponse) : undefined;
   const blocks: SearchReplaceBlock[] = [];
 
   SEARCH_REPLACE_REGEX.lastIndex = 0;
@@ -30,11 +32,12 @@ export function parseAIResponse(response: unknown): ParsedAIResponse {
   const explanation = safeResponse
     .replace(FULL_HTML_REGEX, "")
     .replace(SEARCH_REPLACE_REGEX, "")
+    .replace(inferredFullHtml ?? "", "")
     .trim();
 
   return {
     explanation,
-    fullHtml: fullHtmlMatch?.[1]?.trim(),
+    fullHtml: fullHtmlMatch?.[1]?.trim() ?? inferredFullHtml,
     blocks,
   };
 }
@@ -93,4 +96,18 @@ function readBlockField(block: object, key: "search" | "replace") {
   } catch {
     return undefined;
   }
+}
+
+function inferFullHtmlFromResponse(response: string) {
+  const match = response.match(HTML_START_REGEX);
+  if (!match?.index && match?.index !== 0) {
+    return undefined;
+  }
+
+  const candidate = response.slice(match.index).trim();
+  if (!candidate || !candidate.includes(">")) {
+    return undefined;
+  }
+
+  return candidate;
 }

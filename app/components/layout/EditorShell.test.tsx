@@ -159,6 +159,21 @@ describe("EditorShell", () => {
     expect(screen.getAllByText("Renamed Doc").length).toBeGreaterThan(0);
   });
 
+  it("keeps comments panel hidden by default and toggles visibility", async () => {
+    const user = userEvent.setup();
+    const document = createDocument("Comments Toggle Doc");
+
+    render(<EditorShell documentId={document.id} />);
+
+    expect(screen.queryByText("Comments")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Show comments" }));
+    expect(screen.getByText("Comments")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Hide comments" }));
+    expect(screen.queryByText("Comments")).not.toBeInTheDocument();
+  });
+
   it("grants role from share link query for non-owner user", async () => {
     mockedSearchParams = new URLSearchParams("share=commenter");
     saveSettings({

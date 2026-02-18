@@ -6,9 +6,11 @@ import { hasControlChars } from "@/lib/validators/controlChars";
 type ToolbarProps = {
   documentTitle: unknown;
   roleLabel?: unknown;
+  commentsVisible?: unknown;
   onRenameDocument: unknown;
   onNewDocument: unknown;
   onOpenDocument: unknown;
+  onToggleComments: unknown;
   onHistory: unknown;
   onExport: unknown;
   onShare: unknown;
@@ -19,9 +21,11 @@ type ToolbarProps = {
 export function Toolbar({
   documentTitle,
   roleLabel,
+  commentsVisible = false,
   onRenameDocument,
   onNewDocument,
   onOpenDocument,
+  onToggleComments,
   onHistory,
   onExport,
   onShare,
@@ -39,6 +43,8 @@ export function Toolbar({
       ? roleLabel.trim()
       : undefined;
   const normalizedCanShare = canShare !== false;
+  const normalizedCommentsVisible = commentsVisible === true;
+  const commentsButtonLabel = normalizedCommentsVisible ? "Hide comments" : "Show comments";
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
@@ -69,6 +75,15 @@ export function Toolbar({
           }}
         >
           Rename
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            safeInvoke(onToggleComments);
+          }}
+        >
+          {commentsButtonLabel}
         </Button>
         <Button
           variant="outline"
