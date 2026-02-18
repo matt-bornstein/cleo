@@ -14,6 +14,7 @@ import { ExportModal } from "@/components/modals/ExportModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
+import { RenameDocModal } from "@/components/modals/RenameDocModal";
 import { normalizeDocumentId } from "@/lib/ai/documentId";
 import { ensureCreatedDiff, restoreVersion, triggerIdleSave } from "@/lib/diffs/store";
 import { useComments } from "@/hooks/useComments";
@@ -54,6 +55,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
     refresh: refreshDocuments,
   } = useDocuments(undefined, currentUserEmail);
   const [newModalOpen, setNewModalOpen] = useState(false);
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -205,9 +207,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
       <Toolbar
         documentTitle={documentTitle}
         roleLabel={myRole}
-        onRenameDocument={(nextTitle: string) => {
-          updateTitle(normalizedDocumentId, nextTitle);
-        }}
+        onRenameDocument={() => setRenameModalOpen(true)}
         onNewDocument={() => setNewModalOpen(true)}
         onOpenDocument={() => setOpenModalOpen(true)}
         onHistory={() => setHistoryModalOpen(true)}
@@ -311,6 +311,14 @@ export function EditorShell({ documentId }: EditorShellProps) {
             snapshot: newDocumentContent,
           });
           safeRouterPush(router, `/editor/${newDocumentId}`);
+        }}
+      />
+      <RenameDocModal
+        open={renameModalOpen}
+        onOpenChange={setRenameModalOpen}
+        documentTitle={documentTitle}
+        onRenameDocument={(nextTitle: string) => {
+          updateTitle(normalizedDocumentId, nextTitle);
         }}
       />
       <OpenDocModal

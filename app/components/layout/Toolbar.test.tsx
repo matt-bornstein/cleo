@@ -18,8 +18,6 @@ describe("Toolbar", () => {
     const onExport = vi.fn();
     const onShare = vi.fn();
     const onSettings = vi.fn();
-    vi.spyOn(window, "prompt").mockReturnValue("Renamed doc");
-
     render(
       <Toolbar
         documentTitle="Roadmap"
@@ -44,7 +42,7 @@ describe("Toolbar", () => {
 
     expect(onNewDocument).toHaveBeenCalledTimes(1);
     expect(onOpenDocument).toHaveBeenCalledTimes(1);
-    expect(onRenameDocument).toHaveBeenCalledWith("Renamed doc");
+    expect(onRenameDocument).toHaveBeenCalledTimes(1);
     expect(onHistory).toHaveBeenCalledTimes(1);
     expect(onExport).toHaveBeenCalledTimes(1);
     expect(onShare).toHaveBeenCalledTimes(1);
@@ -53,7 +51,6 @@ describe("Toolbar", () => {
 
   it("does not throw when callback props are malformed non-functions", async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, "prompt").mockReturnValue("Renamed doc");
 
     render(
       <Toolbar
@@ -100,33 +97,8 @@ describe("Toolbar", () => {
     expect(screen.queryByText("editor\nbad")).not.toBeInTheDocument();
   });
 
-  it("does not throw when rename prompt throws", async () => {
-    const user = userEvent.setup();
-    const onRenameDocument = vi.fn();
-    vi.spyOn(window, "prompt").mockImplementation(() => {
-      throw new Error("prompt failed");
-    });
-
-    render(
-      <Toolbar
-        documentTitle="Roadmap"
-        onRenameDocument={onRenameDocument}
-        onNewDocument={vi.fn()}
-        onOpenDocument={vi.fn()}
-        onHistory={vi.fn()}
-        onExport={vi.fn()}
-        onShare={vi.fn()}
-        onSettings={vi.fn()}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Rename" }));
-    expect(onRenameDocument).not.toHaveBeenCalled();
-  });
-
   it("does not throw when action callbacks throw", async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, "prompt").mockReturnValue("Renamed doc");
     const throwing = () => {
       throw new Error("callback failed");
     };
