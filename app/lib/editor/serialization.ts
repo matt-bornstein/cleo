@@ -1,8 +1,7 @@
-type JSONContent = {
-  type?: string;
-  text?: string;
-  content?: JSONContent[];
-};
+import type { JSONContent } from "@tiptap/core";
+import { generateHTML, generateJSON } from "@tiptap/html";
+
+import { editorExtensions } from "@/lib/editor/extensions";
 
 const EMPTY_DOCUMENT_HTML = "<p></p>";
 const EMPTY_DOCUMENT_JSON = JSON.stringify({
@@ -10,52 +9,20 @@ const EMPTY_DOCUMENT_JSON = JSON.stringify({
   content: [{ type: "paragraph", content: [] }],
 });
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function nodeToHtml(node: JSONContent): string {
-  if (node.type === "text") {
-    return escapeHtml(node.text ?? "");
-  }
-
-  const children = (node.content ?? []).map(nodeToHtml).join("");
-
-  switch (node.type) {
-    case "heading":
-      return `<h2>${children}</h2>`;
-    case "paragraph":
-      return `<p>${children}</p>`;
-    case "bulletList":
-      return `<ul>${children}</ul>`;
-    case "orderedList":
-      return `<ol>${children}</ol>`;
-    case "listItem":
-      return `<li>${children}</li>`;
-    case "doc":
-      return children || "<p></p>";
-    default:
-      return children;
-  }
-}
-
 export function prosemirrorJsonToHtml(content: unknown) {
   try {
     if (typeof content !== "string") {
       return EMPTY_DOCUMENT_HTML;
     }
 
-    const parsed = JSON.parse(content) as unknown;
+    const parsed = JSON.parse(content) as JSONContent | unknown;
     if (!parsed || typeof parsed !== "object") {
       return EMPTY_DOCUMENT_HTML;
     }
 
-    const html = nodeToHtml(parsed as JSONContent);
+    const html = normalizeGeneratedHtml(
+      generateHTML(parsed as JSONContent, editorExtensions),
+    );
     return html || EMPTY_DOCUMENT_HTML;
   } catch {
     return EMPTY_DOCUMENT_HTML;
@@ -63,26 +30,18 @@ export function prosemirrorJsonToHtml(content: unknown) {
 }
 
 export function htmlToProsemirrorJson(html: unknown) {
-  if (typeof html !== "string") {
+  if (typeof html !== "string" || html.trim().length === 0) {
     return EMPTY_DOCUMENT_JSON;
   }
 
-  const paragraphMatches = [...html.matchAll(/<p>([\s\S]*?)<\/p>/gi)];
-  const paragraphs = paragraphMatches.length > 0 ? paragraphMatches : [[html, html]];
+  try {
+    const json = generateJSON(html, editorExtensions);
+    return JSON.stringify(json);
+  } catch {
+    return EMPTY_DOCUMENT_JSON;
+  }
+}
 
-  const content = paragraphs.map((match) => {
-    const text = (match[1] ?? "")
-      .replace(/<[^>]+>/g, "")
-      .replaceAll("&nbsp;", " ")
-      .trim();
-    return {
-      type: "paragraph",
-      content: text ? [{ type: "text", text }] : [],
-    };
-  });
-
-  return JSON.stringify({
-    type: "doc",
-    content,
-  });
+function normalizeGeneratedHtml(html: string) {
+  return html.replaceAll(' xmlns="http://www.w3.org/1999/xhtml"', "");
 }
