@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +11,44 @@ type ChatInputProps = {
 
 export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
   const [prompt, setPrompt] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const restoreFocusRef = useRef(false);
+
+  const scheduleFocusRestore = useCallback(() => {
+    if (!restoreFocusRef.current) {
+      return;
+    }
+
+    const focusInput = () => {
+      const textarea = textareaRef.current;
+      if (!textarea || textarea.disabled) {
+        return;
+      }
+
+      try {
+        textarea.focus({ preventScroll: true });
+      } catch {
+        textarea.focus();
+      }
+      restoreFocusRef.current = false;
+    };
+
+    if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") {
+      focusInput();
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      focusInput();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!restoreFocusRef.current || disabled) {
+      return;
+    }
+    scheduleFocusRestore();
+  }, [disabled, scheduleFocusRestore]);
 
   const submitPrompt = useCallback(async () => {
     if (disabled) return;
@@ -20,6 +58,7 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
       return;
     }
     const previousPrompt = prompt;
+    restoreFocusRef.current = true;
     setPrompt("");
     try {
       await onSubmit(normalizedPrompt);
@@ -27,8 +66,10 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
       setPrompt((currentPrompt) =>
         currentPrompt.length === 0 ? previousPrompt : currentPrompt,
       );
+    } finally {
+      scheduleFocusRestore();
     }
-  }, [disabled, onSubmit, prompt]);
+  }, [disabled, onSubmit, prompt, scheduleFocusRestore]);
 
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -41,6 +82,7 @@ export function ChatInput({ disabled, onSubmit }: ChatInputProps) {
   return (
     <form className="space-y-2" onSubmit={handleSubmit}>
       <textarea
+        ref={textareaRef}
         value={prompt}
         disabled={disabled}
         onChange={(event) => setPrompt(event.target.value)}

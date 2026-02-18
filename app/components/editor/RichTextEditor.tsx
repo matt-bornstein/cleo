@@ -190,7 +190,7 @@ function LocalRichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-slate max-w-none min-h-[400px] rounded-b-md bg-white p-4 focus:outline-none",
+          "prose prose-slate max-w-none min-h-[400px] rounded-b-md bg-white p-4 focus:outline-none [&_h1]:mt-5 [&_h1]:mb-2 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:leading-tight [&_h4]:mt-4 [&_h4]:mb-2 [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:leading-tight [&_h5]:mt-3 [&_h5]:mb-1 [&_h5]:text-base [&_h5]:font-semibold [&_h6]:mt-3 [&_h6]:mb-1 [&_h6]:text-base [&_h6]:font-semibold [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_li]:pl-1",
       },
     },
     editable,
@@ -250,7 +250,7 @@ function SyncedRichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-slate max-w-none min-h-[400px] rounded-b-md bg-white p-4 focus:outline-none",
+          "prose prose-slate max-w-none min-h-[400px] rounded-b-md bg-white p-4 focus:outline-none [&_h1]:mt-5 [&_h1]:mb-2 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:leading-tight [&_h4]:mt-4 [&_h4]:mb-2 [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:leading-tight [&_h5]:mt-3 [&_h5]:mb-1 [&_h5]:text-base [&_h5]:font-semibold [&_h6]:mt-3 [&_h6]:mb-1 [&_h6]:text-base [&_h6]:font-semibold [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_li]:pl-1",
       },
     },
     editable,

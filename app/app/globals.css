@@ -40,3 +40,36 @@ body {
   height: 0;
   pointer-events: none;
 }
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+}
+
+.ProseMirror h4 {
+  font-size: 1.125rem;
+}
+
+.ProseMirror h5,
+.ProseMirror h6 {
+  font-size: 1rem;
+}

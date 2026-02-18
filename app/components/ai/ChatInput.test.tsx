@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { vi } from "vitest";
 
 import { ChatInput } from "@/components/ai/ChatInput";
@@ -104,5 +105,43 @@ describe("ChatInput", () => {
     await user.keyboard("{Enter}");
 
     expect((textarea as HTMLTextAreaElement).value).toBe("keep draft");
+  });
+
+  it("restores textarea focus after async submit toggles disabled state", async () => {
+    const user = userEvent.setup();
+    const deferred = createDeferred();
+
+    function ChatInputWithLoadingState() {
+      const [isLoading, setIsLoading] = useState(false);
+
+      return (
+        <ChatInput
+          disabled={isLoading}
+          onSubmit={async () => {
+            setIsLoading(true);
+            try {
+              await deferred.promise;
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+        />
+      );
+    }
+
+    render(<ChatInputWithLoadingState />);
+    const textarea = screen.getByPlaceholderText(
+      "Ask AI to edit this document...",
+    ) as HTMLTextAreaElement;
+
+    textarea.focus();
+    await user.type(textarea, "focus test");
+    await user.keyboard("{Enter}");
+
+    deferred.reject(new Error("done"));
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(textarea);
+    });
   });
 });
