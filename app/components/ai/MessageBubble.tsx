@@ -3,9 +3,10 @@ import { hasControlChars } from "@/lib/validators/controlChars";
 
 type MessageBubbleProps = {
   message: unknown;
+  onClick?: unknown;
 };
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onClick }: MessageBubbleProps) {
   const candidate =
     message && typeof message === "object"
       ? (message as {
@@ -32,16 +33,32 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     diffId.trim().length > 0 &&
     !hasControlChars(diffId.trim());
   const isUser = normalizedRole === "user";
+  const isInteractive = typeof onClick === "function";
 
   return (
     <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <article
         className={cn(
-          "relative max-w-[92%] rounded-lg border px-3 py-2 text-sm",
+          "relative max-w-[92%] rounded-lg border px-3 py-2 text-left text-sm",
+          isInteractive ? "cursor-pointer transition-shadow hover:shadow-sm" : "",
           isUser
             ? "border-blue-200 bg-blue-50 text-blue-900"
             : "border-slate-200 bg-white text-slate-800",
         )}
+        onClick={() => {
+          safeOnClick(onClick);
+        }}
+        onKeyDown={(event) => {
+          if (!isInteractive) {
+            return;
+          }
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            safeOnClick(onClick);
+          }
+        }}
+        role={isInteractive ? "button" : undefined}
+        tabIndex={isInteractive ? 0 : undefined}
       >
         {isUser ? (
           <>
@@ -111,5 +128,17 @@ function readMessageField(
     return candidate[key];
   } catch {
     return undefined;
+  }
+}
+
+function safeOnClick(onClick: unknown) {
+  if (typeof onClick !== "function") {
+    return;
+  }
+
+  try {
+    onClick();
+  } catch {
+    return;
   }
 }

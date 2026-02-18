@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  MAX_DEBUG_TEXT_LENGTH,
   MAX_PROMPT_LENGTH,
 } from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
@@ -29,7 +30,13 @@ type UseAIChatArgs = {
 
 type AIStreamPayload =
   | { type: "token"; text: string }
-  | { type: "done"; assistantMessage: string; nextContent: string }
+  | {
+      type: "done";
+      assistantMessage: string;
+      nextContent: string;
+      fullPrompt?: string;
+      rawModelResponse?: string;
+    }
   | { type: "error"; error: string };
 
 function createMessage(
@@ -91,6 +98,8 @@ function parseAIStreamPayload(raw: string): AIStreamPayload | null {
 
   const assistantMessage = readAIStreamField(candidate, "assistantMessage");
   const nextContent = readAIStreamField(candidate, "nextContent");
+  const fullPrompt = readAIStreamField(candidate, "fullPrompt");
+  const rawModelResponse = readAIStreamField(candidate, "rawModelResponse");
   if (
     type === "done" &&
     typeof assistantMessage === "string" &&
@@ -100,6 +109,12 @@ function parseAIStreamPayload(raw: string): AIStreamPayload | null {
       type: "done",
       assistantMessage,
       nextContent,
+      fullPrompt:
+        typeof fullPrompt === "string" ? normalizeDebugText(fullPrompt) : undefined,
+      rawModelResponse:
+        typeof rawModelResponse === "string"
+          ? normalizeDebugText(rawModelResponse)
+          : undefined,
     };
   }
 
@@ -217,7 +232,14 @@ function readPayloadError(payload: unknown) {
 
 function readAIStreamField(
   payload: Record<string, unknown>,
-  key: "type" | "text" | "assistantMessage" | "nextContent" | "error",
+  key:
+    | "type"
+    | "text"
+    | "assistantMessage"
+    | "nextContent"
+    | "fullPrompt"
+    | "rawModelResponse"
+    | "error",
 ) {
   try {
     return payload[key];
@@ -391,13 +413,32 @@ export function useAIChat({
               : undefined;
 
             setMessages((prev) =>
-              updateMessageContent(prev, assistantDraft.id, payload.assistantMessage),
+              prev.map((message) => {
+                if (message.id === assistantDraft.id) {
+                  return {
+                    ...message,
+                    content: payload.assistantMessage,
+                    rawResponse: payload.rawModelResponse,
+                  };
+                }
+                if (message.id === userMessage.id && payload.fullPrompt) {
+                  return {
+                    ...message,
+                    promptDebug: payload.fullPrompt,
+                  };
+                }
+                return message;
+              }),
             );
             safeSaveMessage({
               ...assistantDraft,
               content: payload.assistantMessage,
               diffId: diff?.id,
+              rawResponse: payload.rawModelResponse,
             });
+            if (payload.fullPrompt) {
+              safeSaveMessage({ ...userMessage, promptDebug: payload.fullPrompt });
+            }
             safeOnApplyContent(onApplyContent, payload.nextContent);
             return;
           }
@@ -553,6 +594,12 @@ function safeOnApplyContent(onApplyContent: unknown, nextContent: string) {
   }
 }
 
+function normalizeDebugText(value: string) {
+  return value.length > MAX_DEBUG_TEXT_LENGTH
+    ? value.slice(0, MAX_DEBUG_TEXT_LENGTH)
+    : value;
+}
+
 function safeOnClearChat(onClearChat: unknown, clearedAt: number) {
   if (typeof onClearChat !== "function") {
     return;
@@ -587,6 +634,8 @@ function normalizeListedMessage(
   const content = readListedMessageField(message, "content");
   const model = readListedMessageField(message, "model");
   const diffId = readListedMessageField(message, "diffId");
+  const promptDebug = readListedMessageField(message, "promptDebug");
+  const rawResponse = readListedMessageField(message, "rawResponse");
   const createdAt = readListedMessageField(message, "createdAt");
   const normalizedDocumentIdCandidate =
     typeof documentId === "string" ? normalizeDocumentId(documentId) : undefined;
@@ -616,6 +665,14 @@ function normalizeListedMessage(
       typeof diffId === "string" && diffId.trim().length > 0
         ? diffId.trim()
         : undefined,
+    promptDebug:
+      typeof promptDebug === "string" && promptDebug.length > 0
+        ? normalizeDebugText(promptDebug)
+        : undefined,
+    rawResponse:
+      typeof rawResponse === "string" && rawResponse.length > 0
+        ? normalizeDebugText(rawResponse)
+        : undefined,
     createdAt:
       typeof createdAt === "number" && Number.isFinite(createdAt) && createdAt >= 0
         ? createdAt
@@ -625,7 +682,17 @@ function normalizeListedMessage(
 
 function readListedMessageField(
   message: unknown,
-  key: keyof AIMessage,
+  key:
+    | "id"
+    | "documentId"
+    | "userId"
+    | "role"
+    | "content"
+    | "model"
+    | "diffId"
+    | "promptDebug"
+    | "rawResponse"
+    | "createdAt",
 ) {
   if (!message || typeof message !== "object") {
     return undefined;

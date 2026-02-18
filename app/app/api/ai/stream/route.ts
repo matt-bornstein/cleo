@@ -249,6 +249,8 @@ export async function POST(request: Request) {
           type: "done",
           assistantMessage,
           nextContent,
+          fullPrompt,
+          rawModelResponse: modelResponse,
         });
       } catch (error) {
         writeEvent({

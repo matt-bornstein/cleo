@@ -1,4 +1,8 @@
-import { MAX_MESSAGE_CONTENT_LENGTH, MAX_USER_ID_LENGTH } from "@/lib/ai/constraints";
+import {
+  MAX_DEBUG_TEXT_LENGTH,
+  MAX_MESSAGE_CONTENT_LENGTH,
+  MAX_USER_ID_LENGTH,
+} from "@/lib/ai/constraints";
 import { isValidDocumentId, normalizeDocumentId } from "@/lib/ai/documentId";
 import { normalizeAIUserId } from "@/lib/ai/identity";
 import { getModelConfig } from "@/lib/ai/models";
@@ -115,8 +119,15 @@ export function saveMessage(message: unknown) {
   }
 
   const existing = state.messages[existingIndex];
-  if (existing.createdAt >= normalized.createdAt) {
+  if (existing.createdAt > normalized.createdAt) {
     return existing;
+  }
+
+  if (existing.createdAt === normalized.createdAt) {
+    const merged = mergeMessages(existing, normalized);
+    state.messages[existingIndex] = merged;
+    persistState(state);
+    return merged;
   }
 
   state.messages[existingIndex] = normalized;
@@ -144,6 +155,8 @@ function normalizeMessage(message: unknown): AIMessage | null {
   const content = safeReadMessageField(candidate, "content");
   const createdAt = safeReadMessageField(candidate, "createdAt");
   const diffId = safeReadMessageField(candidate, "diffId");
+  const promptDebug = safeReadMessageField(candidate, "promptDebug");
+  const rawResponse = safeReadMessageField(candidate, "rawResponse");
   if (
     !normalizedMessageId ||
     normalizedMessageId.length > MAX_USER_ID_LENGTH ||
@@ -177,6 +190,20 @@ function normalizeMessage(message: unknown): AIMessage | null {
       diffId.trim().length <= MAX_USER_ID_LENGTH &&
       !hasControlChars(diffId.trim())
         ? diffId.trim()
+        : undefined,
+    promptDebug:
+      typeof promptDebug === "string" &&
+      promptDebug.trim().length > 0 &&
+      promptDebug.length <= MAX_DEBUG_TEXT_LENGTH &&
+      !hasDisallowedTextControlChars(promptDebug)
+        ? promptDebug
+        : undefined,
+    rawResponse:
+      typeof rawResponse === "string" &&
+      rawResponse.trim().length > 0 &&
+      rawResponse.length <= MAX_DEBUG_TEXT_LENGTH &&
+      !hasDisallowedTextControlChars(rawResponse)
+        ? rawResponse
         : undefined,
   };
 }
@@ -219,13 +246,27 @@ function safeReadMessageField(
     | "content"
     | "createdAt"
     | "model"
-    | "diffId",
+    | "diffId"
+    | "promptDebug"
+    | "rawResponse",
 ) {
   try {
     return message[key];
   } catch {
     return undefined;
   }
+}
+
+function mergeMessages(existing: AIMessage, incoming: AIMessage): AIMessage {
+  return {
+    ...existing,
+    content: incoming.content,
+    model: incoming.model ?? existing.model,
+    diffId: incoming.diffId ?? existing.diffId,
+    promptDebug: incoming.promptDebug ?? existing.promptDebug,
+    rawResponse: incoming.rawResponse ?? existing.rawResponse,
+    createdAt: incoming.createdAt,
+  };
 }
 
 function compareMessagesForDisplay(a: AIMessage, b: AIMessage) {

@@ -3,9 +3,10 @@ import { hasControlChars } from "@/lib/validators/controlChars";
 
 type ChatMessagesProps = {
   messages: unknown;
+  onSelectMessage?: unknown;
 };
 
-export function ChatMessages({ messages }: ChatMessagesProps) {
+export function ChatMessages({ messages, onSelectMessage }: ChatMessagesProps) {
   const normalizedMessages = Array.isArray(messages)
     ? messages.flatMap((message, index) => {
         if (!message || typeof message !== "object") {
@@ -28,7 +29,13 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
   return (
     <div className="space-y-2">
       {normalizedMessages.map((entry) => (
-        <MessageBubble key={entry.id} message={entry.message} />
+          <MessageBubble
+            key={entry.id}
+            message={entry.message}
+            onClick={() => {
+              safeOnSelectMessage(onSelectMessage, entry.message);
+            }}
+          />
       ))}
     </div>
   );
@@ -55,4 +62,16 @@ function normalizeMessageEntryId(message: unknown, index: number) {
   }
 
   return `message-${index}`;
+}
+
+function safeOnSelectMessage(onSelectMessage: unknown, message: unknown) {
+  if (typeof onSelectMessage !== "function") {
+    return;
+  }
+
+  try {
+    onSelectMessage(message);
+  } catch {
+    return;
+  }
 }

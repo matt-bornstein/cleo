@@ -85,6 +85,8 @@ export type AIMessage = {
   content: string;
   model?: string;
   diffId?: string;
+  promptDebug?: string;
+  rawResponse?: string;
   createdAt: number;
 };
 
