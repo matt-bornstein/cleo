@@ -17,6 +17,7 @@ describe("Toolbar", () => {
     const onToggleComments = vi.fn();
     const onHistory = vi.fn();
     const onExport = vi.fn();
+    const onRawHtml = vi.fn();
     const onShare = vi.fn();
     const onSettings = vi.fn();
     render(
@@ -29,6 +30,7 @@ describe("Toolbar", () => {
         onToggleComments={onToggleComments}
         onHistory={onHistory}
         onExport={onExport}
+        onRawHtml={onRawHtml}
         onShare={onShare}
         onSettings={onSettings}
       />,
@@ -40,6 +42,7 @@ describe("Toolbar", () => {
     await user.click(screen.getByRole("button", { name: "Show comments" }));
     await user.click(screen.getByRole("button", { name: "History" }));
     await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.click(screen.getByRole("button", { name: "Raw HTML" }));
     await user.click(screen.getByRole("button", { name: "Share" }));
     await user.click(screen.getByRole("button", { name: "Settings" }));
 
@@ -49,6 +52,7 @@ describe("Toolbar", () => {
     expect(onToggleComments).toHaveBeenCalledTimes(1);
     expect(onHistory).toHaveBeenCalledTimes(1);
     expect(onExport).toHaveBeenCalledTimes(1);
+    expect(onRawHtml).toHaveBeenCalledTimes(1);
     expect(onShare).toHaveBeenCalledTimes(1);
     expect(onSettings).toHaveBeenCalledTimes(1);
   });
@@ -65,6 +69,7 @@ describe("Toolbar", () => {
         onToggleComments={123}
         onHistory={123}
         onExport={123}
+        onRawHtml={123}
         onShare={123}
         onSettings={123}
         canShare={0}
@@ -79,6 +84,7 @@ describe("Toolbar", () => {
     await user.click(screen.getByRole("button", { name: "Rename" }));
     await user.click(screen.getByRole("button", { name: "History" }));
     await user.click(screen.getByRole("button", { name: "Export" }));
+    await user.click(screen.getByRole("button", { name: "Raw HTML" }));
     await user.click(shareButton);
     await user.click(screen.getByRole("button", { name: "Settings" }));
   });
@@ -94,6 +100,7 @@ describe("Toolbar", () => {
         onToggleComments={vi.fn()}
         onHistory={vi.fn()}
         onExport={vi.fn()}
+        onRawHtml={vi.fn()}
         onShare={vi.fn()}
         onSettings={vi.fn()}
       />,
@@ -118,6 +125,7 @@ describe("Toolbar", () => {
         onToggleComments={throwing}
         onHistory={throwing}
         onExport={throwing}
+        onRawHtml={throwing}
         onShare={throwing}
         onSettings={throwing}
       />,
@@ -140,6 +148,9 @@ describe("Toolbar", () => {
     ).resolves.toBeUndefined();
     await expect(
       user.click(screen.getByRole("button", { name: "Export" })),
+    ).resolves.toBeUndefined();
+    await expect(
+      user.click(screen.getByRole("button", { name: "Raw HTML" })),
     ).resolves.toBeUndefined();
     await expect(
       user.click(screen.getByRole("button", { name: "Share" })),

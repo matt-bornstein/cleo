@@ -13,6 +13,7 @@ type ToolbarProps = {
   onToggleComments: unknown;
   onHistory: unknown;
   onExport: unknown;
+  onRawHtml: unknown;
   onShare: unknown;
   onSettings: unknown;
   canShare?: unknown;
@@ -28,6 +29,7 @@ export function Toolbar({
   onToggleComments,
   onHistory,
   onExport,
+  onRawHtml,
   onShare,
   onSettings,
   canShare = true,
@@ -102,6 +104,15 @@ export function Toolbar({
           }}
         >
           Export
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            safeInvoke(onRawHtml);
+          }}
+        >
+          Raw HTML
         </Button>
         <Button
           variant="outline"

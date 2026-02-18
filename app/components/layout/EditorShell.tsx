@@ -11,6 +11,7 @@ import { Toolbar } from "@/components/layout/Toolbar";
 import { NewDocModal } from "@/components/modals/NewDocModal";
 import { OpenDocModal } from "@/components/modals/OpenDocModal";
 import { ExportModal } from "@/components/modals/ExportModal";
+import { RawHtmlModal } from "@/components/modals/RawHtmlModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
@@ -61,6 +62,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [rawHtmlModalOpen, setRawHtmlModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [saveStateLabel, setSaveStateLabel] = useState("Saved");
@@ -220,6 +222,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onToggleComments={() => setCommentsVisible((visible) => !visible)}
         onHistory={() => setHistoryModalOpen(true)}
         onExport={() => setExportModalOpen(true)}
+        onRawHtml={() => setRawHtmlModalOpen(true)}
         onShare={() => setShareModalOpen(true)}
         onSettings={() => setSettingsModalOpen(true)}
         canShare={canShare}
@@ -365,6 +368,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
         open={exportModalOpen}
         onOpenChange={setExportModalOpen}
         documentTitle={documentTitle}
+        content={content}
+      />
+      <RawHtmlModal
+        open={rawHtmlModalOpen}
+        onOpenChange={setRawHtmlModalOpen}
         content={content}
       />
       <ShareModal
