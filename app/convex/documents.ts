@@ -1,35 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
-
-async function getOrCreateCurrentUser(ctx: {
-  auth: { getUserIdentity: () => Promise<{ email?: string; name?: string } | null> };
-  db: {
-    query: (...args: unknown[]) => {
-      withIndex: (...idxArgs: unknown[]) => {
-        unique: () => Promise<unknown>;
-      };
-    };
-    insert: (...args: unknown[]) => Promise<unknown>;
-  };
-}) {
-  const identity = await ctx.auth.getUserIdentity();
-  const email = identity?.email ?? "dev-user@example.com";
-  const name = identity?.name ?? "Local Dev User";
-
-  const existingUser = (await ctx.db
-    .query("users")
-    .withIndex("by_email", (q: { eq: (field: string, value: string) => unknown }) =>
-      q.eq("email", email),
-    )
-    .unique()) as { _id: string } | null;
-
-  if (existingUser) {
-    return existingUser._id;
-  }
-
-  return (await ctx.db.insert("users", { name, email })) as string;
-}
+import { getCurrentUserId, getOrCreateCurrentUserId } from "./currentUser";
 
 export const create = mutation({
   args: {
@@ -37,18 +9,18 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const now = safeNow();
-    const userId = await getOrCreateCurrentUser(ctx);
+    const userId = await getOrCreateCurrentUserId(ctx);
     const content = JSON.stringify({
       type: "doc",
       content: [{ type: "paragraph" }],
     });
 
-    const documentId = (await ctx.db.insert("documents", {
+    const documentId = await ctx.db.insert("documents", {
       title: args.title.trim() || "Untitled",
       content,
       createdAt: now,
       updatedAt: now,
-    })) as string;
+    });
 
     await ctx.db.insert("permissions", {
       documentId,
@@ -63,16 +35,17 @@ export const create = mutation({
 export const get = query({
   args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {
-    const userId = await getOrCreateCurrentUser(ctx);
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
+      return null;
+    }
 
-    const permission = (await ctx.db
+    const permission = await ctx.db
       .query("permissions")
-      .withIndex(
-        "by_document_user",
-        (q: { eq: (field: string, value: unknown) => { eq: (field2: string, value2: unknown) => unknown } }) =>
-          q.eq("documentId", args.documentId).eq("userId", userId),
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", userId),
       )
-      .unique()) as { role: string } | null;
+      .unique();
 
     if (!permission) {
       return null;
@@ -85,14 +58,15 @@ export const get = query({
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getOrCreateCurrentUser(ctx);
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
+      return [];
+    }
 
-    const permissions = (await ctx.db
+    const permissions = await ctx.db
       .query("permissions")
-      .withIndex("by_user", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("userId", userId),
-      )
-      .collect()) as Array<{ documentId: string }>;
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
 
     const documents = await Promise.all(
       permissions.map((permission) => ctx.db.get(permission.documentId)),
@@ -108,15 +82,16 @@ export const updateContent = mutation({
     content: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getOrCreateCurrentUser(ctx);
-    const permission = (await ctx.db
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
+      throw new Error("Not signed in.");
+    }
+    const permission = await ctx.db
       .query("permissions")
-      .withIndex(
-        "by_document_user",
-        (q: { eq: (field: string, value: unknown) => { eq: (field2: string, value2: unknown) => unknown } }) =>
-          q.eq("documentId", args.documentId).eq("userId", userId),
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", userId),
       )
-      .unique()) as { role: "owner" | "editor" | "commenter" | "viewer" } | null;
+      .unique();
 
     if (!permission || (permission.role !== "owner" && permission.role !== "editor")) {
       throw new Error("Insufficient permissions to edit document.");

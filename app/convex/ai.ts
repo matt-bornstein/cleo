@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
+import { getOrCreateCurrentUserId } from "./currentUser";
 
 export const acquireLock = mutation({
   args: {
@@ -8,14 +9,12 @@ export const acquireLock = mutation({
   },
   handler: async (ctx, args) => {
     const now = safeNow();
-    const document = (await ctx.db.get(args.documentId)) as
-      | { aiLockedBy?: string; aiLockedAt?: number }
-      | null;
+    const document = await ctx.db.get(args.documentId);
     if (!document) {
       throw new Error("Document not found.");
     }
 
-    const currentUserId = "dev-user";
+    const currentUserId = await getOrCreateCurrentUserId(ctx);
     const lockAge = document.aiLockedAt ? now - document.aiLockedAt : Infinity;
     const hasFreshForeignLock =
       document.aiLockedBy &&
@@ -56,9 +55,10 @@ export const saveMessage = mutation({
     diffId: v.optional(v.id("diffs")),
   },
   handler: async (ctx, args) => {
+    const userId = await getOrCreateCurrentUserId(ctx);
     return ctx.db.insert("aiMessages", {
       ...args,
-      userId: "dev-user",
+      userId,
       createdAt: safeNow(),
     });
   },
@@ -71,9 +71,7 @@ export const getMessages = query({
   handler: async (ctx, args) => {
     return ctx.db
       .query("aiMessages")
-      .withIndex("by_document", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("documentId", args.documentId),
-      )
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
       .collect();
   },
 });

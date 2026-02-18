@@ -14,14 +14,12 @@ export const share = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const existing = (await ctx.db
+    const existing = await ctx.db
       .query("permissions")
-      .withIndex(
-        "by_document_user",
-        (q: { eq: (field: string, value: unknown) => { eq: (field2: string, value2: unknown) => unknown } }) =>
-          q.eq("documentId", args.documentId).eq("userId", args.userId),
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", args.userId),
       )
-      .unique()) as { _id: string } | null;
+      .unique();
 
     if (existing) {
       await ctx.db.patch(existing._id, { role: args.role });
@@ -38,14 +36,12 @@ export const unshare = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const existing = (await ctx.db
+    const existing = await ctx.db
       .query("permissions")
-      .withIndex(
-        "by_document_user",
-        (q: { eq: (field: string, value: unknown) => { eq: (field2: string, value2: unknown) => unknown } }) =>
-          q.eq("documentId", args.documentId).eq("userId", args.userId),
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", args.userId),
       )
-      .unique()) as { _id: string; role: string } | null;
+      .unique();
 
     if (!existing || existing.role === "owner") {
       return null;
@@ -63,9 +59,7 @@ export const getPermissions = query({
   handler: async (ctx, args) => {
     return ctx.db
       .query("permissions")
-      .withIndex("by_document", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("documentId", args.documentId),
-      )
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
       .collect();
   },
 });

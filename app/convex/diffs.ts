@@ -2,6 +2,7 @@ import { diff_match_patch } from "diff-match-patch";
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
+import { getOrCreateCurrentUserId } from "./currentUser";
 
 const dmp = new diff_match_patch();
 
@@ -17,9 +18,8 @@ export const triggerIdleSave = mutation({
   },
   handler: async (ctx, args) => {
     const now = safeNow();
-    const document = (await ctx.db.get(args.documentId)) as
-      | { lastDiffAt?: number; content: string }
-      | null;
+    const userId = await getOrCreateCurrentUserId(ctx);
+    const document = await ctx.db.get(args.documentId);
 
     if (!document) {
       throw new Error("Document not found.");
@@ -31,9 +31,7 @@ export const triggerIdleSave = mutation({
 
     const latestDiff = (await ctx.db
       .query("diffs")
-      .withIndex("by_document_time", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("documentId", args.documentId),
-      )
+      .withIndex("by_document_time", (q) => q.eq("documentId", args.documentId))
       .order("desc")
       .first()) as { snapshotAfter: string } | null;
 
@@ -46,7 +44,7 @@ export const triggerIdleSave = mutation({
     const patch = patchFromSnapshots(beforeSnapshot, args.snapshot);
     await ctx.db.insert("diffs", {
       documentId: args.documentId,
-      userId: "dev-user",
+      userId,
       patch,
       snapshotAfter: args.snapshot,
       source: "manual",
@@ -70,9 +68,7 @@ export const listByDocument = query({
   handler: async (ctx, args) => {
     return ctx.db
       .query("diffs")
-      .withIndex("by_document_time", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("documentId", args.documentId),
-      )
+      .withIndex("by_document_time", (q) => q.eq("documentId", args.documentId))
       .order("desc")
       .collect();
   },

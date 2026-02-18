@@ -9,12 +9,10 @@ export const upsertCurrentUser = mutation({
     avatarUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const existingUsers = (await ctx.db
+    const existingUsers = await ctx.db
       .query("users")
-      .withIndex("by_email", (q: { eq: (field: string, value: string) => unknown }) =>
-        q.eq("email", args.email),
-      )
-      .collect()) as Array<{ _id: string }>;
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .collect();
 
     if (existingUsers.length > 0) {
       const existing = existingUsers[0];
@@ -43,9 +41,7 @@ export const getCurrentUser = query({
 
     const users = (await ctx.db
       .query("users")
-      .withIndex("by_email", (q: { eq: (field: string, value: string) => unknown }) =>
-        q.eq("email", identity.email!),
-      )
+      .withIndex("by_email", (q) => q.eq("email", identity.email!))
       .collect()) as Array<{ _id: string }>;
 
     return users[0] ?? null;

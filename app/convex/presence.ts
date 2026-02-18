@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
+import { getOrCreateCurrentUserId } from "./currentUser";
 
 export const update = mutation({
   args: {
@@ -10,12 +11,11 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const now = safeNow();
-    const existing = (await ctx.db
+    const userId = await getOrCreateCurrentUserId(ctx);
+    const existing = await ctx.db
       .query("presence")
-      .withIndex("by_visitor", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("visitorId", args.visitorId),
-      )
-      .unique()) as { _id: string } | null;
+      .withIndex("by_visitor", (q) => q.eq("visitorId", args.visitorId))
+      .unique();
 
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -29,7 +29,7 @@ export const update = mutation({
     return ctx.db.insert("presence", {
       documentId: args.documentId,
       visitorId: args.visitorId,
-      userId: "dev-user",
+      userId,
       data: args.data,
       updatedAt: now,
     });
@@ -41,12 +41,10 @@ export const heartbeat = mutation({
     visitorId: v.string(),
   },
   handler: async (ctx, args) => {
-    const existing = (await ctx.db
+    const existing = await ctx.db
       .query("presence")
-      .withIndex("by_visitor", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("visitorId", args.visitorId),
-      )
-      .unique()) as { _id: string } | null;
+      .withIndex("by_visitor", (q) => q.eq("visitorId", args.visitorId))
+      .unique();
 
     if (!existing) return null;
     await ctx.db.patch(existing._id, {
@@ -63,9 +61,7 @@ export const list = query({
   handler: async (ctx, args) => {
     return ctx.db
       .query("presence")
-      .withIndex("by_document", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("documentId", args.documentId),
-      )
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
       .collect();
   },
 });
@@ -75,26 +71,21 @@ export const remove = mutation({
     visitorId: v.string(),
   },
   handler: async (ctx, args) => {
-    const existing = (await ctx.db
+    const existing = await ctx.db
       .query("presence")
-      .withIndex("by_visitor", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("visitorId", args.visitorId),
-      )
-      .unique()) as { _id: string } | null;
+      .withIndex("by_visitor", (q) => q.eq("visitorId", args.visitorId))
+      .unique();
     if (!existing) return null;
     await ctx.db.delete(existing._id);
     return existing._id;
   },
 });
 
-export const cleanup = mutation({
+export const cleanup = internalMutation({
   args: {},
   handler: async (ctx) => {
     const threshold = Math.max(0, safeNow() - 60_000);
-    const entries = (await ctx.db.query("presence").collect()) as Array<{
-      _id: string;
-      updatedAt: number;
-    }>;
+    const entries = await ctx.db.query("presence").collect();
     const stale = entries.filter((entry) => entry.updatedAt < threshold);
     await Promise.all(stale.map((entry) => ctx.db.delete(entry._id)));
     return stale.length;

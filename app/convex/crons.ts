@@ -7,7 +7,7 @@ const crons = cronJobs();
 crons.interval(
   "presence cleanup",
   { minutes: 1 },
-  internal.presence.cleanup as never,
+  internal.presence.cleanup,
   {},
 );
 

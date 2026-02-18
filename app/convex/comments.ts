@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
+import { getOrCreateCurrentUserId } from "./currentUser";
 
 export const create = mutation({
   args: {
@@ -12,9 +13,10 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const now = safeNow();
+    const userId = await getOrCreateCurrentUserId(ctx);
     return ctx.db.insert("comments", {
       ...args,
-      userId: "dev-user",
+      userId,
       resolved: false,
       createdAt: now,
       updatedAt: now,
@@ -29,9 +31,7 @@ export const list = query({
   handler: async (ctx, args) => {
     return ctx.db
       .query("comments")
-      .withIndex("by_document", (q: { eq: (field: string, value: unknown) => unknown }) =>
-        q.eq("documentId", args.documentId),
-      )
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
       .collect();
   },
 });
@@ -56,14 +56,13 @@ export const reply = mutation({
   },
   handler: async (ctx, args) => {
     const now = safeNow();
-    const parent = (await ctx.db.get(args.parentCommentId)) as
-      | { documentId: string; anchorFrom: number; anchorTo: number; anchorText: string }
-      | null;
+    const userId = await getOrCreateCurrentUserId(ctx);
+    const parent = await ctx.db.get(args.parentCommentId);
     if (!parent) throw new Error("Parent comment not found");
 
     return ctx.db.insert("comments", {
       documentId: parent.documentId,
-      userId: "dev-user",
+      userId,
       content: args.content,
       anchorFrom: parent.anchorFrom,
       anchorTo: parent.anchorTo,
