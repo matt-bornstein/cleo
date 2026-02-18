@@ -78,10 +78,10 @@ describe("getRecentMessages", () => {
     expect(recent).toEqual([]);
   });
 
-  it("uses deterministic id tie-breaker when timestamps are equal", () => {
+  it("keeps user prompts before assistant replies when timestamps are equal", () => {
     const messages: AIMessage[] = [
       {
-        id: "b",
+        id: "a",
         documentId: "doc-1",
         userId: "user-1",
         role: "assistant",
@@ -89,7 +89,7 @@ describe("getRecentMessages", () => {
         createdAt: 10,
       },
       {
-        id: "a",
+        id: "z",
         documentId: "doc-1",
         userId: "user-1",
         role: "user",

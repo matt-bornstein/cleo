@@ -17,11 +17,7 @@ export function getRecentMessages(messages: AIMessage[], limit = 5) {
 
   return messages
     .filter(isValidHistoryMessage)
-    .sort((a, b) =>
-      a.createdAt === b.createdAt
-        ? a.id.localeCompare(b.id)
-        : a.createdAt - b.createdAt,
-    )
+    .sort(compareMessagesForHistory)
     .slice(-safeLimit)
     .map((message) => ({
       role: message.role,
@@ -74,4 +70,27 @@ function readHistoryField(
   } catch {
     return undefined;
   }
+}
+
+function compareMessagesForHistory(a: AIMessage, b: AIMessage) {
+  if (a.createdAt !== b.createdAt) {
+    return a.createdAt - b.createdAt;
+  }
+
+  const rolePriorityDiff = rolePriority(a.role) - rolePriority(b.role);
+  if (rolePriorityDiff !== 0) {
+    return rolePriorityDiff;
+  }
+
+  return a.id.localeCompare(b.id);
+}
+
+function rolePriority(role: AIMessage["role"]) {
+  if (role === "user") {
+    return 0;
+  }
+  if (role === "assistant") {
+    return 1;
+  }
+  return 2;
 }

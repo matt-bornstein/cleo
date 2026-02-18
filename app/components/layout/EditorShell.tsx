@@ -185,7 +185,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   }, []);
 
   if (!hasHydrated) {
-    return <div className="min-h-screen bg-slate-100" />;
+    return <div className="h-screen bg-slate-100" />;
   }
 
   if (!hasAccess && !requestedShareRole) {
@@ -209,7 +209,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-100">
       <Toolbar
         documentTitle={documentTitle}
         roleLabel={myRole}
@@ -236,8 +236,8 @@ export function EditorShell({ documentId }: EditorShellProps) {
       ) : null}
       <EditorLayout
         editorPanel={
-          <div className="flex h-full">
-            <div className="flex-1">
+          <div className="flex h-full min-h-0 overflow-hidden">
+            <div className="min-h-0 flex-1">
               <EditorPanel
                 key={normalizedDocumentId}
                 documentId={normalizedDocumentId}

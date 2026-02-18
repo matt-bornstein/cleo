@@ -75,4 +75,40 @@ describe("MessageBubble", () => {
     expect(screen.getByText("Assistant")).toBeInTheDocument();
     expect(screen.getByText("…")).toBeInTheDocument();
   });
+
+  it("renders tail direction by message role", () => {
+    const { container, rerender } = render(
+      <MessageBubble
+        message={{
+          id: "assistant-1",
+          documentId: "doc-1",
+          userId: "assistant",
+          role: "assistant",
+          content: "Assistant response",
+          createdAt: 102,
+        }}
+      />,
+    );
+
+    expect(container.querySelector(".justify-start")).toBeInTheDocument();
+    expect(container.querySelector(".left-\\[-8px\\]")).toBeInTheDocument();
+    expect(container.querySelector(".border-r-white")).toBeInTheDocument();
+
+    rerender(
+      <MessageBubble
+        message={{
+          id: "user-1",
+          documentId: "doc-1",
+          userId: "user-1",
+          role: "user",
+          content: "User prompt",
+          createdAt: 103,
+        }}
+      />,
+    );
+
+    expect(container.querySelector(".justify-end")).toBeInTheDocument();
+    expect(container.querySelector(".right-\\[-8px\\]")).toBeInTheDocument();
+    expect(container.querySelector(".border-l-blue-50")).toBeInTheDocument();
+  });
 });

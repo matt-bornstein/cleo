@@ -17,12 +17,12 @@ export function EditorLayout({ editorPanel, aiPanel }: EditorLayoutProps) {
   const [mobileAiOpen, setMobileAiOpen] = useState(false);
 
   return (
-    <div className="relative grid h-[calc(100vh-3.5rem)] grid-cols-1 lg:grid-cols-3">
-      <section className="border-b border-slate-200 bg-white lg:col-span-2 lg:border-b-0 lg:border-r">
+    <div className="relative grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-3">
+      <section className="min-h-0 overflow-hidden border-b border-slate-200 bg-white lg:col-span-2 lg:border-b-0 lg:border-r">
         {normalizedEditorPanel}
       </section>
       <aside
-        className={`bg-slate-50 ${
+        className={`min-h-0 overflow-hidden bg-slate-50 ${
           mobileAiOpen ? "block" : "hidden"
         } absolute inset-0 z-20 lg:static lg:col-span-1 lg:block`}
       >

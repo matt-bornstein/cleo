@@ -80,7 +80,7 @@ export function CommentsSidebar({
   }, [normalizedComments]);
 
   return (
-    <section className="w-full max-w-xs border-l border-slate-200 bg-slate-50 p-3">
+    <section className="flex h-full min-h-0 w-full max-w-xs flex-col border-l border-slate-200 bg-slate-50 p-3">
       <h3 className="mb-2 text-sm font-semibold text-slate-700">Comments</h3>
       {normalizedCanComment ? (
         <CommentInput
@@ -94,7 +94,7 @@ export function CommentsSidebar({
           Commenting is disabled for your current role.
         </p>
       )}
-      <div className="mt-3 space-y-2">
+      <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         {rootComments.map((comment) => (
           <CommentThread
             key={comment.id}

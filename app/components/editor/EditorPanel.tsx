@@ -48,7 +48,7 @@ export function EditorPanel({
   const normalizedReadOnly = readOnly === true;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2 text-sm">
         <span className="font-medium text-slate-600">{normalizedTitle}</span>
         <span className="text-xs text-slate-500">{normalizedSaveStateLabel}</span>
@@ -61,7 +61,7 @@ export function EditorPanel({
           Read-only mode. You have view/comment access only.
         </div>
       ) : null}
-      <div className="flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <RichTextEditor
           documentId={documentId}
           content={content}

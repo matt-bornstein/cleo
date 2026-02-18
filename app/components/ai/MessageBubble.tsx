@@ -34,25 +34,50 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = normalizedRole === "user";
 
   return (
-    <article
-      className={cn(
-        "rounded-lg border px-3 py-2 text-sm",
-        isUser
-          ? "border-blue-200 bg-blue-50 text-blue-900"
-          : "border-slate-200 bg-white text-slate-800",
-      )}
-    >
-      <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide">
-        <span>{isUser ? "You" : "Assistant"}</span>
-        {normalizedModel ? <span className="text-slate-500">{normalizedModel}</span> : null}
-      </div>
-      <p className="whitespace-pre-wrap">{normalizedContent || "…"}</p>
-      {hasDiffId ? (
-        <div className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-          Changes applied
+    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+      <article
+        className={cn(
+          "relative max-w-[92%] rounded-lg border px-3 py-2 text-sm",
+          isUser
+            ? "border-blue-200 bg-blue-50 text-blue-900"
+            : "border-slate-200 bg-white text-slate-800",
+        )}
+      >
+        {isUser ? (
+          <>
+            <span
+              aria-hidden="true"
+              className="absolute right-[-9px] top-3 h-0 w-0 border-y-[8px] border-l-[10px] border-y-transparent border-l-blue-200"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute right-[-8px] top-3 h-0 w-0 border-y-[8px] border-l-[10px] border-y-transparent border-l-blue-50"
+            />
+          </>
+        ) : (
+          <>
+            <span
+              aria-hidden="true"
+              className="absolute left-[-9px] top-3 h-0 w-0 border-y-[8px] border-r-[10px] border-y-transparent border-r-slate-200"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute left-[-8px] top-3 h-0 w-0 border-y-[8px] border-r-[10px] border-y-transparent border-r-white"
+            />
+          </>
+        )}
+        <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-wide">
+          <span>{isUser ? "You" : "Assistant"}</span>
+          {normalizedModel ? <span className="text-slate-500">{normalizedModel}</span> : null}
         </div>
-      ) : null}
-    </article>
+        <p className="whitespace-pre-wrap">{normalizedContent || "…"}</p>
+        {hasDiffId ? (
+          <div className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+            Changes applied
+          </div>
+        ) : null}
+      </article>
+    </div>
   );
 }
 

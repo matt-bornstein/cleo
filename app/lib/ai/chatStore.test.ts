@@ -94,9 +94,9 @@ describe("ai chat store", () => {
     expect(visibleWithNegative[0].id).toBe("m-nan");
   });
 
-  it("uses deterministic id tie-breaker for same-timestamp messages", () => {
+  it("orders user prompts before assistant replies when timestamps match", () => {
     saveMessage({
-      id: "m-b",
+      id: "m-a",
       documentId: "doc-sort",
       userId: "u-1",
       role: "assistant",
@@ -104,17 +104,17 @@ describe("ai chat store", () => {
       createdAt: 100,
     });
     saveMessage({
-      id: "m-a",
+      id: "m-z",
       documentId: "doc-sort",
       userId: "u-1",
-      role: "assistant",
+      role: "user",
       content: "First",
       createdAt: 100,
     });
 
     expect(listMessagesByDocument("doc-sort").map((message) => message.id)).toEqual([
+      "m-z",
       "m-a",
-      "m-b",
     ]);
   });
 
