@@ -17,6 +17,25 @@ Updated intro paragraph.
     expect(parsed.blocks).toHaveLength(1);
     expect(parsed.blocks[0].search).toBe("<p>Old text</p>");
     expect(parsed.blocks[0].replace).toBe("<p>New text</p>");
+    expect(parsed.fullHtml).toBeUndefined();
+  });
+
+  it("applies search/replace blocks instead of inferring full html", () => {
+    const response = `
+Update the paragraph.
+<<<SEARCH
+<p>Old text</p>
+===
+<p><u>New text</u></p>
+>>>
+`;
+
+    const parsed = parseAIResponse(response);
+    expect(parsed.fullHtml).toBeUndefined();
+    expect(parsed.blocks).toHaveLength(1);
+
+    const nextHtml = applyParsedEditsToHtml("<p>Old text</p>", parsed);
+    expect(nextHtml).toBe("<p><u>New text</u></p>");
   });
 
   it("parses full html fallback and applies it", () => {

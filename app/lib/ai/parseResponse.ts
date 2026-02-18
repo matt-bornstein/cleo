@@ -17,7 +17,6 @@ const HTML_START_REGEX = /<[a-zA-Z][\w:-]*(\s[^<>]*)?>/;
 export function parseAIResponse(response: unknown): ParsedAIResponse {
   const safeResponse = typeof response === "string" ? response : "";
   const fullHtmlMatch = safeResponse.match(FULL_HTML_REGEX);
-  const inferredFullHtml = !fullHtmlMatch ? inferFullHtmlFromResponse(safeResponse) : undefined;
   const blocks: SearchReplaceBlock[] = [];
 
   SEARCH_REPLACE_REGEX.lastIndex = 0;
@@ -28,6 +27,10 @@ export function parseAIResponse(response: unknown): ParsedAIResponse {
       replace: typeof match[2] === "string" ? match[2] : "",
     });
   }
+  const inferredFullHtml =
+    !fullHtmlMatch && blocks.length === 0
+      ? inferFullHtmlFromResponse(safeResponse)
+      : undefined;
 
   const explanation = safeResponse
     .replace(FULL_HTML_REGEX, "")
