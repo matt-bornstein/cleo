@@ -22,6 +22,7 @@ import { useComments } from "@/hooks/useComments";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDocuments } from "@/hooks/useDocuments";
+import { useDocumentsConvex } from "@/hooks/useDocumentsConvex";
 import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
 import {
@@ -39,6 +40,9 @@ type EditorShellProps = {
 };
 
 export function EditorShell({ documentId }: EditorShellProps) {
+  const useDocumentsImpl = process.env.NEXT_PUBLIC_CONVEX_URL
+    ? useDocumentsConvex
+    : useDocuments;
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,7 +59,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
     setChatClearedAt,
     remove,
     refresh: refreshDocuments,
-  } = useDocuments(undefined, currentUserEmail);
+  } = useDocumentsImpl(undefined, currentUserEmail);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
@@ -75,16 +79,23 @@ export function EditorShell({ documentId }: EditorShellProps) {
 
   const currentDocument = getById(normalizedDocumentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
-  const myRole = safeGetRoleForUser(
-    normalizedDocumentId,
-    currentUserEmail,
-    currentDocument?.ownerEmail,
-  );
-  const hasAccess = safeHasDocumentAccess(
-    normalizedDocumentId,
-    currentUserEmail,
-    currentDocument?.ownerEmail,
-  );
+  const convexRole = readDocumentRole(currentDocument);
+  const myRole =
+    process.env.NEXT_PUBLIC_CONVEX_URL && convexRole
+      ? convexRole
+      : safeGetRoleForUser(
+          normalizedDocumentId,
+          currentUserEmail,
+          currentDocument?.ownerEmail,
+        );
+  const hasAccess =
+    process.env.NEXT_PUBLIC_CONVEX_URL
+      ? Boolean(currentDocument)
+      : safeHasDocumentAccess(
+          normalizedDocumentId,
+          currentUserEmail,
+          currentDocument?.ownerEmail,
+        );
   const canEdit = hasPermission(myRole, "editor");
   const canComment = hasPermission(myRole, "commenter");
   const canShare = hasPermission(myRole, "owner");
@@ -125,6 +136,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   }, [settings.theme]);
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_CONVEX_URL) return;
     if (!requestedShareRole) return;
     if (myRole === "owner" || myRole === requestedShareRole) return;
 
@@ -145,6 +157,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
   ]);
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_CONVEX_URL) return;
     if (!requestedShareRole) return;
     if (!(myRole === "owner" || myRole === requestedShareRole)) return;
 
@@ -301,8 +314,8 @@ export function EditorShell({ documentId }: EditorShellProps) {
       <NewDocModal
         open={newModalOpen}
         onOpenChange={setNewModalOpen}
-        onCreateDocument={(title: string) => {
-          const newDocument = create(title, currentUserEmail);
+        onCreateDocument={async (title: string) => {
+          const newDocument = await create(title, currentUserEmail);
           if (!newDocument || typeof newDocument !== "object") {
             safeRouterPush(router, "/editor");
             return;
@@ -341,8 +354,8 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenDocument={(nextDocumentId: string) =>
           safeRouterPush(router, `/editor/${nextDocumentId}`)
         }
-        onDeleteDocument={(targetDocumentId: string) => {
-          const removed = remove(targetDocumentId);
+        onDeleteDocument={async (targetDocumentId: string) => {
+          const removed = await remove(targetDocumentId);
           if (!removed) return;
           if (targetDocumentId === normalizedDocumentId) {
             safeRouterPush(router, "/editor");
@@ -623,4 +636,19 @@ function getClientHydrationSnapshot() {
 
 function getServerHydrationSnapshot() {
   return false;
+}
+
+function readDocumentRole(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  try {
+    const role = (value as { role?: unknown }).role;
+    return role === "owner" || role === "editor" || role === "commenter" || role === "viewer"
+      ? role
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }

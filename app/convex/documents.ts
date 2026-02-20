@@ -51,7 +51,15 @@ export const get = query({
       return null;
     }
 
-    return ctx.db.get(args.documentId);
+    const document = await ctx.db.get(args.documentId);
+    if (!document) {
+      return null;
+    }
+
+    return {
+      ...document,
+      role: permission.role,
+    };
   },
 });
 
@@ -69,7 +77,16 @@ export const list = query({
       .collect();
 
     const documents = await Promise.all(
-      permissions.map((permission) => ctx.db.get(permission.documentId)),
+      permissions.map(async (permission) => {
+        const document = await ctx.db.get(permission.documentId);
+        if (!document) {
+          return null;
+        }
+        return {
+          ...document,
+          role: permission.role,
+        };
+      }),
     );
 
     return documents.filter(Boolean);
@@ -101,6 +118,92 @@ export const updateContent = mutation({
       content: args.content,
       updatedAt: safeNow(),
     });
+    return args.documentId;
+  },
+});
+
+export const updateTitle = mutation({
+  args: {
+    documentId: v.id("documents"),
+    title: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
+      throw new Error("Not signed in.");
+    }
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", userId),
+      )
+      .unique();
+
+    if (!permission || (permission.role !== "owner" && permission.role !== "editor")) {
+      throw new Error("Insufficient permissions to rename document.");
+    }
+
+    const normalizedTitle = args.title.trim() || "Untitled";
+    await ctx.db.patch(args.documentId, {
+      title: normalizedTitle,
+      updatedAt: safeNow(),
+    });
+    return args.documentId;
+  },
+});
+
+export const setChatClearedAt = mutation({
+  args: {
+    documentId: v.id("documents"),
+    chatClearedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
+      throw new Error("Not signed in.");
+    }
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", userId),
+      )
+      .unique();
+    if (!permission) {
+      throw new Error("Insufficient permissions to update document chat state.");
+    }
+
+    await ctx.db.patch(args.documentId, {
+      chatClearedAt: Math.max(0, args.chatClearedAt),
+    });
+    return args.documentId;
+  },
+});
+
+export const remove = mutation({
+  args: {
+    documentId: v.id("documents"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
+      throw new Error("Not signed in.");
+    }
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", userId),
+      )
+      .unique();
+    if (!permission || permission.role !== "owner") {
+      throw new Error("Only owners can delete documents.");
+    }
+
+    const permissions = await ctx.db
+      .query("permissions")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .collect();
+    await Promise.all(permissions.map((entry) => ctx.db.delete(entry._id)));
+    await ctx.db.delete(args.documentId);
     return args.documentId;
   },
 });

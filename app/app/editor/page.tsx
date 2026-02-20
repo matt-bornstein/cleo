@@ -4,30 +4,34 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { useDocuments } from "@/hooks/useDocuments";
+import { useDocumentsConvex } from "@/hooks/useDocumentsConvex";
 import { useSettings } from "@/hooks/useSettings";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 export default function EditorIndexPage() {
+  const useDocumentsImpl = process.env.NEXT_PUBLIC_CONVEX_URL
+    ? useDocumentsConvex
+    : useDocuments;
   const router = useRouter();
   const { settings } = useSettings();
   const currentUserEmail =
     normalizeEmailOrUndefined(settings.userEmail) ?? DEFAULT_LOCAL_USER_EMAIL;
-  const { documents, create } = useDocuments(undefined, currentUserEmail);
+  const { documents, create } = useDocumentsImpl(undefined, currentUserEmail);
   const existingDocumentId = Array.isArray(documents)
     ? documents
         .map((document) => normalizeDocumentId(document?.id))
         .find((documentId) => !!documentId)
     : undefined;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (existingDocumentId) {
       safeNavigate(router, `/editor/${existingDocumentId}`);
       return;
     }
 
-    const document = create("Untitled", currentUserEmail);
+    const document = await create("Untitled", currentUserEmail);
     const nextDocumentId = normalizeDocumentId(readCreatedDocumentId(document));
     safeNavigate(router, nextDocumentId ? `/editor/${nextDocumentId}` : "/editor");
   };
@@ -41,7 +45,12 @@ export default function EditorIndexPage() {
         <p className="mt-2 text-sm text-slate-600">
           This route creates or opens your latest local document shell.
         </p>
-        <Button className="mt-6" onClick={handleContinue}>
+        <Button
+          className="mt-6"
+          onClick={() => {
+            void handleContinue();
+          }}
+        >
           Open editor
         </Button>
       </section>
