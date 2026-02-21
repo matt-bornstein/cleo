@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { useAIChat } from "@/hooks/useAIChat";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import { MessageBubble } from "./MessageBubble";
-import { ChatInput } from "./ChatInput";
+import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ModelSelector } from "./ModelSelector";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -37,6 +37,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
     clearChat,
   } = useAIChat(documentId, { onChangesApplied });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<ChatInputHandle>(null);
   const document = useQuery(api.documents.get, { id: documentId });
   const isLocked = document?.aiLockedBy != null;
 
@@ -48,6 +49,15 @@ export function AIPanel({ documentId }: AIPanelProps) {
       viewport.scrollTop = viewport.scrollHeight;
     }
   }, [messages, streamingContent]);
+
+  // Refocus the chat input when streaming ends
+  const prevStreamingRef = useRef(false);
+  useEffect(() => {
+    if (prevStreamingRef.current && !isStreaming) {
+      chatInputRef.current?.focus();
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming]);
 
   const handleSubmit = (prompt: string) => {
     submitPrompt(prompt, model);
@@ -143,6 +153,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
           <ModelSelector value={model} onChange={setModel} />
         </div>
         <ChatInput
+          ref={chatInputRef}
           onSubmit={handleSubmit}
           disabled={isStreaming}
           placeholder={

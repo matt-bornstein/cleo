@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent, forwardRef, useImperativeHandle } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
@@ -11,13 +11,21 @@ interface ChatInputProps {
   placeholder?: string;
 }
 
-export function ChatInput({
+export interface ChatInputHandle {
+  focus: () => void;
+}
+
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput({
   onSubmit,
   disabled = false,
   placeholder = "Ask AI to edit your document...",
-}: ChatInputProps) {
+}, ref) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }));
 
   const handleSubmit = () => {
     const trimmed = value.trim();
@@ -64,4 +72,4 @@ export function ChatInput({
       </p>
     </div>
   );
-}
+});
