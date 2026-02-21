@@ -105,6 +105,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
               role="assistant"
               content={streamingContent}
               model={model}
+              isStreaming
             />
           )}
 
