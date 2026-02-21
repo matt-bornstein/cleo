@@ -110,6 +110,70 @@ http.route({
       const writer = writable.getWriter();
       const encoder = new TextEncoder();
 
+      const sendEvent = async (type: string, content: string) => {
+        await writer.write(
+          encoder.encode(`data: ${JSON.stringify({ type, content })}\n\n`)
+        );
+      };
+
+      // Incremental edit state: tracks accumulated text and applies
+      // search/replace blocks to the document as each one completes.
+      let accumulated = "";
+      let blocksApplied = 0;
+      let runningHtml = documentHtml;
+      const schema = getServerSchema();
+
+      const applyBlockToDocument = async (search: string, replace: string) => {
+        if (!runningHtml.includes(search)) {
+          console.warn("Search block not found in document:", search.substring(0, 80));
+          return;
+        }
+        const updatedHtml = runningHtml.replace(search, replace);
+        try {
+          const newDocJson = htmlToProsemirrorJson(updatedHtml);
+          await prosemirrorSync.transform(ctx, documentId, schema, (currentDoc) => {
+            const targetDoc = Node.fromJSON(schema, newDocJson);
+            const tr = new Transform(currentDoc);
+            tr.replaceWith(0, currentDoc.content.size, targetDoc.content);
+            if (tr.steps.length === 0) return null;
+            return tr;
+          });
+          runningHtml = updatedHtml;
+          blocksApplied++;
+          await sendEvent("changes_applied", "Block applied");
+        } catch (e) {
+          console.error("Failed to apply incremental block:", e);
+          // Fallback: try direct content update
+          try {
+            const newDocJson = htmlToProsemirrorJson(updatedHtml);
+            await ctx.runMutation(internal.documents.updateContentInternal, {
+              id: documentId,
+              content: JSON.stringify(newDocJson),
+            });
+            runningHtml = updatedHtml;
+            blocksApplied++;
+            await sendEvent("changes_applied", "Block applied (fallback)");
+          } catch (fallbackErr) {
+            console.error("Fallback content update also failed:", fallbackErr);
+          }
+        }
+      };
+
+      // Scan accumulated text for newly completed search/replace blocks
+      let lastScannedEnd = 0;
+      const tryApplyNewBlocks = async () => {
+        const regex = /<<<SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)\n>>>/g;
+        regex.lastIndex = lastScannedEnd;
+        let match;
+        while ((match = regex.exec(accumulated)) !== null) {
+          const blockEnd = match.index + match[0].length;
+          if (blockEnd > lastScannedEnd) {
+            lastScannedEnd = blockEnd;
+            await applyBlockToDocument(match[1].trim(), match[2].trim());
+          }
+        }
+      };
+
       // Start streaming in background
       (async () => {
         try {
@@ -118,25 +182,17 @@ http.route({
             aiMessages,
             { thinkHarder: !!thinkHarder, verbose: !!verbose },
             async (chunk: string) => {
-              await writer.write(
-                encoder.encode(`data: ${JSON.stringify({ type: "token", content: chunk })}\n\n`)
-              );
+              accumulated += chunk;
+              await sendEvent("token", chunk);
+              // Check if a new complete block has appeared
+              await tryApplyNewBlocks();
             }
           );
 
-          // Signal completion
-          await writer.write(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: "done", content: fullResponse })}\n\n`
-            )
-          );
+          await sendEvent("done", fullResponse);
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : "AI request failed";
-          await writer.write(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: "error", content: errMsg })}\n\n`
-            )
-          );
+          await sendEvent("error", errMsg);
         } finally {
           // Save the AI assistant message
           try {
@@ -152,74 +208,57 @@ http.route({
             console.error("Failed to save AI message:", e);
           }
 
-          // Try to apply AI edits to the document via prosemirror-sync
-          try {
-            if (fullResponse && documentHtml) {
-              const newHtml = applyAIEdits(fullResponse, documentHtml);
-              if (newHtml && newHtml !== documentHtml) {
-                // Convert new HTML to ProseMirror JSON
-                const newDocJson = htmlToProsemirrorJson(newHtml);
+          // Handle full HTML fallback (only if no blocks were applied)
+          if (blocksApplied === 0 && fullResponse && documentHtml) {
+            try {
+              const fullHtml = extractFullHtmlFromResponse(fullResponse);
+              if (fullHtml) {
+                const newDocJson = htmlToProsemirrorJson(fullHtml);
                 const newContent = JSON.stringify(newDocJson);
-
-                // Apply via prosemirrorSync.transform() for live OT collaboration
-                const schema = getServerSchema();
-                let transformApplied = false;
                 try {
-                  await prosemirrorSync.transform(
-                    ctx,
-                    documentId,
-                    schema,
-                    (currentDoc) => {
-                      // Build the new ProseMirror Node from our JSON
-                      const targetDoc = Node.fromJSON(schema, newDocJson);
-
-                      const tr = new Transform(currentDoc);
-                      tr.replaceWith(0, currentDoc.content.size, targetDoc.content);
-                      if (tr.steps.length === 0) return null;
-                      return tr;
-                    }
-                  );
-                  transformApplied = true;
+                  await prosemirrorSync.transform(ctx, documentId, schema, (currentDoc) => {
+                    const targetDoc = Node.fromJSON(schema, newDocJson);
+                    const tr = new Transform(currentDoc);
+                    tr.replaceWith(0, currentDoc.content.size, targetDoc.content);
+                    if (tr.steps.length === 0) return null;
+                    return tr;
+                  });
+                  runningHtml = fullHtml;
+                  blocksApplied++;
                 } catch (transformErr) {
-                  console.error("prosemirrorSync.transform() failed, falling back to content update:", transformErr);
-                  // Fallback: update cached content directly
+                  console.error("Full HTML transform failed, using fallback:", transformErr);
                   await ctx.runMutation(internal.documents.updateContentInternal, {
                     id: documentId,
                     content: newContent,
                   });
+                  runningHtml = fullHtml;
+                  blocksApplied++;
                 }
-
-                // Also update cached content for consistency
-                if (transformApplied) {
-                  await ctx.runMutation(internal.documents.updateContentInternal, {
-                    id: documentId,
-                    content: newContent,
-                  });
-                }
-
-                // Save AI diff record for version history
-                await ctx.runMutation(internal.diffs.createAiDiffInternal, {
-                  documentId,
-                  content: newContent,
-                  aiPrompt: prompt,
-                  aiModel: model,
-                });
-
-                // Notify client that changes were applied
-                await writer.write(
-                  encoder.encode(
-                    `data: ${JSON.stringify({
-                      type: "changes_applied",
-                      content: transformApplied
-                        ? "Document updated (live sync)"
-                        : "Document updated (will appear on reload)",
-                    })}\n\n`
-                  )
-                );
+                await sendEvent("changes_applied", "Document replaced");
               }
+            } catch (e) {
+              console.error("Failed to apply full HTML:", e);
             }
-          } catch (e) {
-            console.error("Failed to apply AI edits:", e);
+          }
+
+          // Save final state for version history and cached content
+          if (blocksApplied > 0 && runningHtml !== documentHtml) {
+            try {
+              const finalDocJson = htmlToProsemirrorJson(runningHtml);
+              const finalContent = JSON.stringify(finalDocJson);
+              await ctx.runMutation(internal.documents.updateContentInternal, {
+                id: documentId,
+                content: finalContent,
+              });
+              await ctx.runMutation(internal.diffs.createAiDiffInternal, {
+                documentId,
+                content: finalContent,
+                aiPrompt: prompt,
+                aiModel: model,
+              });
+            } catch (e) {
+              console.error("Failed to save final state:", e);
+            }
           }
 
           // Release the lock
@@ -263,7 +302,7 @@ function getSystemPrompt(): string {
 The document is provided as HTML.
 
 RESPONSE FORMAT:
-- For small, targeted changes, use SEARCH/REPLACE blocks operating on the HTML:
+Use SEARCH/REPLACE blocks to make changes to the HTML. Each block targets one specific change:
 
 <<<SEARCH
 <p>exact HTML to find in the document</p>
@@ -271,20 +310,21 @@ RESPONSE FORMAT:
 <p>replacement HTML</p>
 >>>
 
-- For large-scale changes or rewrites, return the FULL updated HTML inside a code fence:
+IMPORTANT — changes are applied to the document in real time as you produce each block. Follow these rules:
+- Use one SEARCH/REPLACE block per logical change (e.g. one block per paragraph, heading, or list item being modified).
+- Keep blocks small and focused. Do NOT combine unrelated changes into a single block.
+- SEARCH text must match the document HTML EXACTLY (including tags, attributes, and whitespace).
+- To delete content, use an empty replacement (nothing between === and >>>).
+- To insert new content, SEARCH for the element immediately before the insertion point and include the new content after it in the replacement.
+- Only for complete rewrites where most of the document changes, return full HTML in a code fence:
 
 \`\`\`html
 (full document HTML here)
 \`\`\`
 
-RULES:
-- SEARCH blocks must match the document HTML EXACTLY (including tags, attributes, and whitespace).
-- You may use multiple SEARCH/REPLACE blocks in one response.
-- Only return the changed portions — do not include unchanged HTML outside of blocks.
-- If you return a full document, it replaces the entire current document.
 - Always preserve the document's existing structure and formatting unless asked to change it.
 - Use standard HTML elements: <h1>-<h3>, <p>, <strong>, <em>, <u>, <s>, <ul>, <ol>, <li>, <blockquote>, <pre><code>, <a>, <img>, <table>, <tr>, <td>, <th>, <hr>.
-- Briefly explain what you changed before the blocks.`;
+- Briefly explain what you will change before the blocks, then provide a short summary after.`;
 }
 
 interface ModelConfig {
@@ -525,49 +565,6 @@ async function callGoogle(
   }
 
   return fullContent;
-}
-
-/**
- * Apply AI edits from the response to the document HTML.
- * Supports search/replace blocks and full HTML replacement.
- */
-function applyAIEdits(response: string, originalHtml: string): string | null {
-  // Try search/replace blocks first
-  const blocks = extractSearchReplaceBlocks(response);
-  if (blocks.length > 0) {
-    let html = originalHtml;
-    let applied = false;
-    for (const block of blocks) {
-      if (html.includes(block.search)) {
-        html = html.replace(block.search, block.replace);
-        applied = true;
-      }
-    }
-    return applied ? html : null;
-  }
-
-  // Try full HTML
-  const fullHtml = extractFullHtmlFromResponse(response);
-  if (fullHtml) {
-    return fullHtml;
-  }
-
-  return null;
-}
-
-function extractSearchReplaceBlocks(
-  response: string
-): { search: string; replace: string }[] {
-  const blocks: { search: string; replace: string }[] = [];
-  const regex = /<<<SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)\n>>>/g;
-  let match;
-  while ((match = regex.exec(response)) !== null) {
-    blocks.push({
-      search: match[1].trim(),
-      replace: match[2].trim(),
-    });
-  }
-  return blocks;
 }
 
 function extractFullHtmlFromResponse(response: string): string | null {
