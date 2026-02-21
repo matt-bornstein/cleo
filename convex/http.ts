@@ -140,10 +140,13 @@ http.route({
           });
           runningHtml = updatedHtml;
           blocksApplied++;
-          await sendEvent("changes_applied", "Block applied");
+          await sendEvent("changes_applied", JSON.stringify({
+            diffType: "search_replace",
+            search,
+            replace,
+          }));
         } catch (e) {
           console.error("Failed to apply incremental block:", e);
-          // Fallback: try direct content update
           try {
             const newDocJson = htmlToProsemirrorJson(updatedHtml);
             await ctx.runMutation(internal.documents.updateContentInternal, {
@@ -152,7 +155,11 @@ http.route({
             });
             runningHtml = updatedHtml;
             blocksApplied++;
-            await sendEvent("changes_applied", "Block applied (fallback)");
+            await sendEvent("changes_applied", JSON.stringify({
+              diffType: "search_replace",
+              search,
+              replace,
+            }));
           } catch (fallbackErr) {
             console.error("Fallback content update also failed:", fallbackErr);
           }
@@ -179,7 +186,9 @@ http.route({
       let htmlFenceStart = -1;
       let lastAppliedElementCount = 0;
 
+      let previousHtmlSnapshot = "";
       const applyHtmlToDocument = async (html: string) => {
+        const prevHtml = previousHtmlSnapshot;
         try {
           const newDocJson = htmlToProsemirrorJson(html);
           await prosemirrorSync.transform(ctx, documentId, schema, (currentDoc) => {
@@ -190,7 +199,12 @@ http.route({
             return tr;
           });
           runningHtml = html;
-          await sendEvent("changes_applied", "Element streamed");
+          previousHtmlSnapshot = html;
+          await sendEvent("changes_applied", JSON.stringify({
+            diffType: "full_html",
+            newHtml: html,
+            previousHtml: prevHtml,
+          }));
         } catch (e) {
           console.error("Failed to apply incremental HTML:", e);
           try {
@@ -200,6 +214,7 @@ http.route({
               content: JSON.stringify(newDocJson),
             });
             runningHtml = html;
+            previousHtmlSnapshot = html;
           } catch (fallbackErr) {
             console.error("HTML fallback also failed:", fallbackErr);
           }

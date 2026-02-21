@@ -373,3 +373,23 @@
   opacity: 0;
   animation: dotPulse 1.2s infinite;
 }
+
+/* AI diff highlights — use !important to override Tailwind layer specificity */
+.ai-diff-added {
+  background-color: #bbf7d0 !important;
+  border-bottom: 2px solid #22c55e !important;
+  transition: background-color 0.3s;
+}
+
+.ai-diff-added:hover {
+  background-color: #86efac !important;
+}
+
+.dark .ai-diff-added {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+  border-bottom-color: #22c55e !important;
+}
+
+.dark .ai-diff-added:hover {
+  background-color: rgba(34, 197, 94, 0.3) !important;
+}

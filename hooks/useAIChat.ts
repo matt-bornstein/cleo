@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -11,7 +11,7 @@ interface StreamEvent {
 }
 
 interface UseAIChatOptions {
-  onChangesApplied?: () => void;
+  onChangesApplied?: (diffMetadata: string) => void;
 }
 
 export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOptions) {
@@ -19,6 +19,12 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
   const [streamingContent, setStreamingContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Keep a ref to the latest callback so the streaming closure always uses it
+  const onChangesAppliedRef = useRef(options?.onChangesApplied);
+  useEffect(() => {
+    onChangesAppliedRef.current = options?.onChangesApplied;
+  }, [options?.onChangesApplied]);
 
   const messages = useQuery(api.ai.getMessages, { documentId });
   const acquireLock = useMutation(api.ai.acquireLock);
@@ -95,7 +101,7 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
                   // AI message is saved server-side
                   break;
                 case "changes_applied":
-                  options?.onChangesApplied?.();
+                  onChangesAppliedRef.current?.(event.content);
                   break;
                 case "error":
                   setError(event.content);

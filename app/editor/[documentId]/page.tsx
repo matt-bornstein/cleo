@@ -17,6 +17,7 @@ import {
 } from "@/components/editor/EditorContext";
 import { Bot, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { clearDiffHighlights } from "@/lib/editor/diffHighlights";
 
 function RedirectToSignIn() {
   const router = useRouter();
@@ -98,7 +99,7 @@ function EditorPageContent({
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(document.title || "");
-  const { getEditorHtml, isSaving } = useEditorContext();
+  const { getEditorHtml, isSaving, diffCount, setDiffCount, refreshDecorations } = useEditorContext();
   const updateTitle = useMutation(api.documents.updateTitle);
 
   const handleTitleSave = async () => {
@@ -147,9 +148,23 @@ function EditorPageContent({
                 </button>
               )}
             </div>
-            <span className="text-xs text-muted-foreground">
-              {isSaving ? "Saving..." : "Saved"}
-            </span>
+            <div className="flex items-center gap-3">
+              {diffCount > 0 && (
+                <button
+                  className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                  onClick={() => {
+                    clearDiffHighlights();
+                    setDiffCount(0);
+                    refreshDecorations();
+                  }}
+                >
+                  {diffCount} {diffCount === 1 ? "change" : "changes"} highlighted — Dismiss
+                </button>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {isSaving ? "Saving..." : "Saved"}
+              </span>
+            </div>
           </div>
           <EditorPanel
             documentId={document._id}

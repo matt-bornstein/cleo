@@ -18,6 +18,7 @@ import {
   commentHighlightsState,
   type CommentAnchor,
 } from "@/lib/editor/commentHighlights";
+import { DiffHighlightsExtension } from "@/lib/editor/diffHighlights";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { usePresence } from "@/hooks/usePresence";
@@ -152,6 +153,7 @@ function SyncedEditor({
       syncExtension,
       RemoteCursorsExtension,
       CommentHighlightsExtension,
+      DiffHighlightsExtension,
     ],
     [syncExtension]
   );

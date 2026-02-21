@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Trash2, Bot } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
+import { addDiffHighlight, clearDiffHighlights, diffHighlightsState } from "@/lib/editor/diffHighlights";
 
 interface AIPanelProps {
   documentId: Id<"documents">;
@@ -23,12 +24,30 @@ export function AIPanel({ documentId }: AIPanelProps) {
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [thinkHarder, setThinkHarder] = useState(true);
   const [verbose, setVerbose] = useState(true);
-  const { setIsSaving } = useEditorContext();
+  const { setIsSaving, refreshDecorations, setDiffCount } = useEditorContext();
 
-  const onChangesApplied = useCallback(() => {
+  const onChangesApplied = useCallback((diffMetadata: string) => {
     setIsSaving(true);
     setTimeout(() => setIsSaving(false), 1000);
-  }, [setIsSaving]);
+
+    try {
+      const parsed = JSON.parse(diffMetadata);
+      if (parsed.diffType === "search_replace" && parsed.replace) {
+        addDiffHighlight(parsed.replace);
+      } else if (parsed.diffType === "full_html" && parsed.newHtml) {
+        addDiffHighlight(parsed.newHtml);
+      }
+      const refreshAttempts = [300, 700, 1500];
+      for (const delay of refreshAttempts) {
+        setTimeout(() => {
+          refreshDecorations();
+          setDiffCount(diffHighlightsState.diffs.length);
+        }, delay);
+      }
+    } catch {
+      // Non-JSON payload — ignore
+    }
+  }, [setIsSaving, refreshDecorations, setDiffCount]);
 
   const {
     messages,
@@ -63,6 +82,9 @@ export function AIPanel({ documentId }: AIPanelProps) {
   }, [isStreaming]);
 
   const handleSubmit = (prompt: string) => {
+    clearDiffHighlights();
+    setDiffCount(0);
+    refreshDecorations();
     submitPrompt(prompt, model, { thinkHarder, verbose });
   };
 
