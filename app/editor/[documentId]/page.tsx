@@ -1,9 +1,8 @@
 "use client";
 
-import { use, useState } from "react";
-import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
+import { use, useState, useEffect } from "react";
+import { Authenticated, Unauthenticated, AuthLoading, useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Toolbar } from "@/components/layout/Toolbar";
@@ -17,6 +16,7 @@ import {
   useEditorContext,
 } from "@/components/editor/EditorContext";
 import { Bot, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 function RedirectToSignIn() {
   const router = useRouter();
@@ -96,7 +96,17 @@ function EditorPageContent({
 }) {
   const [showComments, setShowComments] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState(document.title || "");
   const { getEditorHtml } = useEditorContext();
+  const updateTitle = useMutation(api.documents.updateTitle);
+
+  const handleTitleSave = async () => {
+    if (editTitle.trim()) {
+      await updateTitle({ id: document._id, title: editTitle.trim() });
+    }
+    setIsEditingTitle(false);
+  };
 
   return (
     <div className="flex h-screen flex-col">
@@ -111,6 +121,31 @@ function EditorPageContent({
       <div className="flex flex-1 overflow-hidden">
         {/* Editor panel — full width on mobile, 2/3 on desktop */}
         <div className="flex min-h-0 flex-1 flex-col lg:border-r">
+          <div className="flex items-center border-b px-4 py-2">
+            {isEditingTitle ? (
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleTitleSave();
+                  if (e.key === "Escape") setIsEditingTitle(false);
+                }}
+                className="h-8 max-w-md text-lg font-semibold"
+                autoFocus
+              />
+            ) : (
+              <button
+                className="text-lg font-semibold text-foreground hover:text-muted-foreground"
+                onClick={() => {
+                  setEditTitle(document.title || "");
+                  setIsEditingTitle(true);
+                }}
+              >
+                {document.title || "Untitled"}
+              </button>
+            )}
+          </div>
           <EditorPanel
             documentId={document._id}
             initialContent={document.content}

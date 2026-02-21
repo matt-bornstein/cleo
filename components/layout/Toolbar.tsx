@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +29,6 @@ import { SettingsModal } from "@/components/modals/SettingsModal";
 import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Id } from "@/convex/_generated/dataModel";
-import { Input } from "@/components/ui/input";
 import { PresenceIndicator } from "@/components/editor/PresenceIndicator";
 import { exportAsHtml, exportAsText, exportAsMarkdown, htmlToMarkdown } from "@/lib/export";
 import { prosemirrorJsonToHtml } from "@/lib/editor/htmlSerializer";
@@ -57,17 +55,8 @@ export function Toolbar({
   const [showShare, setShowShare] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editTitle, setEditTitle] = useState(documentTitle || "");
   const { signOut } = useAuthActions();
-  const updateTitle = useMutation(api.documents.updateTitle);
 
-  const handleTitleSave = async () => {
-    if (documentId && editTitle.trim()) {
-      await updateTitle({ id: documentId, title: editTitle.trim() });
-    }
-    setIsEditingTitle(false);
-  };
 
   const handleExportHtml = () => {
     // Prefer live editor HTML if available, fall back to cached content
@@ -248,31 +237,6 @@ ${htmlContent}
         </div>
         <div className="flex items-center gap-2">
           {documentId && <PresenceIndicator documentId={documentId} />}
-          {documentId && (
-            isEditingTitle ? (
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onBlur={handleTitleSave}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleTitleSave();
-                  if (e.key === "Escape") setIsEditingTitle(false);
-                }}
-                className="h-7 w-48 text-sm"
-                autoFocus
-              />
-            ) : (
-              <button
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
-                onClick={() => {
-                  setEditTitle(documentTitle || "");
-                  setIsEditingTitle(true);
-                }}
-              >
-                {documentTitle || "Untitled"}
-              </button>
-            )
-          )}
           <Button variant="ghost" size="sm" onClick={() => void signOut()}>
             <LogOut className="h-4 w-4" />
           </Button>
