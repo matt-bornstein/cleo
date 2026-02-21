@@ -21,7 +21,6 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isUser = role === "user";
 
-  // For assistant messages, render basic formatting
   const renderedContent = useMemo(() => {
     if (isUser) return null;
     return renderAssistantContent(content);
@@ -73,36 +72,60 @@ export function MessageBubble({
 }
 
 /**
- * Basic rendering of AI assistant messages.
- * Converts code fences and search/replace blocks into styled HTML,
- * and applies basic inline formatting.
+ * Strip edit blocks from AI responses, keeping only the trailing summary
+ * that comes after the last edit block. For text-only responses (no edits),
+ * the full text is shown.
  */
 function renderAssistantContent(content: string): string {
-  let html = escapeHtml(content);
+  let text = content;
+  let lastEditEnd = -1;
 
-  // Convert code fences: ```language\ncode\n``` → <pre><code>
+  // Find the end position of every complete search/replace block
+  const srRegex = /<<<SEARCH\n[\s\S]*?\n===\n[\s\S]*?\n>>>/g;
+  let match;
+  while ((match = srRegex.exec(text)) !== null) {
+    lastEditEnd = Math.max(lastEditEnd, match.index + match[0].length);
+  }
+
+  // Find the end position of every complete HTML code fence
+  const htmlRegex = /```html\n[\s\S]*?\n```/g;
+  while ((match = htmlRegex.exec(text)) !== null) {
+    lastEditEnd = Math.max(lastEditEnd, match.index + match[0].length);
+  }
+
+  if (lastEditEnd !== -1) {
+    // Only keep text after the last edit block
+    text = text.substring(lastEditEnd);
+  }
+
+  // If still streaming into an edit block, show nothing yet
+  text = text.replace(/<<<SEARCH[\s\S]*$/, "");
+  text = text.replace(/```html[\s\S]*$/, "");
+
+  // If no edit blocks found but one is about to start, hide the intro text too
+  if (lastEditEnd === -1 && /<<<SEARCH|```html/.test(content)) {
+    text = "";
+  }
+
+  text = text.replace(/\n{3,}/g, "\n\n").trim();
+
+  let html = escapeHtml(text);
+
+  // Convert non-HTML code fences: ```language\ncode\n``` -> <pre><code>
   html = html.replace(
     /```(\w*)\n([\s\S]*?)```/g,
-    (_match, lang, code) => {
+    (_match, _lang, code) => {
       return `<pre class="ai-code-block"><code>${code.trim()}</code></pre>`;
     }
   );
 
-  // Convert search/replace blocks to styled display
-  html = html.replace(
-    /&lt;&lt;&lt;SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)\n&gt;&gt;&gt;/g,
-    (_match, search, replace) => {
-      return `<div class="ai-diff-block"><div class="ai-diff-search"><span class="ai-diff-label">Find:</span><pre>${search.trim()}</pre></div><div class="ai-diff-replace"><span class="ai-diff-label">Replace:</span><pre>${replace.trim()}</pre></div></div>`;
-    }
-  );
-
-  // Convert inline code: `code` → <code>
+  // Convert inline code: `code` -> <code>
   html = html.replace(/`([^`]+)`/g, '<code class="ai-inline-code">$1</code>');
 
-  // Convert bold: **text** → <strong>
+  // Convert bold: **text** -> <strong>
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 
-  // Convert italic: *text* → <em> (careful not to match **)
+  // Convert italic: *text* -> <em>
   html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
 
   // Convert newlines to <br>
