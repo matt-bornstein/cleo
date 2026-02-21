@@ -1,29 +1,39 @@
 import { httpRouter } from "convex/server";
 import { auth } from "./auth";
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { prosemirrorJsonToHtml } from "./lib/htmlSerializer";
 import { htmlToProsemirrorJson } from "./lib/htmlToJson";
 import { getServerSchema } from "./lib/schema";
 import { prosemirrorSync } from "./prosemirrorSync";
 import { Node } from "@tiptap/pm/model";
 import { Transform } from "@tiptap/pm/transform";
-import { recreateTransform } from "@technik-sde/prosemirror-recreate-transform";
 
 const http = httpRouter();
 
 // Auth routes
 auth.addHttpRoutes(http);
 
+// CORS headers shared by AI streaming endpoint responses
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+function jsonError(message: string, status: number) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 // AI streaming endpoint
 http.route({
   path: "/ai/stream",
   method: "POST",
   handler: httpAction(async (ctx, request) => {
-    // CORS headers
-    const headers = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    const streamHeaders = {
+      ...corsHeaders,
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
@@ -34,23 +44,17 @@ http.route({
       const { documentId, prompt, model } = body;
 
       if (!documentId || !prompt || !model) {
-        return new Response(
-          JSON.stringify({ error: "Missing required fields" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
+        return jsonError("Missing required fields", 400);
       }
 
-      // Get document content
-      const doc = await ctx.runQuery(api.documents.get, { id: documentId });
+      // Get document content (use internal queries to bypass auth in HTTP actions)
+      const doc = await ctx.runQuery(internal.documents.getInternal, { id: documentId });
       if (!doc) {
-        return new Response(
-          JSON.stringify({ error: "Document not found" }),
-          { status: 404, headers: { "Content-Type": "application/json" } }
-        );
+        return jsonError("Document not found", 404);
       }
 
       // Get chat history
-      const messages = await ctx.runQuery(api.ai.getMessages, { documentId });
+      const messages = await ctx.runQuery(internal.ai.getMessagesInternal, { documentId });
 
       // Get the AI model configuration
       const modelConfig = getModelConfig(model);
@@ -123,7 +127,7 @@ http.route({
           // Save the AI assistant message
           try {
             if (fullResponse) {
-              await ctx.runMutation(api.ai.saveMessage, {
+              await ctx.runMutation(internal.ai.saveMessageInternal, {
                 documentId,
                 role: "assistant",
                 content: fullResponse,
@@ -155,33 +159,17 @@ http.route({
                       // Build the new ProseMirror Node from our JSON
                       const targetDoc = Node.fromJSON(schema, newDocJson);
 
-                      // Use recreateTransform for MINIMAL steps that preserve
-                      // collaborator cursor positions outside changed regions.
-                      // This is critical: a full replaceWith(0, size, newContent)
-                      // would map ALL cursor positions to the end of the doc.
-                      try {
-                        const tr = recreateTransform(currentDoc, targetDoc, {
-                          complexSteps: true,
-                          wordDiffs: false,
-                          simplifyDiff: true,
-                        });
-                        if (tr.steps.length === 0) return null;
-                        return tr;
-                      } catch (e) {
-                        // Fallback to full replace if recreateTransform fails
-                        console.error("recreateTransform failed, using full replace:", e);
-                        const tr = new Transform(currentDoc);
-                        tr.replaceWith(0, currentDoc.content.size, targetDoc.content);
-                        if (tr.steps.length === 0) return null;
-                        return tr;
-                      }
+                      const tr = new Transform(currentDoc);
+                      tr.replaceWith(0, currentDoc.content.size, targetDoc.content);
+                      if (tr.steps.length === 0) return null;
+                      return tr;
                     }
                   );
                   transformApplied = true;
                 } catch (transformErr) {
                   console.error("prosemirrorSync.transform() failed, falling back to content update:", transformErr);
                   // Fallback: update cached content directly
-                  await ctx.runMutation(api.documents.updateContent, {
+                  await ctx.runMutation(internal.documents.updateContentInternal, {
                     id: documentId,
                     content: newContent,
                   });
@@ -189,14 +177,14 @@ http.route({
 
                 // Also update cached content for consistency
                 if (transformApplied) {
-                  await ctx.runMutation(api.documents.updateContent, {
+                  await ctx.runMutation(internal.documents.updateContentInternal, {
                     id: documentId,
                     content: newContent,
                   });
                 }
 
                 // Save AI diff record for version history
-                await ctx.runMutation(api.diffs.createAiDiff, {
+                await ctx.runMutation(internal.diffs.createAiDiffInternal, {
                   documentId,
                   content: newContent,
                   aiPrompt: prompt,
@@ -222,7 +210,7 @@ http.route({
 
           // Release the lock
           try {
-            await ctx.runMutation(api.ai.releaseLock, { documentId });
+            await ctx.runMutation(internal.ai.releaseLockInternal, { documentId });
           } catch (e) {
             console.error("Failed to release lock:", e);
           }
@@ -232,13 +220,10 @@ http.route({
       })();
 
       // Return the readable stream immediately
-      return new Response(readable, { status: 200, headers });
+      return new Response(readable, { status: 200, headers: streamHeaders });
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Internal error";
-      return new Response(JSON.stringify({ error: errMsg }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonError(errMsg, 500);
     }
   }),
 });
@@ -251,9 +236,8 @@ http.route({
     return new Response(null, {
       status: 200,
       headers: {
-        "Access-Control-Allow-Origin": "*",
+        ...corsHeaders,
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
   }),

@@ -46,7 +46,7 @@ export default defineSchema({
   // --- Diffs / Version History ---
   diffs: defineTable({
     documentId: v.id("documents"),
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
     patch: v.string(),
     snapshotAfter: v.string(), // ProseMirror JSON snapshot
     source: v.union(
@@ -91,7 +91,7 @@ export default defineSchema({
   // --- AI Chat Messages ---
   aiMessages: defineTable({
     documentId: v.id("documents"),
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
     role: v.union(
       v.literal("user"),
       v.literal("assistant"),

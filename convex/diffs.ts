@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { prosemirrorJsonToHtml } from "./lib/htmlSerializer";
 import { computeHtmlPatch } from "./lib/diffing";
@@ -121,6 +121,34 @@ export const createAiDiff = mutation({
   },
 });
 
+export const createAiDiffInternal = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    content: v.string(),
+    aiPrompt: v.optional(v.string()),
+    aiModel: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const doc = await ctx.db.get(args.documentId);
+    const previousContent = doc?.content ?? "";
+
+    const oldHtml = contentToHtml(previousContent);
+    const newHtml = contentToHtml(args.content);
+    const patch = computeHtmlPatch(oldHtml, newHtml);
+
+    const now = Date.now();
+    return await ctx.db.insert("diffs", {
+      documentId: args.documentId,
+      patch,
+      snapshotAfter: args.content,
+      source: "ai",
+      aiPrompt: args.aiPrompt,
+      aiModel: args.aiModel,
+      createdAt: now,
+    });
+  },
+});
+
 export const listByDocument = query({
   args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {
@@ -146,11 +174,14 @@ export const listByDocument = query({
     // Enrich with user info
     const enriched = await Promise.all(
       diffs.map(async (diff) => {
-        const user = await ctx.db.get(diff.userId);
-        return {
-          ...diff,
-          userName: user?.name ?? user?.email ?? "Unknown",
-        };
+        let userName = diff.source === "ai" ? "AI" : "Unknown";
+        if (diff.userId) {
+          const user = await ctx.db.get(diff.userId);
+          if (user && "name" in user) {
+            userName = user.name ?? (user as any).email ?? userName;
+          }
+        }
+        return { ...diff, userName };
       })
     );
 

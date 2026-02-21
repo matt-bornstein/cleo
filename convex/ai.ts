@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 const AI_LOCK_TIMEOUT = 120000; // 120 seconds
@@ -123,11 +123,14 @@ export const getMessages = query({
     // Enrich with user info
     const enriched = await Promise.all(
       filtered.map(async (msg) => {
-        const user = await ctx.db.get(msg.userId);
-        return {
-          ...msg,
-          userName: user?.name ?? user?.email ?? "Unknown",
-        };
+        let userName = msg.role === "assistant" ? "AI" : "Unknown";
+        if (msg.userId) {
+          const user = await ctx.db.get(msg.userId);
+          if (user && "name" in user) {
+            userName = user.name ?? (user as any).email ?? userName;
+          }
+        }
+        return { ...msg, userName };
       })
     );
 
@@ -143,6 +146,54 @@ export const clearChat = mutation({
 
     await ctx.db.patch(args.documentId, {
       chatClearedAt: Date.now(),
+    });
+  },
+});
+
+// Internal functions for use by HTTP actions (no auth checks)
+export const getMessagesInternal = internalQuery({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .collect();
+
+    const doc = await ctx.db.get(args.documentId);
+    const filtered = doc?.chatClearedAt
+      ? messages.filter((m) => m.createdAt > doc.chatClearedAt!)
+      : messages;
+
+    return filtered;
+  },
+});
+
+export const saveMessageInternal = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
+    content: v.string(),
+    model: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("aiMessages", {
+      documentId: args.documentId,
+      role: args.role,
+      content: args.content,
+      model: args.model,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const releaseLockInternal = internalMutation({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const doc = await ctx.db.get(args.documentId);
+    if (!doc) return;
+    await ctx.db.patch(args.documentId, {
+      aiLockedBy: undefined,
+      aiLockedAt: undefined,
     });
   },
 });

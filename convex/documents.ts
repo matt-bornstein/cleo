@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { prosemirrorSync } from "./prosemirrorSync";
 
@@ -221,5 +221,26 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.id);
+  },
+});
+
+// Internal functions for use by HTTP actions (no auth checks)
+export const getInternal = internalQuery({
+  args: { id: v.id("documents") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const updateContentInternal = internalMutation({
+  args: {
+    id: v.id("documents"),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      content: args.content,
+      updatedAt: Date.now(),
+    });
   },
 });
