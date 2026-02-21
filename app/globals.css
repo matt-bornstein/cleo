@@ -362,3 +362,14 @@
   word-break: break-word;
   font-family: var(--font-mono);
 }
+
+@keyframes dotPulse {
+  0%, 20% { opacity: 0; }
+  40% { opacity: 1; }
+  60%, 100% { opacity: 0; }
+}
+
+.editing-dot {
+  opacity: 0;
+  animation: dotPulse 1.2s infinite;
+}
