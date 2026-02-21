@@ -210,6 +210,27 @@ export const setRenderedPromptInternal = internalMutation({
   },
 });
 
+export const updateDiffIdInternal = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    diffId: v.id("diffs"),
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .order("desc")
+      .collect();
+
+    const latestAssistantMsg = messages.find((m) => m.role === "assistant");
+    if (latestAssistantMsg) {
+      await ctx.db.patch(latestAssistantMsg._id, {
+        diffId: args.diffId,
+      });
+    }
+  },
+});
+
 export const releaseLockInternal = internalMutation({
   args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {

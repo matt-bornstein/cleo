@@ -140,6 +140,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
               model={msg.model ?? undefined}
               diffId={msg.diffId ?? undefined}
               renderedPrompt={msg.renderedPrompt ?? undefined}
+              documentId={documentId}
             />
           ))}
 

@@ -215,6 +215,65 @@ export const getVersion = query({
   },
 });
 
+export const undoAiEdit = mutation({
+  args: {
+    documentId: v.id("documents"),
+    diffId: v.id("diffs"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", userId)
+      )
+      .first();
+
+    if (!permission || (permission.role !== "owner" && permission.role !== "editor")) {
+      throw new Error("Not authorized");
+    }
+
+    const aiDiff = await ctx.db.get(args.diffId);
+    if (!aiDiff) throw new Error("Diff not found");
+
+    // Find the diff immediately before this AI diff
+    const previousDiffs = await ctx.db
+      .query("diffs")
+      .withIndex("by_document_time", (q) =>
+        q.eq("documentId", args.documentId).lt("createdAt", aiDiff.createdAt)
+      )
+      .order("desc")
+      .first();
+
+    // Restore to previous snapshot, or empty doc if no prior diff exists
+    const restoreContent = previousDiffs?.snapshotAfter ?? JSON.stringify({ type: "doc", content: [] });
+
+    const now = Date.now();
+    const doc = await ctx.db.get(args.documentId);
+    const previousContent = doc?.content ?? "";
+    const oldHtml = contentToHtml(previousContent);
+    const newHtml = contentToHtml(restoreContent);
+    const patch = computeHtmlPatch(oldHtml, newHtml);
+
+    await ctx.db.insert("diffs", {
+      documentId: args.documentId,
+      userId,
+      patch,
+      snapshotAfter: restoreContent,
+      source: "manual",
+      createdAt: now,
+    });
+
+    await ctx.db.patch(args.documentId, {
+      content: restoreContent,
+      updatedAt: now,
+      lastDiffAt: now,
+    });
+  },
+});
+
 export const restore = mutation({
   args: {
     documentId: v.id("documents"),

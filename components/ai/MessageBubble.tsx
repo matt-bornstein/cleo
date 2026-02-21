@@ -1,8 +1,10 @@
 "use client";
 
-import { Bot, User, CheckCircle2, FileEdit } from "lucide-react";
+import { Bot, User, CheckCircle2, FileEdit, Undo2 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMemo, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,7 @@ interface MessageBubbleProps {
   diffId?: Id<"diffs">;
   isStreaming?: boolean;
   renderedPrompt?: string;
+  documentId?: Id<"documents">;
 }
 
 export function MessageBubble({
@@ -29,9 +32,12 @@ export function MessageBubble({
   diffId,
   isStreaming = false,
   renderedPrompt,
+  documentId,
 }: MessageBubbleProps) {
   const isUser = role === "user";
   const [showRaw, setShowRaw] = useState(false);
+  const [isUndoing, setIsUndoing] = useState(false);
+  const undoAiEdit = useMutation(api.diffs.undoAiEdit);
 
   const { html: renderedContent, isEditingNow } = useMemo(() => {
     if (isUser) return { html: null, isEditingNow: false };
@@ -93,6 +99,30 @@ export function MessageBubble({
           <div className="mt-1 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-3 w-3" />
             <span>Changes applied to document</span>
+            {documentId && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <button
+                  className="inline-flex items-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isUndoing}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!window.confirm("Undo this AI edit? The document will be restored to its state before this change.")) return;
+                    setIsUndoing(true);
+                    try {
+                      await undoAiEdit({ documentId, diffId });
+                    } catch (err) {
+                      console.error("Failed to undo:", err);
+                    } finally {
+                      setIsUndoing(false);
+                    }
+                  }}
+                >
+                  <Undo2 className="h-3 w-3" />
+                  <span>{isUndoing ? "Undoing..." : "Undo"}</span>
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

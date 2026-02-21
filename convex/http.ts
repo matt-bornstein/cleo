@@ -313,11 +313,16 @@ http.route({
                 id: documentId,
                 content: finalContent,
               });
-              await ctx.runMutation(internal.diffs.createAiDiffInternal, {
+              const diffId = await ctx.runMutation(internal.diffs.createAiDiffInternal, {
                 documentId,
                 content: finalContent,
                 aiPrompt: prompt,
                 aiModel: model,
+              });
+              // Link the diff to the AI assistant message
+              await ctx.runMutation(internal.ai.updateDiffIdInternal, {
+                documentId,
+                diffId,
               });
             } catch (e) {
               console.error("Failed to save final state:", e);
