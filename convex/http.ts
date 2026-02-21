@@ -174,6 +174,61 @@ http.route({
         }
       };
 
+      // Incremental full HTML streaming: apply complete elements as they arrive
+      let inHtmlFence = false;
+      let htmlFenceStart = -1;
+      let lastAppliedElementCount = 0;
+
+      const applyHtmlToDocument = async (html: string) => {
+        try {
+          const newDocJson = htmlToProsemirrorJson(html);
+          await prosemirrorSync.transform(ctx, documentId, schema, (currentDoc) => {
+            const targetDoc = Node.fromJSON(schema, newDocJson);
+            const tr = new Transform(currentDoc);
+            tr.replaceWith(0, currentDoc.content.size, targetDoc.content);
+            if (tr.steps.length === 0) return null;
+            return tr;
+          });
+          runningHtml = html;
+          await sendEvent("changes_applied", "Element streamed");
+        } catch (e) {
+          console.error("Failed to apply incremental HTML:", e);
+          try {
+            const newDocJson = htmlToProsemirrorJson(html);
+            await ctx.runMutation(internal.documents.updateContentInternal, {
+              id: documentId,
+              content: JSON.stringify(newDocJson),
+            });
+            runningHtml = html;
+          } catch (fallbackErr) {
+            console.error("HTML fallback also failed:", fallbackErr);
+          }
+        }
+      };
+
+      const tryApplyHtmlElements = async () => {
+        if (!inHtmlFence && accumulated.includes("```html\n")) {
+          inHtmlFence = true;
+          htmlFenceStart = accumulated.indexOf("```html\n") + "```html\n".length;
+        }
+        if (!inHtmlFence) return;
+
+        const closingIdx = accumulated.indexOf("\n```", htmlFenceStart);
+        const fenceContent = closingIdx !== -1
+          ? accumulated.substring(htmlFenceStart, closingIdx)
+          : accumulated.substring(htmlFenceStart);
+
+        const { count, endPos } = findCompleteTopLevelElements(fenceContent);
+        if (count > lastAppliedElementCount && endPos > 0) {
+          const completeHtml = fenceContent.substring(0, endPos).trim();
+          if (completeHtml) {
+            await applyHtmlToDocument(completeHtml);
+            blocksApplied = count;
+            lastAppliedElementCount = count;
+          }
+        }
+      };
+
       // Start streaming in background
       (async () => {
         try {
@@ -184,8 +239,8 @@ http.route({
             async (chunk: string) => {
               accumulated += chunk;
               await sendEvent("token", chunk);
-              // Check if a new complete block has appeared
               await tryApplyNewBlocks();
+              await tryApplyHtmlElements();
             }
           );
 
@@ -208,33 +263,26 @@ http.route({
             console.error("Failed to save AI message:", e);
           }
 
-          // Handle full HTML fallback (only if no blocks were applied)
-          if (blocksApplied === 0 && fullResponse && documentHtml) {
+          // Final pass: apply any remaining HTML elements or full HTML fallback
+          if (inHtmlFence && fullResponse) {
+            // One final element check now that streaming is complete
+            await tryApplyHtmlElements();
+
+            // If the fence is closed, apply the complete content as a final pass
+            // to catch any trailing elements the incremental parser missed
+            const fullHtml = extractFullHtmlFromResponse(fullResponse);
+            if (fullHtml && fullHtml.trim() !== runningHtml.trim()) {
+              await applyHtmlToDocument(fullHtml);
+              blocksApplied++;
+            }
+          } else if (blocksApplied === 0 && fullResponse && documentHtml) {
+            // No search/replace blocks and no HTML fence detected —
+            // check for a full HTML fence we might have missed
             try {
               const fullHtml = extractFullHtmlFromResponse(fullResponse);
               if (fullHtml) {
-                const newDocJson = htmlToProsemirrorJson(fullHtml);
-                const newContent = JSON.stringify(newDocJson);
-                try {
-                  await prosemirrorSync.transform(ctx, documentId, schema, (currentDoc) => {
-                    const targetDoc = Node.fromJSON(schema, newDocJson);
-                    const tr = new Transform(currentDoc);
-                    tr.replaceWith(0, currentDoc.content.size, targetDoc.content);
-                    if (tr.steps.length === 0) return null;
-                    return tr;
-                  });
-                  runningHtml = fullHtml;
-                  blocksApplied++;
-                } catch (transformErr) {
-                  console.error("Full HTML transform failed, using fallback:", transformErr);
-                  await ctx.runMutation(internal.documents.updateContentInternal, {
-                    id: documentId,
-                    content: newContent,
-                  });
-                  runningHtml = fullHtml;
-                  blocksApplied++;
-                }
-                await sendEvent("changes_applied", "Document replaced");
+                await applyHtmlToDocument(fullHtml);
+                blocksApplied++;
               }
             } catch (e) {
               console.error("Failed to apply full HTML:", e);
@@ -571,6 +619,77 @@ function extractFullHtmlFromResponse(response: string): string | null {
   const regex = /```html\n([\s\S]*?)\n```/;
   const match = regex.exec(response);
   return match ? match[1].trim() : null;
+}
+
+const VOID_ELEMENTS = new Set([
+  "area", "base", "br", "col", "embed", "hr", "img",
+  "input", "link", "meta", "param", "source", "track", "wbr",
+]);
+
+/**
+ * Walk HTML and count complete top-level elements, returning how many
+ * were found and the string position just past the last one. This lets
+ * us incrementally apply elements to the document as they stream in.
+ */
+function findCompleteTopLevelElements(html: string): { count: number; endPos: number } {
+  let count = 0;
+  let endPos = 0;
+  let depth = 0;
+  let i = 0;
+
+  while (i < html.length && /\s/.test(html[i])) i++;
+
+  while (i < html.length) {
+    if (html[i] !== "<") {
+      if (depth === 0) {
+        while (i < html.length && html[i] !== "<") i++;
+        continue;
+      }
+      i++;
+      continue;
+    }
+
+    if (html[i + 1] === "/") {
+      const closeMatch = html.substring(i).match(/^<\/([a-zA-Z][a-zA-Z0-9]*)\s*>/);
+      if (!closeMatch) break;
+
+      depth--;
+      i += closeMatch[0].length;
+
+      if (depth === 0) {
+        count++;
+        endPos = i;
+        while (i < html.length && /\s/.test(html[i])) i++;
+      }
+    } else if (html[i + 1] === "!") {
+      // Comment or doctype — skip
+      const commentEnd = html.indexOf("-->", i);
+      if (commentEnd === -1) break;
+      i = commentEnd + 3;
+      while (i < html.length && /\s/.test(html[i])) i++;
+    } else {
+      const openMatch = html.substring(i).match(/^<([a-zA-Z][a-zA-Z0-9]*)([^>]*?)(\/?)>/);
+      if (!openMatch) break;
+
+      const tagName = openMatch[1].toLowerCase();
+      const selfClosing = openMatch[3] === "/";
+      const isVoid = VOID_ELEMENTS.has(tagName);
+
+      i += openMatch[0].length;
+
+      if (selfClosing || isVoid) {
+        if (depth === 0) {
+          count++;
+          endPos = i;
+          while (i < html.length && /\s/.test(html[i])) i++;
+        }
+      } else {
+        depth++;
+      }
+    }
+  }
+
+  return { count, endPos };
 }
 
 export default http;
