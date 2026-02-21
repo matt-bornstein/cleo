@@ -34,8 +34,10 @@ export function AIPanel({ documentId }: AIPanelProps) {
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const viewport = scrollRef.current?.closest("[data-slot='scroll-area']")
+      ?.querySelector("[data-slot='scroll-area-viewport']") as HTMLElement | null;
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
     }
   }, [messages, streamingContent]);
 
@@ -72,7 +74,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-hidden">
         <div ref={scrollRef} className="p-3">
           {messages.length === 0 && !isStreaming && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
