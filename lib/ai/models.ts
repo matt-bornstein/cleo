@@ -8,18 +8,25 @@ export interface AIModel {
 
 export const AI_MODELS: AIModel[] = [
   {
+    id: "gpt-5.2",
+    name: "GPT-5.2",
+    provider: "openai",
+    maxTokens: 16384,
+    contextWindow: 1047576,
+  },
+  {
+    id: "gpt-5-mini",
+    name: "GPT-5 mini",
+    provider: "openai",
+    maxTokens: 16384,
+    contextWindow: 1047576,
+  },
+  {
     id: "gpt-4o",
     name: "GPT-4o",
     provider: "openai",
     maxTokens: 4096,
     contextWindow: 128000,
-  },
-  {
-    id: "gpt-4.1",
-    name: "GPT-4.1",
-    provider: "openai",
-    maxTokens: 4096,
-    contextWindow: 1047576,
   },
   {
     id: "claude-sonnet-4-20250514",
@@ -37,7 +44,7 @@ export const AI_MODELS: AIModel[] = [
   },
 ];
 
-export const DEFAULT_MODEL = "gpt-4o";
+export const DEFAULT_MODEL = "gpt-5.2";
 
 export function getModel(id: string): AIModel | undefined {
   return AI_MODELS.find((m) => m.id === id);
