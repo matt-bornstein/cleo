@@ -91,6 +91,19 @@ http.route({
         { role: "user", content: prompt },
       ];
 
+      // Store the rendered prompt on the user message for debugging
+      const renderedPrompt = aiMessages
+        .map((m) => `[${m.role}]\n${m.content}`)
+        .join("\n\n---\n\n");
+      try {
+        await ctx.runMutation(internal.ai.setRenderedPromptInternal, {
+          documentId,
+          renderedPrompt,
+        });
+      } catch (e) {
+        console.error("Failed to save rendered prompt:", e);
+      }
+
       // Call the AI provider
       let fullResponse = "";
       const { readable, writable } = new TransformStream();

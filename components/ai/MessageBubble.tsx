@@ -2,7 +2,14 @@
 
 import { Bot, User, CheckCircle2, FileEdit } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface MessageBubbleProps {
   role: "user" | "assistant" | "system";
@@ -11,6 +18,7 @@ interface MessageBubbleProps {
   model?: string;
   diffId?: Id<"diffs">;
   isStreaming?: boolean;
+  renderedPrompt?: string;
 }
 
 export function MessageBubble({
@@ -20,8 +28,10 @@ export function MessageBubble({
   model,
   diffId,
   isStreaming = false,
+  renderedPrompt,
 }: MessageBubbleProps) {
   const isUser = role === "user";
+  const [showRaw, setShowRaw] = useState(false);
 
   const { html: renderedContent, isEditingNow } = useMemo(() => {
     if (isUser) return { html: null, isEditingNow: false };
@@ -29,7 +39,11 @@ export function MessageBubble({
   }, [content, isUser, isStreaming]);
 
   return (
-    <div className="flex gap-3 py-3">
+    <>
+    <div
+      className="flex gap-3 py-3 cursor-pointer rounded-md hover:bg-muted/50 -mx-1 px-1 transition-colors"
+      onClick={() => !isStreaming && setShowRaw(true)}
+    >
       <div
         className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${
           isUser
@@ -65,7 +79,14 @@ export function MessageBubble({
         {isEditingNow && (
           <div className="mt-1 flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
             <FileEdit className="h-3 w-3" />
-            <span>Editing document...</span>
+            <span>
+              Editing document
+              <span className="editing-dots">
+                <span className="editing-dot" style={{ animationDelay: "0s" }}>.</span>
+                <span className="editing-dot" style={{ animationDelay: "0.2s" }}>.</span>
+                <span className="editing-dot" style={{ animationDelay: "0.4s" }}>.</span>
+              </span>
+            </span>
           </div>
         )}
         {diffId && (
@@ -76,6 +97,22 @@ export function MessageBubble({
         )}
       </div>
     </div>
+
+    <Dialog open={showRaw} onOpenChange={setShowRaw}>
+      <DialogContent className="sm:max-w-[700px]">
+        <DialogHeader>
+          <DialogTitle>
+            {isUser ? "Rendered Prompt" : "Raw AI Response"}
+          </DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="h-[400px] rounded-md border">
+          <pre className="p-4 text-xs whitespace-pre-wrap break-words font-mono">
+            {isUser ? (renderedPrompt || "Rendered prompt not available for this message.") : content}
+          </pre>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

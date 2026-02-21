@@ -83,7 +83,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
                 Ask AI to help edit your document.
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                It can rewrite, fix grammar, change tone, and more.
+                It can rewrite, fix grammar, change tone, correct formatting, and more.
               </p>
             </div>
           )}
@@ -96,6 +96,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
               userName={msg.userName}
               model={msg.model ?? undefined}
               diffId={msg.diffId ?? undefined}
+              renderedPrompt={msg.renderedPrompt ?? undefined}
             />
           ))}
 

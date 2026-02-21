@@ -189,6 +189,27 @@ export const saveMessageInternal = internalMutation({
   },
 });
 
+export const setRenderedPromptInternal = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    renderedPrompt: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .order("desc")
+      .collect();
+
+    const latestUserMsg = messages.find((m) => m.role === "user");
+    if (latestUserMsg) {
+      await ctx.db.patch(latestUserMsg._id, {
+        renderedPrompt: args.renderedPrompt,
+      });
+    }
+  },
+});
+
 export const releaseLockInternal = internalMutation({
   args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {

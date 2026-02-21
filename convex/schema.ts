@@ -100,6 +100,7 @@ export default defineSchema({
     content: v.string(),
     model: v.optional(v.string()),
     diffId: v.optional(v.id("diffs")),
+    renderedPrompt: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_document", ["documentId"]),
 });
