@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAIChat } from "@/hooks/useAIChat";
+import { useEditorContext } from "@/components/editor/EditorContext";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { ModelSelector } from "./ModelSelector";
@@ -19,6 +20,13 @@ interface AIPanelProps {
 
 export function AIPanel({ documentId }: AIPanelProps) {
   const [model, setModel] = useState(DEFAULT_MODEL);
+  const { setIsSaving } = useEditorContext();
+
+  const onChangesApplied = useCallback(() => {
+    setIsSaving(true);
+    setTimeout(() => setIsSaving(false), 1000);
+  }, [setIsSaving]);
+
   const {
     messages,
     isStreaming,
@@ -27,7 +35,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
     submitPrompt,
     cancelStream,
     clearChat,
-  } = useAIChat(documentId);
+  } = useAIChat(documentId, { onChangesApplied });
   const scrollRef = useRef<HTMLDivElement>(null);
   const document = useQuery(api.documents.get, { id: documentId });
   const isLocked = document?.aiLockedBy != null;

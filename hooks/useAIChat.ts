@@ -10,7 +10,11 @@ interface StreamEvent {
   content: string;
 }
 
-export function useAIChat(documentId: Id<"documents">) {
+interface UseAIChatOptions {
+  onChangesApplied?: () => void;
+}
+
+export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOptions) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +93,7 @@ export function useAIChat(documentId: Id<"documents">) {
                   // AI message is saved server-side
                   break;
                 case "changes_applied":
-                  // Document was updated by the AI
+                  options?.onChangesApplied?.();
                   break;
                 case "error":
                   setError(event.content);
