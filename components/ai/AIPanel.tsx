@@ -12,6 +12,7 @@ import { ModelSelector } from "./ModelSelector";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Trash2, Bot } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
 
 interface AIPanelProps {
@@ -20,6 +21,8 @@ interface AIPanelProps {
 
 export function AIPanel({ documentId }: AIPanelProps) {
   const [model, setModel] = useState(DEFAULT_MODEL);
+  const [thinkHarder, setThinkHarder] = useState(true);
+  const [verbose, setVerbose] = useState(true);
   const { setIsSaving } = useEditorContext();
 
   const onChangesApplied = useCallback(() => {
@@ -60,7 +63,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
   }, [isStreaming]);
 
   const handleSubmit = (prompt: string) => {
-    submitPrompt(prompt, model);
+    submitPrompt(prompt, model, { thinkHarder, verbose });
   };
 
   return (
@@ -161,6 +164,30 @@ export function AIPanel({ documentId }: AIPanelProps) {
             isStreaming
               ? "AI is working..."
               : "Ask AI to edit your document..."
+          }
+          leftSlot={
+            model.startsWith("gpt-5") ? (
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <Checkbox
+                    checked={thinkHarder}
+                    onCheckedChange={(v) => setThinkHarder(v === true)}
+                    disabled={isStreaming}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span className="text-xs text-muted-foreground">Think harder</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <Checkbox
+                    checked={verbose}
+                    onCheckedChange={(v) => setVerbose(v === true)}
+                    disabled={isStreaming}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span className="text-xs text-muted-foreground">Verbose</span>
+                </label>
+              </div>
+            ) : undefined
           }
         />
       </div>

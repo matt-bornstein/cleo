@@ -27,7 +27,7 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
   const clearChat = useMutation(api.ai.clearChat);
 
   const submitPrompt = useCallback(
-    async (prompt: string, model: string) => {
+    async (prompt: string, model: string, options?: { thinkHarder?: boolean; verbose?: boolean }) => {
       setError(null);
       setStreamingContent("");
 
@@ -60,6 +60,8 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
             documentId,
             prompt,
             model,
+            thinkHarder: options?.thinkHarder ?? false,
+            verbose: options?.verbose ?? false,
           }),
           signal: abortController.signal,
         });

@@ -10,6 +10,7 @@ interface ChatInputProps {
   onCancel?: () => void;
   disabled?: boolean;
   placeholder?: string;
+  leftSlot?: React.ReactNode;
 }
 
 export interface ChatInputHandle {
@@ -21,6 +22,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
   onCancel,
   disabled = false,
   placeholder = "Ask AI to edit your document...",
+  leftSlot,
 }, ref) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -48,24 +50,24 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
   };
 
   return (
-    <div className="space-y-1 p-3">
-      <div className="flex gap-2">
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          className="min-h-[60px] max-h-[120px] resize-none text-sm"
-          rows={2}
-        />
+    <div className="space-y-1.5 p-3">
+      <Textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="min-h-[100px] max-h-[180px] resize-none text-sm"
+        rows={4}
+      />
+      <div className="flex items-center justify-between">
+        <div>{leftSlot}</div>
         {disabled && onCancel ? (
           <Button
             size="sm"
             variant="secondary"
             onClick={onCancel}
-            className="self-end"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -74,15 +76,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
             size="sm"
             onClick={handleSubmit}
             disabled={!value.trim() || disabled}
-            className="self-end"
           >
             <Send className="h-4 w-4" />
           </Button>
         )}
       </div>
-      <p className="text-[10px] text-muted-foreground">
-        Enter to send · Shift+Enter for new line
-      </p>
     </div>
   );
 });
