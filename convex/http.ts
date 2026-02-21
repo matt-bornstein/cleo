@@ -41,7 +41,7 @@ http.route({
 
     try {
       const body = await request.json();
-      const { documentId, prompt, model } = body;
+      const { documentId, prompt, model, thinkHarder, verbose } = body;
 
       if (!documentId || !prompt || !model) {
         return jsonError("Missing required fields", 400);
@@ -116,6 +116,7 @@ http.route({
           fullResponse = await callAIProvider(
             modelConfig,
             aiMessages,
+            { thinkHarder: !!thinkHarder, verbose: !!verbose },
             async (chunk: string) => {
               await writer.write(
                 encoder.encode(`data: ${JSON.stringify({ type: "token", content: chunk })}\n\n`)
@@ -293,22 +294,29 @@ interface ModelConfig {
 
 function getModelConfig(model: string): ModelConfig | null {
   const models: Record<string, ModelConfig> = {
+    "gpt-5.2": { provider: "openai", modelId: "gpt-5.2" },
+    "gpt-5-mini": { provider: "openai", modelId: "gpt-5-mini" },
     "gpt-4o": { provider: "openai", modelId: "gpt-4o" },
-    "gpt-4.1": { provider: "openai", modelId: "gpt-4.1" },
     "claude-sonnet-4-20250514": { provider: "anthropic", modelId: "claude-sonnet-4-20250514" },
     "gemini-2.5-pro": { provider: "google", modelId: "gemini-2.5-pro" },
   };
   return models[model] || null;
 }
 
+interface AIOptions {
+  thinkHarder: boolean;
+  verbose: boolean;
+}
+
 async function callAIProvider(
   config: ModelConfig,
   messages: { role: string; content: string }[],
+  options: AIOptions,
   onChunk: (chunk: string) => Promise<void>
 ): Promise<string> {
   switch (config.provider) {
     case "openai":
-      return callOpenAI(config.modelId, messages, onChunk);
+      return callOpenAI(config.modelId, messages, options, onChunk);
     case "anthropic":
       return callAnthropic(config.modelId, messages, onChunk);
     case "google":
@@ -321,10 +329,28 @@ async function callAIProvider(
 async function callOpenAI(
   model: string,
   messages: { role: string; content: string }[],
+  options: AIOptions,
   onChunk: (chunk: string) => Promise<void>
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured. Set it via: npx convex env set OPENAI_API_KEY <key>");
+
+  const isGpt5 = model.startsWith("gpt-5");
+
+  const body: Record<string, unknown> = {
+    model,
+    messages: messages.map((m) => ({
+      role: m.role as "system" | "user" | "assistant",
+      content: m.content,
+    })),
+    stream: true,
+    max_completion_tokens: isGpt5 ? 16384 : 4096,
+  };
+
+  if (isGpt5) {
+    body.reasoning_effort = options.thinkHarder ? "high" : "low";
+    body.verbosity = options.verbose ? "high" : "low";
+  }
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -332,15 +358,7 @@ async function callOpenAI(
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      messages: messages.map((m) => ({
-        role: m.role as "system" | "user" | "assistant",
-        content: m.content,
-      })),
-      stream: true,
-      max_tokens: 4096,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
