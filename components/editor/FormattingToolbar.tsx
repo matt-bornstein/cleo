@@ -98,7 +98,7 @@ export function FormattingToolbar({ editor, documentId }: FormattingToolbarProps
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b px-2 py-1">
+    <div className="flex flex-wrap items-center gap-0.5 border-t px-2 py-1">
       {/* Undo/Redo */}
       <ToolbarButton
         onClick={() => editor.chain().focus().undo().run()}

@@ -110,7 +110,7 @@ function EditorPageContent({
       />
       <div className="flex flex-1 overflow-hidden">
         {/* Editor panel — full width on mobile, 2/3 on desktop */}
-        <div className="flex flex-1 flex-col lg:border-r">
+        <div className="flex min-h-0 flex-1 flex-col lg:border-r">
           <EditorPanel
             documentId={document._id}
             initialContent={document.content}

@@ -3,7 +3,6 @@
 import { useTiptapSync } from "@convex-dev/prosemirror-sync/tiptap";
 import {
   EditorProvider,
-  EditorContent,
   useCurrentEditor,
 } from "@tiptap/react";
 import { api } from "@/convex/_generated/api";
@@ -158,10 +157,14 @@ function SyncedEditor({
   );
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col">
       <EditorProvider
+        immediatelyRender={false}
         content={initialContent}
         extensions={allExtensions}
+        editorContainerProps={{
+          className: "min-h-0 flex-1 overflow-y-auto",
+        }}
         onUpdate={({ editor }) => {
           const json = JSON.stringify(editor.getJSON());
           scheduleIdleSave(json);
@@ -176,12 +179,11 @@ function SyncedEditor({
         editorProps={{
           attributes: {
             class:
-              "tiptap-content focus:outline-none min-h-[calc(100vh-10rem)] px-8 py-4",
+              "tiptap-content focus:outline-none px-8 py-4",
           },
         }}
       >
         <EditorToolbar documentId={documentId} editorRef={editorRefForDecorations} />
-        <EditorContent editor={null} />
       </EditorProvider>
     </div>
   );
