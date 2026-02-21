@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,7 +24,6 @@ import {
   MessageSquare,
   Printer,
 } from "lucide-react";
-import { NewDocModal } from "@/components/modals/NewDocModal";
 import { OpenDocModal } from "@/components/modals/OpenDocModal";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
@@ -50,12 +51,22 @@ export function Toolbar({
   showComments,
   getEditorHtml,
 }: ToolbarProps) {
-  const [showNewDoc, setShowNewDoc] = useState(false);
   const [showOpenDoc, setShowOpenDoc] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const { signOut } = useAuthActions();
+  const createDoc = useMutation(api.documents.create);
+  const router = useRouter();
+
+  const handleNewDoc = async () => {
+    try {
+      const docId = await createDoc({ title: "Untitled" });
+      router.push(`/editor/${docId}`);
+    } catch (error) {
+      console.error("Failed to create document:", error);
+    }
+  };
 
 
   const handleExportHtml = () => {
@@ -171,7 +182,7 @@ ${htmlContent}
     <>
       <div className="flex h-12 items-center justify-between border-b px-4">
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setShowNewDoc(true)}>
+          <Button variant="ghost" size="sm" onClick={handleNewDoc}>
             <FilePlus className="mr-1 h-4 w-4" />
             New
           </Button>
@@ -243,7 +254,7 @@ ${htmlContent}
         </div>
       </div>
 
-      <NewDocModal open={showNewDoc} onOpenChange={setShowNewDoc} />
+     
       <OpenDocModal open={showOpenDoc} onOpenChange={setShowOpenDoc} />
       {documentId && (
         <>
