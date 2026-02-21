@@ -122,7 +122,7 @@ function EditorPageContent({
         {/* Editor panel — full width on mobile, 2/3 on desktop */}
         <div className="flex min-h-0 flex-1 flex-col lg:border-r">
           <div className="flex h-11 items-center justify-between border-b px-4">
-            <div>
+            <div className="flex-1 min-w-0 mr-4">
               {isEditingTitle ? (
                 <Input
                   value={editTitle}
@@ -132,7 +132,7 @@ function EditorPageContent({
                     if (e.key === "Enter") handleTitleSave();
                     if (e.key === "Escape") setIsEditingTitle(false);
                   }}
-                  className="h-8 max-w-md text-lg font-semibold"
+                  className="h-8 w-full text-lg font-semibold"
                   autoFocus
                 />
               ) : (
