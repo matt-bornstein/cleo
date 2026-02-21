@@ -155,6 +155,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
         <ChatInput
           ref={chatInputRef}
           onSubmit={handleSubmit}
+          onCancel={cancelStream}
           disabled={isStreaming}
           placeholder={
             isStreaming
@@ -162,18 +163,6 @@ export function AIPanel({ documentId }: AIPanelProps) {
               : "Ask AI to edit your document..."
           }
         />
-        {isStreaming && (
-          <div className="px-3 pb-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={cancelStream}
-              className="w-full text-xs"
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );
