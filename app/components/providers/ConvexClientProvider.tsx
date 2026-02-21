@@ -3,8 +3,8 @@
 import { useMemo } from "react";
 import { isValidElement } from "react";
 import type { ReactNode } from "react";
+import { ConvexAuthNextjsProvider } from "@convex-dev/auth/nextjs";
 import { ConvexReactClient } from "convex/react";
-import { ConvexProvider } from "convex/react";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 type ConvexClientProviderProps = {
@@ -31,17 +31,18 @@ export function ConvexClientProvider({ children }: ConvexClientProviderProps) {
 
   if (!client) {
     return (
-      <>
-        <div className="border-b border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Convex is not connected (missing NEXT_PUBLIC_CONVEX_URL). Running with
-          local scaffolding data.
-        </div>
-        {toRenderableChildren(children)}
-      </>
+      <div className="border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+        Convex auth requires `NEXT_PUBLIC_CONVEX_URL`. Authentication is unavailable
+        until Convex is configured.
+      </div>
     );
   }
 
-  return <ConvexProvider client={client}>{toRenderableChildren(children)}</ConvexProvider>;
+  return (
+    <ConvexAuthNextjsProvider client={client}>
+      {toRenderableChildren(children)}
+    </ConvexAuthNextjsProvider>
+  );
 }
 
 function toRenderableChildren(value: unknown): ReactNode {

@@ -1,150 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  convexAuthNextjsMiddleware,
+  createRouteMatcher,
+} from "@convex-dev/auth/nextjs/server";
+import { NextResponse } from "next/server";
 
-import { shouldRedirectToSignIn } from "@/lib/auth/guards";
 import { sanitizeNextPath } from "@/lib/auth/nextPath";
-import { hasValidLocalAuthCookie, LOCAL_AUTH_COOKIE } from "@/lib/auth/session";
 
-export function middleware(request: NextRequest) {
-  const pathname = normalizePathname(request);
-  const nextPath = sanitizeNextPath(`${pathname}${normalizeSearch(request)}`);
-  const authCookie = getCookieValue(request, LOCAL_AUTH_COOKIE);
-  const isAuthenticated = hasValidLocalAuthCookie(authCookie);
+const isEditorRoute = createRouteMatcher(["/editor(.*)"]);
 
-  if (shouldRedirectToSignIn(pathname, isAuthenticated)) {
-    const signInUrl = createSignInUrl(request);
-    signInUrl.searchParams.set("next", nextPath);
-    return NextResponse.redirect(signInUrl);
+export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
+  const isAuthenticated = await convexAuth.isAuthenticated();
+
+  if (isEditorRoute(request) && !isAuthenticated) {
+    const nextPath = sanitizeNextPath(
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    );
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/sign-in";
+    redirectUrl.search = "";
+    redirectUrl.searchParams.set("next", nextPath);
+    return NextResponse.redirect(redirectUrl);
   }
 
-  return NextResponse.next();
-}
+  return null;
+});
 
 export const config = {
-  matcher: ["/editor/:path*"],
+  matcher: ["/editor/:path*", "/sign-in", "/api/auth/:path*"],
 };
-
-function normalizePathname(request: unknown) {
-  const nextUrl = readNextUrl(request);
-  if (!nextUrl || typeof nextUrl !== "object") {
-    return "/";
-  }
-
-  try {
-    if (
-      "pathname" in nextUrl &&
-      typeof nextUrl.pathname === "string"
-    ) {
-      return nextUrl.pathname;
-    }
-  } catch {
-    return "/";
-  }
-
-  return "/";
-}
-
-function normalizeSearch(request: unknown) {
-  const nextUrl = readNextUrl(request);
-  if (!nextUrl || typeof nextUrl !== "object") {
-    return "";
-  }
-
-  try {
-    if (
-      "search" in nextUrl &&
-      typeof nextUrl.search === "string"
-    ) {
-      return nextUrl.search;
-    }
-  } catch {
-    return "";
-  }
-
-  return "";
-}
-
-function getCookieValue(request: unknown, cookieName: string) {
-  if (!request || typeof request !== "object" || !("cookies" in request)) {
-    return undefined;
-  }
-
-  let cookies: unknown;
-  try {
-    cookies = (request as { cookies?: unknown }).cookies;
-  } catch {
-    return undefined;
-  }
-
-  const getCookie = readCookiesGetFunction(cookies);
-  if (!getCookie) {
-    return undefined;
-  }
-
-  let value: unknown;
-  try {
-    value = getCookie(cookieName);
-  } catch {
-    return undefined;
-  }
-  if (!value || typeof value !== "object" || !("value" in value)) {
-    return undefined;
-  }
-
-  return typeof value.value === "string" ? value.value : undefined;
-}
-
-function readCookiesGetFunction(cookies: unknown) {
-  if (!cookies || typeof cookies !== "object" || !("get" in cookies)) {
-    return undefined;
-  }
-
-  try {
-    const candidate = (cookies as { get?: unknown }).get;
-    if (typeof candidate !== "function") {
-      return undefined;
-    }
-
-    const owner = cookies as { get: (name: string) => unknown };
-    return (name: string) => Reflect.apply(candidate, owner, [name]);
-  } catch {
-    return undefined;
-  }
-}
-
-function createSignInUrl(request: unknown) {
-  const requestedUrl = readRequestUrl(request);
-  const baseUrl =
-    typeof requestedUrl === "string" && requestedUrl.length > 0
-      ? requestedUrl
-      : "http://localhost/";
-
-  try {
-    return new URL("/sign-in", baseUrl);
-  } catch {
-    return new URL("/sign-in", "http://localhost/");
-  }
-}
-
-function readNextUrl(request: unknown) {
-  if (!request || typeof request !== "object" || !("nextUrl" in request)) {
-    return undefined;
-  }
-
-  try {
-    return (request as { nextUrl?: unknown }).nextUrl;
-  } catch {
-    return undefined;
-  }
-}
-
-function readRequestUrl(request: unknown) {
-  if (!request || typeof request !== "object" || !("url" in request)) {
-    return undefined;
-  }
-
-  try {
-    return (request as { url?: unknown }).url;
-  } catch {
-    return undefined;
-  }
-}

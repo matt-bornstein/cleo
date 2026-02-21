@@ -1,9 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useAuthToken } from "@convex-dev/auth/react";
+import { useConvexAuth } from "convex/react";
+import { useQuery } from "convex/react";
 
 import { Button } from "@/components/ui/button";
-import { useDocuments } from "@/hooks/useDocuments";
+import { api } from "@/convex/_generated/api";
 import { useDocumentsConvex } from "@/hooks/useDocumentsConvex";
 import { useSettings } from "@/hooks/useSettings";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
@@ -11,14 +14,14 @@ import { normalizeEmailOrUndefined } from "@/lib/user/email";
 import { hasControlChars } from "@/lib/validators/controlChars";
 
 export default function EditorIndexPage() {
-  const useDocumentsImpl = process.env.NEXT_PUBLIC_CONVEX_URL
-    ? useDocumentsConvex
-    : useDocuments;
   const router = useRouter();
+  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
+  const authToken = useAuthToken();
+  const currentUser = useQuery(api.users.getCurrentUser, {});
   const { settings } = useSettings();
   const currentUserEmail =
     normalizeEmailOrUndefined(settings.userEmail) ?? DEFAULT_LOCAL_USER_EMAIL;
-  const { documents, create } = useDocumentsImpl(undefined, currentUserEmail);
+  const { documents, create } = useDocumentsConvex(undefined, currentUserEmail);
   const existingDocumentId = Array.isArray(documents)
     ? documents
         .map((document) => normalizeDocumentId(document?.id))
@@ -26,12 +29,20 @@ export default function EditorIndexPage() {
     : undefined;
 
   const handleContinue = async () => {
+    if (isAuthLoading || currentUser === undefined) {
+      return;
+    }
+    if (!isAuthenticated || authToken === null || currentUser === null) {
+      safeNavigate(router, "/sign-in?next=%2Feditor");
+      return;
+    }
+
     if (existingDocumentId) {
       safeNavigate(router, `/editor/${existingDocumentId}`);
       return;
     }
 
-    const document = await create("Untitled", currentUserEmail);
+    const document = await create("Untitled");
     const nextDocumentId = normalizeDocumentId(readCreatedDocumentId(document));
     safeNavigate(router, nextDocumentId ? `/editor/${nextDocumentId}` : "/editor");
   };
@@ -43,15 +54,18 @@ export default function EditorIndexPage() {
           Collaborative Rich Text Editor
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          This route creates or opens your latest local document shell.
+          Open your latest Convex-backed document, or create a new one.
         </p>
         <Button
           className="mt-6"
+          disabled={isAuthLoading || authToken === null || currentUser === undefined}
           onClick={() => {
             void handleContinue();
           }}
         >
-          Open editor
+          {isAuthLoading || authToken === null || currentUser === undefined
+            ? "Checking session..."
+            : "Open editor"}
         </Button>
       </section>
     </main>

@@ -4,9 +4,9 @@ import { vi } from "vitest";
 
 import { ConvexClientProvider } from "@/components/providers/ConvexClientProvider";
 
-const { convexReactClientMock, convexProviderMock } = vi.hoisted(() => ({
+const { convexReactClientMock, convexAuthProviderMock } = vi.hoisted(() => ({
   convexReactClientMock: vi.fn(),
-  convexProviderMock: vi.fn(),
+  convexAuthProviderMock: vi.fn(),
 }));
 
 vi.mock("convex/react", () => ({
@@ -14,9 +14,12 @@ vi.mock("convex/react", () => ({
     convexReactClientMock(url);
     return { url };
   },
-  ConvexProvider: (props: { children: ReactNode }) => {
-    convexProviderMock(props);
-    return <div data-testid="convex-provider">{props.children}</div>;
+}));
+
+vi.mock("@convex-dev/auth/nextjs", () => ({
+  ConvexAuthNextjsProvider: (props: { children: ReactNode }) => {
+    convexAuthProviderMock(props);
+    return <div data-testid="convex-auth-provider">{props.children}</div>;
   },
 }));
 
@@ -25,7 +28,7 @@ describe("ConvexClientProvider", () => {
 
   beforeEach(() => {
     convexReactClientMock.mockClear();
-    convexProviderMock.mockClear();
+    convexAuthProviderMock.mockClear();
     delete process.env.NEXT_PUBLIC_CONVEX_URL;
   });
 
@@ -33,7 +36,7 @@ describe("ConvexClientProvider", () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = originalConvexUrl;
   });
 
-  it("shows local fallback banner when convex url is missing", () => {
+  it("shows auth configuration error when convex url is missing", () => {
     render(
       <ConvexClientProvider>
         <div>App content</div>
@@ -41,13 +44,13 @@ describe("ConvexClientProvider", () => {
     );
 
     expect(
-      screen.getByText(/Convex is not connected \(missing NEXT_PUBLIC_CONVEX_URL\)/),
+      screen.getByText(/Convex auth requires `NEXT_PUBLIC_CONVEX_URL`/),
     ).toBeInTheDocument();
-    expect(screen.getByText("App content")).toBeInTheDocument();
+    expect(screen.queryByText("App content")).not.toBeInTheDocument();
     expect(convexReactClientMock).not.toHaveBeenCalled();
   });
 
-  it("uses convex provider when convex url is valid", () => {
+  it("uses convex auth provider when convex url is valid", () => {
     process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.convex.cloud";
 
     render(
@@ -57,7 +60,7 @@ describe("ConvexClientProvider", () => {
     );
 
     expect(convexReactClientMock).toHaveBeenCalledWith("https://example.convex.cloud");
-    expect(screen.getByTestId("convex-provider")).toBeInTheDocument();
+    expect(screen.getByTestId("convex-auth-provider")).toBeInTheDocument();
     expect(screen.getByText("Connected content")).toBeInTheDocument();
   });
 
@@ -67,13 +70,15 @@ describe("ConvexClientProvider", () => {
     render(<ConvexClientProvider>{123}</ConvexClientProvider>);
 
     expect(
-      screen.getByText(/Convex is not connected \(missing NEXT_PUBLIC_CONVEX_URL\)/),
+      screen.getByText(/Convex auth requires `NEXT_PUBLIC_CONVEX_URL`/),
     ).toBeInTheDocument();
-    expect(screen.getByText("123")).toBeInTheDocument();
+    expect(screen.queryByText("123")).not.toBeInTheDocument();
     expect(convexReactClientMock).not.toHaveBeenCalled();
   });
 
   it("renders only valid entries from mixed children arrays", () => {
+    process.env.NEXT_PUBLIC_CONVEX_URL = "https://example.convex.cloud";
+
     render(
       <ConvexClientProvider>
         {[<span key="ok">OK</span>, { bad: true }, "Tail"] as unknown as ReactNode}

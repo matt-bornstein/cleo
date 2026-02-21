@@ -134,18 +134,42 @@ You need at least one provider key. If none are set, AI uses local fallback beha
 
 ### 3) Google OAuth (required for Google sign-in)
 
+This app uses Convex Auth + Google OAuth. The callback is handled by your Convex deployment.
+
 1. In Google Cloud Console, create/select a project.
    - https://console.cloud.google.com/
-2. Configure OAuth consent screen.
-3. Create OAuth Client ID credentials for a Web application.
-4. Add authorized origins/redirect URIs required by your Convex auth deployment.
-5. Copy credentials into `.env.local`:
+2. Configure the OAuth consent screen.
+   - For local/dev testing with External audience, add your Google account(s) as test users.
+3. Create OAuth Client ID credentials for a **Web application**.
+4. Configure OAuth client URLs:
+   - **Authorized JavaScript origins**:
+     - local dev: `http://localhost:3000` (or your actual Next.js origin)
+   - **Authorized redirect URIs**:
+     - `https://<your-convex-deployment>.convex.site/api/auth/callback/google`
+     - Replace `<your-convex-deployment>` with your Convex deployment name.
+     - Important: this must use `.convex.site` (HTTP Actions URL), not `.convex.cloud`.
+5. Set Google credentials in your Convex deployment environment:
    ```bash
-   AUTH_GOOGLE_ID=...
-   AUTH_GOOGLE_SECRET=...
+   npx convex env set AUTH_GOOGLE_CLIENT_ID <your-google-client-id>
+   npx convex env set AUTH_GOOGLE_CLIENT_SECRET <your-google-client-secret>
+   ```
+6. Set your app URL in Convex so OAuth can redirect back correctly:
+   ```bash
+   npx convex env set SITE_URL http://localhost:3000
+   ```
+   - Use your real app URL/port if different.
+7. Keep local app env pointing to Convex in `app/.env.local`:
+   ```bash
+   CONVEX_DEPLOYMENT=...
+   NEXT_PUBLIC_CONVEX_URL=...
+   ```
+8. Restart both dev processes after env changes:
+   ```bash
+   npx convex dev
+   npm run dev
    ```
 
-If sign-in fails, double-check OAuth origin/redirect settings match your current local/Convex URLs.
+If sign-in fails, verify redirect URI/origin values exactly match your current local + Convex URLs.
 
 ## Environment variable reference
 
@@ -162,9 +186,25 @@ ANTHROPIC_API_KEY=
 GEMINI_API_KEY=
 
 # Google auth
-AUTH_GOOGLE_ID=
-AUTH_GOOGLE_SECRET=
+AUTH_GOOGLE_CLIENT_ID=
+AUTH_GOOGLE_CLIENT_SECRET=
 ```
+
+Note: `AUTH_GOOGLE_CLIENT_ID` / `AUTH_GOOGLE_CLIENT_SECRET` should also be set in Convex environment variables (`npx convex env set ...`) for Convex Auth to use them.
+
+## OAuth troubleshooting
+
+Common Google OAuth errors and fixes:
+
+- `redirect_uri_mismatch`
+  - Fix Authorized redirect URI in Google Cloud to:
+    `https://<deployment>.convex.site/api/auth/callback/google`
+- `origin_mismatch` / `unauthorized_origin`
+  - Add your local app origin (for example `http://localhost:3000`) to Authorized JavaScript origins.
+- `access_blocked` / app not verified / test-user issues
+  - Ensure OAuth consent screen is configured and your account is added as a test user (for External app in testing mode).
+- Redirects back to wrong port/domain
+  - Set Convex `SITE_URL` to your actual app origin (`npx convex env set SITE_URL ...`).
 
 ## Recommended local run flow
 

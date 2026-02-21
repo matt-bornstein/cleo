@@ -11,7 +11,7 @@ export const upsertCurrentUser = mutation({
   handler: async (ctx, args) => {
     const existingUsers = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("email", (q) => q.eq("email", args.email))
       .collect();
 
     if (existingUsers.length > 0) {
@@ -41,9 +41,16 @@ export const getCurrentUser = query({
 
     const users = (await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", identity.email!))
+      .withIndex("email", (q) => q.eq("email", identity.email!))
       .collect()) as Array<{ _id: string }>;
 
-    return users[0] ?? null;
+    const existingUser = users[0];
+    if (existingUser) {
+      return existingUser;
+    }
+
+    // Identity is authenticated but our app-level users row might not exist yet.
+    // Allow callers to gate on authenticated identity before create mutations.
+    return { email: identity.email };
   },
 });

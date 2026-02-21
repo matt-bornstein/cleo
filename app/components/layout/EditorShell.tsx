@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
+import { useConvexAuth } from "convex/react";
+import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 
 import { AIPanel } from "@/components/ai/AIPanel";
 import { CommentsSidebar } from "@/components/comments/CommentsSidebar";
@@ -17,21 +20,15 @@ import { ShareModal } from "@/components/modals/ShareModal";
 import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
 import { RenameDocModal } from "@/components/modals/RenameDocModal";
 import { normalizeDocumentId } from "@/lib/ai/documentId";
+import { api } from "@/convex/_generated/api";
 import { ensureCreatedDiff, restoreVersion, triggerIdleSave } from "@/lib/diffs/store";
 import { useComments } from "@/hooks/useComments";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useDocuments } from "@/hooks/useDocuments";
 import { useDocumentsConvex } from "@/hooks/useDocumentsConvex";
 import { usePresence } from "@/hooks/usePresence";
 import { useSettings } from "@/hooks/useSettings";
-import {
-  getRoleForUser,
-  hasDocumentAccess,
-  upsertPermission,
-} from "@/lib/permissions/store";
 import { hasPermission } from "@/lib/permissions";
-import { sanitizeShareRole } from "@/lib/permissions/shareLink";
 import { DEFAULT_LOCAL_USER_EMAIL } from "@/lib/user/defaults";
 import { normalizeEmailOrUndefined } from "@/lib/user/email";
 
@@ -40,13 +37,13 @@ type EditorShellProps = {
 };
 
 export function EditorShell({ documentId }: EditorShellProps) {
-  const useDocumentsImpl = process.env.NEXT_PUBLIC_CONVEX_URL
-    ? useDocumentsConvex
-    : useDocuments;
   const normalizedDocumentId = normalizeDocumentId(documentId);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const hasHydrated = useHasHydrated();
+  const { signOut } = useAuthActions();
+  const { isLoading: isAuthLoading, isAuthenticated } = useConvexAuth();
+  const authToken = useAuthToken();
+  const currentUser = useQuery(api.users.getCurrentUser, {});
   const { settings, refreshSettings } = useSettings();
   const currentUserEmail =
     normalizeEmailOrUndefined(settings.userEmail) ?? DEFAULT_LOCAL_USER_EMAIL;
@@ -58,8 +55,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
     updateContent,
     setChatClearedAt,
     remove,
-    refresh: refreshDocuments,
-  } = useDocumentsImpl(undefined, currentUserEmail);
+  } = useDocumentsConvex(undefined, currentUserEmail);
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
@@ -80,28 +76,11 @@ export function EditorShell({ documentId }: EditorShellProps) {
   const currentDocument = getById(normalizedDocumentId);
   const documentTitle = currentDocument?.title ?? "Untitled";
   const convexRole = readDocumentRole(currentDocument);
-  const myRole =
-    process.env.NEXT_PUBLIC_CONVEX_URL && convexRole
-      ? convexRole
-      : safeGetRoleForUser(
-          normalizedDocumentId,
-          currentUserEmail,
-          currentDocument?.ownerEmail,
-        );
-  const hasAccess =
-    process.env.NEXT_PUBLIC_CONVEX_URL
-      ? Boolean(currentDocument)
-      : safeHasDocumentAccess(
-          normalizedDocumentId,
-          currentUserEmail,
-          currentDocument?.ownerEmail,
-        );
+  const myRole = convexRole ?? "viewer";
+  const hasAccess = Boolean(currentDocument);
   const canEdit = hasPermission(myRole, "editor");
   const canComment = hasPermission(myRole, "commenter");
   const canShare = hasPermission(myRole, "owner");
-  const requestedShareRole = sanitizeShareRole(
-    readSearchParam(searchParams, "share"),
-  );
   const content =
     currentDocument?.content ??
     JSON.stringify({
@@ -136,41 +115,6 @@ export function EditorShell({ documentId }: EditorShellProps) {
   }, [settings.theme]);
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_CONVEX_URL) return;
-    if (!requestedShareRole) return;
-    if (myRole === "owner" || myRole === requestedShareRole) return;
-
-    const upserted = safeUpsertPermission(
-      normalizedDocumentId,
-      currentUserEmail,
-      requestedShareRole,
-    );
-    if (upserted) {
-      refreshDocuments();
-    }
-  }, [
-    normalizedDocumentId,
-    currentUserEmail,
-    myRole,
-    refreshDocuments,
-    requestedShareRole,
-  ]);
-
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_CONVEX_URL) return;
-    if (!requestedShareRole) return;
-    if (!(myRole === "owner" || myRole === requestedShareRole)) return;
-
-    const params = new URLSearchParams(readSearchParamsString(searchParams));
-    params.delete("share");
-    const cleaned = params.toString();
-    const nextPath = cleaned
-      ? `/editor/${normalizedDocumentId}?${cleaned}`
-      : `/editor/${normalizedDocumentId}`;
-    safeRouterReplace(router, nextPath);
-  }, [normalizedDocumentId, myRole, requestedShareRole, router, searchParams]);
-
-  useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       const isMeta = event.metaKey || event.ctrlKey;
       if (!isMeta) return;
@@ -203,7 +147,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
     return <div className="h-screen bg-slate-100" />;
   }
 
-  if (!hasAccess && !requestedShareRole) {
+  if (!hasAccess) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
         <section className="w-full max-w-md rounded-xl border border-red-200 bg-white p-6 shadow-sm">
@@ -243,11 +187,6 @@ export function EditorShell({ documentId }: EditorShellProps) {
       {!isOnline ? (
         <div className="border-b border-amber-300 bg-amber-100 px-4 py-2 text-xs font-medium text-amber-900">
           You are offline. Reconnect to sync collaboration and AI features.
-        </div>
-      ) : null}
-      {!hasAccess && requestedShareRole ? (
-        <div className="border-b border-blue-300 bg-blue-100 px-4 py-2 text-xs font-medium text-blue-900">
-          Applying shared access permissions...
         </div>
       ) : null}
       <EditorLayout
@@ -315,7 +254,17 @@ export function EditorShell({ documentId }: EditorShellProps) {
         open={newModalOpen}
         onOpenChange={setNewModalOpen}
         onCreateDocument={async (title: string) => {
-          const newDocument = await create(title, currentUserEmail);
+          if (
+            isAuthLoading ||
+            currentUser === undefined ||
+            !isAuthenticated ||
+            authToken === null ||
+            currentUser === null
+          ) {
+            safeRouterPush(router, "/sign-in?next=%2Feditor");
+            return;
+          }
+          const newDocument = await create(title);
           if (!newDocument || typeof newDocument !== "object") {
             safeRouterPush(router, "/editor");
             return;
@@ -399,7 +348,7 @@ export function EditorShell({ documentId }: EditorShellProps) {
         onOpenChange={setSettingsModalOpen}
         onSaved={refreshSettings}
         onSignOut={async () => {
-          await safeSignOutRequest();
+          await safeSignOut(signOut);
           safeRouterPush(router, "/sign-in");
           safeRouterRefresh(router);
         }}
@@ -408,38 +357,9 @@ export function EditorShell({ documentId }: EditorShellProps) {
   );
 }
 
-function readSearchParam(searchParams: unknown, key: string) {
-  if (!searchParams || typeof searchParams !== "object") {
-    return null;
-  }
-
-  const getFn = readSearchParamsGetFunction(searchParams);
-  if (!getFn) {
-    return null;
-  }
-
+async function safeSignOut(signOut: () => Promise<void>) {
   try {
-    return getFn(key);
-  } catch {
-    return null;
-  }
-}
-
-function readSearchParamsString(searchParams: unknown) {
-  if (!searchParams) {
-    return "";
-  }
-
-  try {
-    return String(searchParams);
-  } catch {
-    return "";
-  }
-}
-
-async function safeSignOutRequest() {
-  try {
-    await fetch("/api/auth/local-signout", { method: "POST" });
+    await signOut();
   } catch {
     return;
   }
@@ -460,21 +380,6 @@ function safeRouterPush(router: unknown, path: string) {
   }
 }
 
-function safeRouterReplace(router: unknown, path: string) {
-  if (!router || typeof router !== "object" || !("replace" in router)) {
-    return;
-  }
-
-  try {
-    const replace = (router as { replace?: unknown }).replace;
-    if (typeof replace === "function") {
-      replace(path);
-    }
-  } catch {
-    return;
-  }
-}
-
 function safeRouterRefresh(router: unknown) {
   if (!router || typeof router !== "object" || !("refresh" in router)) {
     return;
@@ -487,60 +392,6 @@ function safeRouterRefresh(router: unknown) {
     }
   } catch {
     return;
-  }
-}
-
-function readSearchParamsGetFunction(searchParams: unknown) {
-  if (!searchParams || typeof searchParams !== "object" || !("get" in searchParams)) {
-    return undefined;
-  }
-
-  try {
-    const candidate = (searchParams as { get?: unknown }).get;
-    if (typeof candidate !== "function") {
-      return undefined;
-    }
-
-    const owner = searchParams as { get: (name: string) => string | null };
-    return (name: string) => Reflect.apply(candidate, owner, [name]) as string | null;
-  } catch {
-    return undefined;
-  }
-}
-
-function safeGetRoleForUser(
-  documentId: string,
-  userEmail: string,
-  ownerEmail?: string,
-) {
-  try {
-    return getRoleForUser(documentId, userEmail, ownerEmail);
-  } catch {
-    return "viewer";
-  }
-}
-
-function safeHasDocumentAccess(
-  documentId: string,
-  userEmail: string,
-  ownerEmail?: string,
-) {
-  try {
-    return hasDocumentAccess(documentId, userEmail, ownerEmail);
-  } catch {
-    return false;
-  }
-}
-
-function safeUpsertPermission(
-  documentId: string,
-  email: string,
-  role: Parameters<typeof upsertPermission>[2],
-) {
-  try {
-    return upsertPermission(documentId, email, role);
-  } catch {
-    return null;
   }
 }
 

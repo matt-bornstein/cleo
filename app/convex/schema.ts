@@ -5,8 +5,14 @@ import { authTables } from "@convex-dev/auth/server";
 export default defineSchema({
   ...authTables,
   users: defineTable({
-    name: v.string(),
-    email: v.string(),
+    // Keep Convex Auth default OAuth/user fields so auth:store can upsert users.
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
     avatarUrl: v.optional(v.string()),
     settings: v.optional(
       v.object({
@@ -18,7 +24,9 @@ export default defineSchema({
         editorLineSpacing: v.optional(v.number()),
       }),
     ),
-  }).index("by_email", ["email"]),
+  })
+    // Convex Auth expects a users.email index with this exact name.
+    .index("email", ["email"]),
 
   documents: defineTable({
     title: v.string(),

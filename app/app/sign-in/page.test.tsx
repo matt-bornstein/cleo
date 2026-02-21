@@ -6,6 +6,7 @@ import SignInPage from "@/app/sign-in/page";
 
 const pushMock = vi.fn();
 const refreshMock = vi.fn();
+const signInMock = vi.fn();
 let mockedRouter: unknown = {
   push: pushMock,
   refresh: refreshMock,
@@ -13,16 +14,30 @@ let mockedRouter: unknown = {
 let mockedSearchParams: unknown = {
   get: () => "/editor/doc-1",
 };
+let mockedConvexAuthState = {
+  isAuthenticated: false,
+};
 
 vi.mock("next/navigation", () => ({
   useRouter: () => mockedRouter,
   useSearchParams: () => mockedSearchParams,
 }));
 
+vi.mock("@convex-dev/auth/react", () => ({
+  useAuthActions: () => ({
+    signIn: signInMock,
+  }),
+}));
+
+vi.mock("convex/react", () => ({
+  useConvexAuth: () => mockedConvexAuthState,
+}));
+
 describe("SignInPage", () => {
   beforeEach(() => {
     pushMock.mockReset();
     refreshMock.mockReset();
+    signInMock.mockReset();
     mockedRouter = {
       push: pushMock,
       refresh: refreshMock,
@@ -30,136 +45,59 @@ describe("SignInPage", () => {
     mockedSearchParams = {
       get: () => "/editor/doc-1",
     };
-    vi.restoreAllMocks();
+    mockedConvexAuthState = {
+      isAuthenticated: false,
+    };
   });
 
-  it("posts local sign-in request and redirects to sanitized next path", async () => {
+  it("starts Google sign-in with sanitized next path", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("{}", { status: 200 }),
-    );
+    signInMock.mockResolvedValue(undefined);
 
     render(<SignInPage />);
-    await user.click(screen.getByRole("button", { name: "Continue (local auth)" }));
+    await user.click(screen.getByRole("button", { name: "Continue with Google" }));
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth/local-signin",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ next: "/editor/doc-1" }),
-      }),
-    );
-    expect(pushMock).toHaveBeenCalledWith("/editor/doc-1");
-    expect(refreshMock).toHaveBeenCalled();
+    expect(signInMock).toHaveBeenCalledWith("google", {
+      redirectTo: "/editor/doc-1",
+    });
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("falls back to /editor when search params payload is malformed", async () => {
     const user = userEvent.setup();
     mockedSearchParams = 123;
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("{}", { status: 200 }),
-    );
+    signInMock.mockResolvedValue(undefined);
 
     render(<SignInPage />);
-    await user.click(screen.getByRole("button", { name: "Continue (local auth)" }));
+    await user.click(screen.getByRole("button", { name: "Continue with Google" }));
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth/local-signin",
-      expect.objectContaining({
-        body: JSON.stringify({ next: "/editor" }),
-      }),
-    );
-    expect(pushMock).toHaveBeenCalledWith("/editor");
-  });
-
-  it("falls back to /editor when search params getter throws", async () => {
-    const user = userEvent.setup();
-    mockedSearchParams = {
-      get: () => {
-        throw new Error("search params unavailable");
-      },
-    };
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("{}", { status: 200 }),
-    );
-
-    render(<SignInPage />);
-    await user.click(screen.getByRole("button", { name: "Continue (local auth)" }));
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth/local-signin",
-      expect.objectContaining({
-        body: JSON.stringify({ next: "/editor" }),
-      }),
-    );
-    expect(pushMock).toHaveBeenCalledWith("/editor");
-  });
-
-  it("falls back to /editor when search params get getter throws", async () => {
-    const user = userEvent.setup();
-    const malformedSearchParams = Object.create(null) as { get: unknown };
-    Object.defineProperty(malformedSearchParams, "get", {
-      get() {
-        throw new Error("get getter failed");
-      },
+    expect(signInMock).toHaveBeenCalledWith("google", {
+      redirectTo: "/editor",
     });
-    mockedSearchParams = malformedSearchParams;
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("{}", { status: 200 }),
-    );
-
-    render(<SignInPage />);
-    await user.click(screen.getByRole("button", { name: "Continue (local auth)" }));
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth/local-signin",
-      expect.objectContaining({
-        body: JSON.stringify({ next: "/editor" }),
-      }),
-    );
-    expect(pushMock).toHaveBeenCalledWith("/editor");
   });
 
-  it("shows error when sign-in response payload is malformed", async () => {
+  it("shows error when google sign-in throws", async () => {
     const user = userEvent.setup();
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({} as Response);
+    signInMock.mockRejectedValue(new Error("Sign in failed"));
 
     render(<SignInPage />);
-    await user.click(screen.getByRole("button", { name: "Continue (local auth)" }));
+    await user.click(screen.getByRole("button", { name: "Continue with Google" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Unable to sign in.")).toBeInTheDocument();
+      expect(screen.getByText("Sign in failed")).toBeInTheDocument();
     });
   });
 
-  it("does not throw when router getters are malformed", async () => {
-    const user = userEvent.setup();
-    const malformedRouter = Object.create(null) as {
-      push: unknown;
-      refresh: unknown;
+  it("redirects already-authenticated users to next path", async () => {
+    mockedConvexAuthState = {
+      isAuthenticated: true,
     };
-    Object.defineProperty(malformedRouter, "push", {
-      get() {
-        throw new Error("push getter failed");
-      },
-    });
-    Object.defineProperty(malformedRouter, "refresh", {
-      get() {
-        throw new Error("refresh getter failed");
-      },
-    });
-    mockedRouter = malformedRouter;
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("{}", { status: 200 }),
-    );
 
     render(<SignInPage />);
-    await user.click(screen.getByRole("button", { name: "Continue (local auth)" }));
-
-    expect(pushMock).not.toHaveBeenCalled();
-    expect(refreshMock).not.toHaveBeenCalled();
-    expect(
-      screen.queryByText("Unable to sign in."),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith("/editor/doc-1");
+    });
+    expect(refreshMock).toHaveBeenCalled();
   });
 });

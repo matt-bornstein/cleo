@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useEffect } from "react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvexAuth } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +12,8 @@ import { sanitizeNextPath } from "@/lib/auth/nextPath";
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { signIn } = useAuthActions();
+  const { isAuthenticated } = useConvexAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nextPath = useMemo(() => {
@@ -16,20 +21,19 @@ export default function SignInPage() {
     return sanitizeNextPath(rawNextPath);
   }, [searchParams]);
 
-  const handleLocalSignIn = async () => {
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+    safeRouterPush(router, nextPath);
+    safeRouterRefresh(router);
+  }, [isAuthenticated, nextPath, router]);
+
+  const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/auth/local-signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ next: nextPath }),
-      });
-      if (!response || typeof response !== "object" || response.ok !== true) {
-        throw new Error("Unable to sign in.");
-      }
-      safeRouterPush(router, nextPath);
-      safeRouterRefresh(router);
+      await signIn("google", { redirectTo: nextPath });
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Sign in failed.");
     } finally {
@@ -44,8 +48,7 @@ export default function SignInPage() {
           Sign in to continue
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Google OAuth + Convex Auth wiring is scaffolded. For local development,
-          use a local auth session to access protected editor routes.
+          Sign in with Google to access Convex-backed documents and collaboration data.
         </p>
         {error ? (
           <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -56,12 +59,9 @@ export default function SignInPage() {
           <Button
             className="w-full"
             disabled={isLoading}
-            onClick={() => void handleLocalSignIn()}
+            onClick={() => void handleGoogleSignIn()}
           >
-            {isLoading ? "Signing in..." : "Continue (local auth)"}
-          </Button>
-          <Button variant="secondary" className="w-full" disabled>
-            Continue with Google (scaffold)
+            {isLoading ? "Signing in..." : "Continue with Google"}
           </Button>
         </div>
       </section>
