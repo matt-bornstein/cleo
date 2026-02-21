@@ -126,8 +126,11 @@ export const getMessages = query({
         let userName = msg.role === "assistant" ? "AI" : "Unknown";
         if (msg.userId) {
           const user = await ctx.db.get(msg.userId);
-          if (user && "name" in user) {
-            userName = user.name ?? (user as any).email ?? userName;
+          if (user) {
+            userName =
+              (user as any).name ||
+              (user as any).email ||
+              userName;
           }
         }
         return { ...msg, userName };

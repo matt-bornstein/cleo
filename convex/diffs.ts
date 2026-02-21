@@ -177,8 +177,11 @@ export const listByDocument = query({
         let userName = diff.source === "ai" ? "AI" : "Unknown";
         if (diff.userId) {
           const user = await ctx.db.get(diff.userId);
-          if (user && "name" in user) {
-            userName = user.name ?? (user as any).email ?? userName;
+          if (user) {
+            userName =
+              (user as any).name ||
+              (user as any).email ||
+              userName;
           }
         }
         return { ...diff, userName };
