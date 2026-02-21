@@ -1,27 +1,37 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
-import { Authenticated } from "convex/react";
+import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 
-function RedirectToHome() {
-  const router = useRouter();
-  useEffect(() => {
-    router.push("/");
-  }, [router]);
-  return null;
-}
-
 export default function SignInPage() {
-  const { signIn } = useAuthActions();
+  const { signIn, signOut } = useAuthActions();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const clearedStaleToken = useRef(false);
+
+  // Clear stale tokens that the server rejected (e.g. after key rotation)
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !clearedStaleToken.current) {
+      clearedStaleToken.current = true;
+      signOut().catch(() => {});
+    }
+  }, [isLoading, isAuthenticated, signOut]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log("[auth] authenticated! redirecting to /");
+      router.replace("/");
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,12 +42,11 @@ export default function SignInPage() {
     formData.set("flow", isSignUp ? "signUp" : "signIn");
 
     try {
-      const { signingIn } = await signIn("password", formData);
-      if (!signingIn) {
+      const result = await signIn("password", formData);
+      if (!result.signingIn) {
         setError("Sign-in didn't complete. Please try again.");
+        setLoading(false);
       }
-      // If signingIn is true, the Authenticated component will render
-      // and redirect to home
     } catch (err) {
       console.error("signIn error:", err);
       setError(
@@ -47,18 +56,12 @@ export default function SignInPage() {
             ? "Failed to create account. Email may already be registered."
             : "Invalid email or password."
       );
-    } finally {
       setLoading(false);
     }
   };
 
   return (
     <>
-      {/* Redirect if already authenticated */}
-      <Authenticated>
-        <RedirectToHome />
-      </Authenticated>
-
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[380px] px-4">
           <div className="flex flex-col space-y-2 text-center">
@@ -129,7 +132,7 @@ export default function SignInPage() {
               type="password"
               placeholder="Password"
               required
-              minLength={6}
+              minLength={8}
               autoComplete={isSignUp ? "new-password" : "current-password"}
             />
             <input type="hidden" name="flow" value={isSignUp ? "signUp" : "signIn"} />
@@ -156,6 +159,7 @@ export default function SignInPage() {
               {isSignUp ? "Sign in" : "Sign up"}
             </button>
           </p>
+
         </div>
       </div>
     </>
