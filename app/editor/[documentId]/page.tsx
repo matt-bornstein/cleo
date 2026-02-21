@@ -121,7 +121,7 @@ function EditorPageContent({
       <div className="flex flex-1 overflow-hidden">
         {/* Editor panel — full width on mobile, 2/3 on desktop */}
         <div className="flex min-h-0 flex-1 flex-col lg:border-r">
-          <div className="flex items-center border-b px-4 py-2">
+          <div className="flex h-11 items-center border-b px-4">
             {isEditingTitle ? (
               <Input
                 value={editTitle}
