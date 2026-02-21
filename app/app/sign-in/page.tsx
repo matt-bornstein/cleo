@@ -22,19 +22,44 @@ export default function SignInPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    debugLog("state change", {
+      isAuthenticated,
+      isLoading,
+      nextPath,
+    });
+  }, [isAuthenticated, isLoading, nextPath]);
+
+  useEffect(() => {
     if (!isAuthenticated) {
+      debugLog("skip redirect because not authenticated yet", {
+        nextPath,
+      });
       return;
     }
+    debugLog("authenticated on sign-in page; redirecting", {
+      nextPath,
+    });
     safeRouterPush(router, nextPath);
     safeRouterRefresh(router);
   }, [isAuthenticated, nextPath, router]);
 
   const handleGoogleSignIn = async () => {
+    debugLog("google sign-in clicked", {
+      nextPath,
+    });
     setIsLoading(true);
     setError(null);
     try {
       await signIn("google", { redirectTo: nextPath });
+      debugLog("signIn call resolved", {
+        redirectTo: nextPath,
+      });
     } catch (requestError) {
+      debugLog("signIn call failed", {
+        redirectTo: nextPath,
+        error:
+          requestError instanceof Error ? requestError.message : "non-error thrown",
+      });
       setError(requestError instanceof Error ? requestError.message : "Sign in failed.");
     } finally {
       setIsLoading(false);
@@ -131,5 +156,18 @@ function readSearchParamsGetFunction(searchParams: unknown) {
     return (key: string) => Reflect.apply(candidate, owner, [key]) as string | null;
   } catch {
     return undefined;
+  }
+}
+
+function debugLog(message: string, data?: unknown) {
+  const prefix = `[sign-in-page ${new Date().toISOString()}]`;
+  if (data === undefined) {
+    console.info(prefix, message);
+    return;
+  }
+  try {
+    console.info(prefix, message, JSON.parse(JSON.stringify(data)));
+  } catch {
+    console.info(prefix, message, String(data));
   }
 }

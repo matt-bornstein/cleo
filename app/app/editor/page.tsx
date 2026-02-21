@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuthToken } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
 import { useQuery } from "convex/react";
+import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
@@ -28,22 +29,54 @@ export default function EditorIndexPage() {
         .find((documentId) => !!documentId)
     : undefined;
 
+  useClientAuthDebug({
+    isAuthLoading,
+    isAuthenticated,
+    hasAuthToken: authToken !== null,
+    currentUserStatus:
+      currentUser === undefined ? "loading" : currentUser === null ? "none" : "present",
+    documentsCount: Array.isArray(documents) ? documents.length : 0,
+    existingDocumentId,
+  });
+
   const handleContinue = async () => {
+    debugLog("handleContinue invoked", {
+      isAuthLoading,
+      isAuthenticated,
+      hasAuthToken: authToken !== null,
+      currentUserStatus:
+        currentUser === undefined ? "loading" : currentUser === null ? "none" : "present",
+      existingDocumentId,
+    });
     if (isAuthLoading || currentUser === undefined) {
+      debugLog("handleContinue early return: still loading auth/currentUser");
       return;
     }
     if (!isAuthenticated || authToken === null || currentUser === null) {
+      debugLog("handleContinue redirecting to sign-in", {
+        reason: {
+          isAuthenticated,
+          hasAuthToken: authToken !== null,
+          hasCurrentUser: currentUser !== null,
+        },
+      });
       safeNavigate(router, "/sign-in?next=%2Feditor");
       return;
     }
 
     if (existingDocumentId) {
+      debugLog("handleContinue opening existing document", { existingDocumentId });
       safeNavigate(router, `/editor/${existingDocumentId}`);
       return;
     }
 
+    debugLog("handleContinue creating new document");
     const document = await create("Untitled");
     const nextDocumentId = normalizeDocumentId(readCreatedDocumentId(document));
+    debugLog("document create result", {
+      createdDocumentId: nextDocumentId ?? null,
+      createReturnedNull: document === null,
+    });
     safeNavigate(router, nextDocumentId ? `/editor/${nextDocumentId}` : "/editor");
   };
 
@@ -109,5 +142,54 @@ function readCreatedDocumentId(document: unknown) {
     return (document as { id?: unknown }).id;
   } catch {
     return undefined;
+  }
+}
+
+function useClientAuthDebug(payload: {
+  isAuthLoading: boolean;
+  isAuthenticated: boolean;
+  hasAuthToken: boolean;
+  currentUserStatus: "loading" | "none" | "present";
+  documentsCount: number;
+  existingDocumentId: string | undefined;
+}) {
+  const {
+    isAuthLoading,
+    isAuthenticated,
+    hasAuthToken,
+    currentUserStatus,
+    documentsCount,
+    existingDocumentId,
+  } = payload;
+
+  useEffect(() => {
+    debugLog("state change", {
+      isAuthLoading,
+      isAuthenticated,
+      hasAuthToken,
+      currentUserStatus,
+      documentsCount,
+      existingDocumentId: existingDocumentId ?? null,
+    });
+  }, [
+    isAuthLoading,
+    isAuthenticated,
+    hasAuthToken,
+    currentUserStatus,
+    documentsCount,
+    existingDocumentId,
+  ]);
+}
+
+function debugLog(message: string, data?: unknown) {
+  const prefix = `[editor-index ${new Date().toISOString()}]`;
+  if (data === undefined) {
+    console.info(prefix, message);
+    return;
+  }
+  try {
+    console.info(prefix, message, JSON.parse(JSON.stringify(data)));
+  } catch {
+    console.info(prefix, message, String(data));
   }
 }

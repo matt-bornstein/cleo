@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
+import { getCurrentUserId } from "./currentUser";
 
 export const upsertCurrentUser = mutation({
   args: {
@@ -34,23 +35,16 @@ export const upsertCurrentUser = mutation({
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity?.email) {
+    const userId = await getCurrentUserId(ctx);
+    if (!userId) {
       return null;
     }
 
-    const users = (await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email!))
-      .collect()) as Array<{ _id: string }>;
-
-    const existingUser = users[0];
+    const existingUser = await ctx.db.get(userId);
     if (existingUser) {
       return existingUser;
     }
 
-    // Identity is authenticated but our app-level users row might not exist yet.
-    // Allow callers to gate on authenticated identity before create mutations.
-    return { email: identity.email };
+    return null;
   },
 });
