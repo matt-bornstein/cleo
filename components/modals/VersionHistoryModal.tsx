@@ -110,7 +110,7 @@ export function VersionHistoryModal({
         {previewDiff ? (
           /* Version preview */
           <div className="space-y-3">
-            <ScrollArea className="max-h-[350px] rounded-md border p-4">
+            <ScrollArea className="h-[350px] rounded-md border p-4">
               <div
                 className="tiptap-content text-sm"
                 dangerouslySetInnerHTML={{
