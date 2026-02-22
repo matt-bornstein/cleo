@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { useAIChat } from "@/hooks/useAIChat";
 import { useEditorContext } from "@/components/editor/EditorContext";
 import { MessageBubble } from "./MessageBubble";
+import { RestoreDivider } from "./RestoreDivider";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ModelSelector } from "./ModelSelector";
 import { Button } from "@/components/ui/button";
@@ -131,23 +132,34 @@ export function AIPanel({ documentId }: AIPanelProps) {
             </div>
           )}
 
-          {messages.map((msg, _idx, arr) => {
+          {messages.map((msg, idx, arr) => {
             const latestDiffIdx = arr.findLastIndex((m) => m.diffId);
             const latestDiffId = latestDiffIdx >= 0 ? arr[latestDiffIdx].diffId : undefined;
             const hasNewPromptAfterDiff = latestDiffIdx >= 0 &&
               arr.slice(latestDiffIdx + 1).some((m) => m.role === "user");
+
+            // Show "Restore here" divider above user messages (except the first message)
+            const showRestoreDivider = msg.role === "user" && idx > 0 && !isStreaming;
+
             return (
-              <MessageBubble
-                key={msg._id}
-                role={msg.role}
-                content={msg.content}
-                userName={msg.userName}
-                model={msg.model ?? undefined}
-                diffId={msg.diffId ?? undefined}
-                renderedPrompt={msg.renderedPrompt ?? undefined}
-                documentId={documentId}
-                showControls={!!msg.diffId && msg.diffId === latestDiffId && !hasNewPromptAfterDiff}
-              />
+              <div key={msg._id}>
+                {showRestoreDivider && (
+                  <RestoreDivider
+                    documentId={documentId}
+                    messageId={msg._id}
+                  />
+                )}
+                <MessageBubble
+                  role={msg.role}
+                  content={msg.content}
+                  userName={msg.userName}
+                  model={msg.model ?? undefined}
+                  diffId={msg.diffId ?? undefined}
+                  renderedPrompt={msg.renderedPrompt ?? undefined}
+                  documentId={documentId}
+                  showControls={!!msg.diffId && msg.diffId === latestDiffId && !hasNewPromptAfterDiff}
+                />
+              </div>
             );
           })}
 

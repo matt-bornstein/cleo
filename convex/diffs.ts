@@ -318,6 +318,40 @@ export const applyUndoInternal = internalMutation({
   },
 });
 
+/**
+ * Internal mutation: restore document content (for "Restore here" feature).
+ * Creates a diff record and updates the document, without touching any diff's undone flag.
+ */
+export const applyRestoreInternal = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    userId: v.id("users"),
+    restoreContent: v.string(),
+    currentContent: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const oldHtml = contentToHtml(args.currentContent);
+    const newHtml = contentToHtml(args.restoreContent);
+    const patch = computeHtmlPatch(oldHtml, newHtml);
+
+    const now = Date.now();
+    await ctx.db.insert("diffs", {
+      documentId: args.documentId,
+      userId: args.userId,
+      patch,
+      snapshotAfter: args.restoreContent,
+      source: "manual",
+      createdAt: now,
+    });
+
+    await ctx.db.patch(args.documentId, {
+      content: args.restoreContent,
+      updatedAt: now,
+      lastDiffAt: now,
+    });
+  },
+});
+
 export const restore = mutation({
   args: {
     documentId: v.id("documents"),

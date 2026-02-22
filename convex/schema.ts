@@ -104,6 +104,7 @@ export default defineSchema({
     model: v.optional(v.string()),
     diffId: v.optional(v.id("diffs")),
     renderedPrompt: v.optional(v.string()),
+    documentSnapshot: v.optional(v.string()), // ProseMirror JSON at time of user message
     createdAt: v.number(),
   }).index("by_document", ["documentId"]),
 });

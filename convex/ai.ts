@@ -79,6 +79,13 @@ export const saveMessage = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    // Capture document snapshot for user messages (used by "Restore here")
+    let documentSnapshot: string | undefined;
+    if (args.role === "user") {
+      const doc = await ctx.db.get(args.documentId);
+      documentSnapshot = doc?.content;
+    }
+
     return await ctx.db.insert("aiMessages", {
       documentId: args.documentId,
       userId,
@@ -86,6 +93,7 @@ export const saveMessage = mutation({
       content: args.content,
       model: args.model,
       diffId: args.diffId,
+      documentSnapshot,
       createdAt: Date.now(),
     });
   },
@@ -227,6 +235,67 @@ export const updateDiffIdInternal = internalMutation({
       await ctx.db.patch(latestAssistantMsg._id, {
         diffId: args.diffId,
       });
+    }
+  },
+});
+
+/**
+ * Internal query: get restore data for "Restore here" feature.
+ * Returns the snapshot and validates auth/permissions.
+ */
+export const getRestoreDataInternal = internalQuery({
+  args: {
+    documentId: v.id("documents"),
+    messageId: v.id("aiMessages"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", userId)
+      )
+      .first();
+
+    if (!permission || (permission.role !== "owner" && permission.role !== "editor")) {
+      throw new Error("Not authorized");
+    }
+
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+    if (!message.documentSnapshot) throw new Error("No snapshot available for this message");
+
+    const doc = await ctx.db.get(args.documentId);
+    const currentContent = doc?.content ?? "";
+
+    return { userId, restoreContent: message.documentSnapshot, currentContent };
+  },
+});
+
+/**
+ * Internal mutation: delete a message and all messages after it.
+ */
+export const deleteMessagesFromInternal = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    messageId: v.id("aiMessages"),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) return;
+
+    const allMessages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .collect();
+
+    // Delete this message and all messages created at or after it
+    for (const msg of allMessages) {
+      if (msg.createdAt >= message.createdAt) {
+        await ctx.db.delete(msg._id);
+      }
     }
   },
 });
