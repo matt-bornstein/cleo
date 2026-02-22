@@ -21,6 +21,7 @@ export const create = mutation({
     const now = Date.now();
     const documentId = await ctx.db.insert("documents", {
       title: args.title,
+      titleSet: false,
       content: EMPTY_DOC,
       createdAt: now,
       updatedAt: now,
@@ -126,6 +127,7 @@ export const updateTitle = mutation({
 
     await ctx.db.patch(args.id, {
       title: args.title,
+      titleSet: true,
       updatedAt: Date.now(),
     });
   },

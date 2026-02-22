@@ -89,6 +89,7 @@ function EditorPageContent({
   document: {
     _id: Id<"documents">;
     title: string;
+    titleSet?: boolean;
     content: string;
     myRole: string;
   };
@@ -98,7 +99,7 @@ function EditorPageContent({
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(document.title || "");
-  const { getEditorHtml, isSaving } = useEditorContext();
+  const { getEditorHtml, getEditorJson, isSaving } = useEditorContext();
   const updateTitle = useMutation(api.documents.updateTitle);
 
   const handleTitleSave = async () => {
@@ -139,7 +140,30 @@ function EditorPageContent({
                 <button
                   className="text-lg font-semibold text-foreground hover:text-muted-foreground"
                   onClick={() => {
-                    setEditTitle(document.title || "");
+                    let title = document.title || "";
+                    // Auto-populate from first line if title hasn't been set yet
+                    if (!document.titleSet) {
+                      try {
+                        const json = getEditorJson();
+                        if (json) {
+                          const doc = JSON.parse(json);
+                          const firstNode = doc.content?.[0];
+                          if (firstNode) {
+                            const extractText = (node: any): string => {
+                              if (node.text) return node.text;
+                              return (node.content || []).map(extractText).join("");
+                            };
+                            const firstLine = extractText(firstNode).trim();
+                            if (firstLine) {
+                              title = firstLine.substring(0, 180);
+                            }
+                          }
+                        }
+                      } catch {
+                        // Ignore — keep existing title
+                      }
+                    }
+                    setEditTitle(title);
                     setIsEditingTitle(true);
                   }}
                 >

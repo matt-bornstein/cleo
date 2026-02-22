@@ -8,6 +8,7 @@ export default defineSchema({
   // --- Documents ---
   documents: defineTable({
     title: v.string(),
+    titleSet: v.optional(v.boolean()), // false until user explicitly saves a title
     content: v.string(), // ProseMirror JSON (stringified) — cached snapshot
     lastDiffAt: v.optional(v.number()),
     chatClearedAt: v.optional(v.number()),
