@@ -49,6 +49,9 @@ export default defineSchema({
     userId: v.optional(v.id("users")),
     patch: v.string(),
     snapshotAfter: v.string(), // ProseMirror JSON snapshot
+    snapshotBefore: v.optional(v.string()), // ProseMirror JSON before AI edit (for undo)
+    undone: v.optional(v.boolean()), // true when an AI edit has been undone (toggles on reapply)
+    highlightData: v.optional(v.array(v.string())), // added/replaced text fragments for diff highlights
     source: v.union(
       v.literal("ai"),
       v.literal("manual"),

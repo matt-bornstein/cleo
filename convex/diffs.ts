@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { prosemirrorJsonToHtml } from "./lib/htmlSerializer";
 import { computeHtmlPatch } from "./lib/diffing";
@@ -125,6 +125,8 @@ export const createAiDiffInternal = internalMutation({
   args: {
     documentId: v.id("documents"),
     content: v.string(),
+    snapshotBefore: v.optional(v.string()),
+    highlightData: v.optional(v.array(v.string())),
     aiPrompt: v.optional(v.string()),
     aiModel: v.optional(v.string()),
   },
@@ -141,6 +143,8 @@ export const createAiDiffInternal = internalMutation({
       documentId: args.documentId,
       patch,
       snapshotAfter: args.content,
+      snapshotBefore: args.snapshotBefore,
+      highlightData: args.highlightData,
       source: "ai",
       aiPrompt: args.aiPrompt,
       aiModel: args.aiModel,
@@ -215,10 +219,18 @@ export const getVersion = query({
   },
 });
 
-export const undoAiEdit = mutation({
+/**
+ * Internal query: fetch undo/reapply data and verify auth/permissions.
+ * Auth context is propagated from the calling action.
+ *
+ * When `reapply` is false (default): returns `snapshotBefore` so we restore pre-AI state.
+ * When `reapply` is true: returns `snapshotAfter` so we re-apply the AI edit.
+ */
+export const getUndoDataInternal = internalQuery({
   args: {
     documentId: v.id("documents"),
     diffId: v.id("diffs"),
+    reapply: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -238,36 +250,68 @@ export const undoAiEdit = mutation({
     const aiDiff = await ctx.db.get(args.diffId);
     if (!aiDiff) throw new Error("Diff not found");
 
-    // Find the diff immediately before this AI diff
-    const previousDiffs = await ctx.db
-      .query("diffs")
-      .withIndex("by_document_time", (q) =>
-        q.eq("documentId", args.documentId).lt("createdAt", aiDiff.createdAt)
-      )
-      .order("desc")
-      .first();
+    let restoreContent: string;
 
-    // Restore to previous snapshot, or empty doc if no prior diff exists
-    const restoreContent = previousDiffs?.snapshotAfter ?? JSON.stringify({ type: "doc", content: [] });
+    if (args.reapply) {
+      // Reapply: restore to the state after the AI edit
+      restoreContent = aiDiff.snapshotAfter;
+    } else {
+      // Undo: restore to the snapshot captured before the AI edit started
+      restoreContent = aiDiff.snapshotBefore ?? "";
 
-    const now = Date.now();
+      // Fallback for older diffs created before snapshotBefore existed
+      if (!restoreContent) {
+        const previousDiff = await ctx.db
+          .query("diffs")
+          .withIndex("by_document_time", (q) =>
+            q.eq("documentId", args.documentId).lt("createdAt", aiDiff.createdAt)
+          )
+          .order("desc")
+          .first();
+        restoreContent = previousDiff?.snapshotAfter ?? JSON.stringify({ type: "doc", content: [] });
+      }
+    }
+
     const doc = await ctx.db.get(args.documentId);
-    const previousContent = doc?.content ?? "";
-    const oldHtml = contentToHtml(previousContent);
-    const newHtml = contentToHtml(restoreContent);
+    const currentContent = doc?.content ?? "";
+
+    return { userId, restoreContent, currentContent };
+  },
+});
+
+/**
+ * Internal mutation: apply the undo/reapply DB operations.
+ * Updates the AI diff's `undone` flag and patches the document.
+ */
+export const applyUndoInternal = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    diffId: v.id("diffs"),
+    userId: v.id("users"),
+    restoreContent: v.string(),
+    currentContent: v.string(),
+    undone: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const oldHtml = contentToHtml(args.currentContent);
+    const newHtml = contentToHtml(args.restoreContent);
     const patch = computeHtmlPatch(oldHtml, newHtml);
 
+    const now = Date.now();
     await ctx.db.insert("diffs", {
       documentId: args.documentId,
-      userId,
+      userId: args.userId,
       patch,
-      snapshotAfter: restoreContent,
+      snapshotAfter: args.restoreContent,
       source: "manual",
       createdAt: now,
     });
 
+    // Mark the AI diff as undone (or not, if reapplying)
+    await ctx.db.patch(args.diffId, { undone: args.undone });
+
     await ctx.db.patch(args.documentId, {
-      content: restoreContent,
+      content: args.restoreContent,
       updatedAt: now,
       lastDiffAt: now,
     });

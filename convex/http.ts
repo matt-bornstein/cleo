@@ -122,6 +122,7 @@ http.route({
       let blocksApplied = 0;
       let runningHtml = documentHtml;
       const schema = getServerSchema();
+      const highlightFragments: string[] = [];
 
       const applyBlockToDocument = async (search: string, replace: string) => {
         if (!runningHtml.includes(search)) {
@@ -140,6 +141,7 @@ http.route({
           });
           runningHtml = updatedHtml;
           blocksApplied++;
+          if (replace.trim()) highlightFragments.push(replace);
           await sendEvent("changes_applied", JSON.stringify({
             diffType: "search_replace",
             search,
@@ -155,6 +157,7 @@ http.route({
             });
             runningHtml = updatedHtml;
             blocksApplied++;
+            if (replace.trim()) highlightFragments.push(replace);
             await sendEvent("changes_applied", JSON.stringify({
               diffType: "search_replace",
               search,
@@ -200,6 +203,7 @@ http.route({
           });
           runningHtml = html;
           previousHtmlSnapshot = html;
+          if (html.trim()) highlightFragments.push(html);
           await sendEvent("changes_applied", JSON.stringify({
             diffType: "full_html",
             newHtml: html,
@@ -316,6 +320,8 @@ http.route({
               const diffId = await ctx.runMutation(internal.diffs.createAiDiffInternal, {
                 documentId,
                 content: finalContent,
+                snapshotBefore: doc.content,
+                highlightData: highlightFragments.length > 0 ? highlightFragments : undefined,
                 aiPrompt: prompt,
                 aiModel: model,
               });
