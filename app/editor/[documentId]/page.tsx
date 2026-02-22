@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useCallback } from "react";
 import { Authenticated, Unauthenticated, AuthLoading, useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
@@ -101,6 +101,7 @@ function EditorPageContent({
   const [editTitle, setEditTitle] = useState(document.title || "");
   const { getEditorHtml, getEditorJson, isSaving } = useEditorContext();
   const updateTitle = useMutation(api.documents.updateTitle);
+  const router = useRouter();
 
   const handleTitleSave = async () => {
     if (editTitle.trim()) {
@@ -175,6 +176,13 @@ function EditorPageContent({
               <span className="text-xs text-muted-foreground">
                 {isSaving ? "Saving..." : "Saved"}
               </span>
+              <button
+                className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => router.push("/")}
+                title="Close document"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
           <EditorPanel
