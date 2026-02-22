@@ -143,14 +143,10 @@ export function MessageBubble({
                   <button
                     className="cursor-pointer inline-flex items-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
                     disabled={isUndoing}
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      const actionName = isUndone ? "Reapply" : "Undo";
-                      const message = isUndone
-                        ? "Reapply this AI edit? The document will be restored to the AI-edited state."
-                        : "Undo this AI edit? The document will be restored to its state before this change.";
-                      if (!window.confirm(message)) return;
-                      setIsUndoing(true);
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const actionName = isUndone ? "Reapply" : "Undo";
+                    setIsUndoing(true);
                       try {
                         await undoAiEdit({ documentId, diffId, reapply: isUndone });
 
