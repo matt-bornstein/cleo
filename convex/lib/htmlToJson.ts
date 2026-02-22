@@ -188,11 +188,22 @@ function buildBlockNode(tag: string, attrsStr: string, innerTokens: Token[]): Pr
     case "ol":
       return { type: "orderedList", content: buildListItems(innerTokens) };
 
-    case "li":
+    case "li": {
+      const hasBlock = innerTokens.some(
+        (t) => t.type === "open" && isBlockTag(t.tag!)
+      );
+      if (hasBlock) {
+        const blockContent = buildNodes(innerTokens);
+        return {
+          type: "listItem",
+          content: blockContent.length > 0 ? blockContent : [{ type: "paragraph" }],
+        };
+      }
       return {
         type: "listItem",
         content: [{ type: "paragraph", content: buildInlineNodes(innerTokens) }],
       };
+    }
 
     case "blockquote":
       return { type: "blockquote", content: buildNodes(innerTokens) };
@@ -333,13 +344,33 @@ function buildListItems(tokens: Token[]): ProseMirrorNode[] {
     const token = tokens[i];
     if (token.type === "open" && token.tag === "li") {
       const { innerTokens, endIndex } = extractInner(tokens, i);
-      items.push({
-        type: "listItem",
-        content: [{
-          type: "paragraph",
-          content: buildInlineNodes(innerTokens),
-        }],
-      });
+
+      // Check if the <li> contains block-level elements (e.g. <p>, <ul>, <ol>)
+      const hasBlockContent = innerTokens.some(
+        (t) => t.type === "open" && isBlockTag(t.tag!)
+      );
+
+      if (hasBlockContent) {
+        // Parse block content properly (handles <li><p>text</p></li>,
+        // nested lists, and multi-paragraph items)
+        const blockContent = buildNodes(innerTokens);
+        items.push({
+          type: "listItem",
+          content: blockContent.length > 0
+            ? blockContent
+            : [{ type: "paragraph" }],
+        });
+      } else {
+        // Simple inline content: <li>text</li>
+        items.push({
+          type: "listItem",
+          content: [{
+            type: "paragraph",
+            content: buildInlineNodes(innerTokens),
+          }],
+        });
+      }
+
       i = endIndex + 1;
     } else {
       i++;

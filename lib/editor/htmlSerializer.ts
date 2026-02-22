@@ -52,8 +52,17 @@ export function prosemirrorJsonToHtml(node: any): string {
       return `<ul>\n${children}</ul>\n`;
     case "orderedList":
       return `<ol>\n${children}</ol>\n`;
-    case "listItem":
+    case "listItem": {
+      // If only one paragraph child, inline its content to produce clean <li>text</li>
+      // instead of <li><p>text</p></li> which causes whitespace issues on round-trip
+      if (node.content?.length === 1 && node.content[0].type === "paragraph") {
+        const inlineChildren = (node.content[0].content || [])
+          .map((child: any) => prosemirrorJsonToHtml(child))
+          .join("");
+        return `<li>${inlineChildren || "<br>"}</li>\n`;
+      }
       return `<li>${children}</li>\n`;
+    }
     case "taskList":
       return `<ul data-type="taskList">\n${children}</ul>\n`;
     case "taskItem": {
