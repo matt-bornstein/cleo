@@ -10,9 +10,8 @@ import { MessageBubble } from "./MessageBubble";
 import { RestoreDivider } from "./RestoreDivider";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ModelSelector } from "./ModelSelector";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Trash2, Bot } from "lucide-react";
+import { Loader2, Bot } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
 import { addDiffHighlight, clearDiffHighlights, diffHighlightsState } from "@/lib/editor/diffHighlights";
@@ -105,14 +104,12 @@ export function AIPanel({ documentId }: AIPanelProps) {
           <h3 className="text-sm font-medium">AI Assistant</h3>
         </div>
         {messages.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors"
             onClick={clearChat}
-            className="h-7 px-2"
           >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+            Clear
+          </button>
         )}
       </div>
 
