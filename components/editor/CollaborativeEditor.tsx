@@ -20,6 +20,7 @@ import {
 } from "@/lib/editor/commentHighlights";
 import { DiffHighlightsExtension } from "@/lib/editor/diffHighlights";
 import { FormattingToolbar } from "./FormattingToolbar";
+import { Ruler } from "./Ruler";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { usePresence } from "@/hooks/usePresence";
 import { useEditorContext } from "./EditorContext";
@@ -211,5 +212,10 @@ function EditorToolbar({
   }, [editor, setEditor, editorRef]);
 
   if (!editor) return null;
-  return <FormattingToolbar editor={editor} documentId={documentId} />;
+  return (
+    <>
+      <FormattingToolbar editor={editor} documentId={documentId} />
+      <Ruler leftOffset={48} />
+    </>
+  );
 }
