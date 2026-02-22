@@ -60,7 +60,7 @@ export function parseAIResponse(response: string): ParsedAIResponse {
  */
 function extractSearchReplaceBlocks(response: string): SearchReplaceBlock[] {
   const blocks: SearchReplaceBlock[] = [];
-  const regex = /<<<SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)\n>>>/g;
+  const regex = /<<<SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)>>>/g;
   let match;
 
   while ((match = regex.exec(response)) !== null) {
