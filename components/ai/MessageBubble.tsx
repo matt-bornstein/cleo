@@ -1,10 +1,12 @@
 "use client";
 
-import { Bot, User, CheckCircle2, FileEdit, Undo2 } from "lucide-react";
+import { Bot, User, CheckCircle2, FileEdit, Undo2, Redo2 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMemo, useState } from "react";
-import { useMutation } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEditorContext } from "@/components/editor/EditorContext";
+import { clearDiffHighlights, addDiffHighlight, diffHighlightsState } from "@/lib/editor/diffHighlights";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +24,7 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   renderedPrompt?: string;
   documentId?: Id<"documents">;
+  showControls?: boolean;
 }
 
 export function MessageBubble({
@@ -33,11 +36,16 @@ export function MessageBubble({
   isStreaming = false,
   renderedPrompt,
   documentId,
+  showControls = false,
 }: MessageBubbleProps) {
   const isUser = role === "user";
   const [showRaw, setShowRaw] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
-  const undoAiEdit = useMutation(api.diffs.undoAiEdit);
+  const undoAiEdit = useAction(api.undoAction.undoAiEdit);
+  const diff = useQuery(api.diffs.getVersion, diffId ? { diffId } : "skip");
+  const isUndone = diff?.undone === true;
+  const { diffCount, setDiffCount, refreshDecorations } = useEditorContext();
+  const hasActiveHighlights = diffCount > 0;
 
   const { html: renderedContent, isEditingNow } = useMemo(() => {
     if (isUser) return { html: null, isEditingNow: false };
@@ -96,34 +104,85 @@ export function MessageBubble({
           </div>
         )}
         {diffId && (
-          <div className="mt-1 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="h-3 w-3" />
-            <span>Changes applied to document</span>
-            {documentId && (
-              <>
-                <span className="text-muted-foreground">·</span>
+          showControls ? (
+            <div className={`mt-1 flex items-center gap-1 text-xs ${isUndone ? "text-muted-foreground" : "text-emerald-600 dark:text-emerald-400"}`}>
+              {isUndone ? (
+                <>
+                  <Undo2 className="h-3 w-3" />
+                  <span>Changes undone</span>
+                </>
+              ) : hasActiveHighlights ? (
                 <button
-                  className="inline-flex items-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                  disabled={isUndoing}
-                  onClick={async (e) => {
+                  className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
+                  onClick={(e) => {
                     e.stopPropagation();
-                    if (!window.confirm("Undo this AI edit? The document will be restored to its state before this change.")) return;
-                    setIsUndoing(true);
-                    try {
-                      await undoAiEdit({ documentId, diffId });
-                    } catch (err) {
-                      console.error("Failed to undo:", err);
-                    } finally {
-                      setIsUndoing(false);
-                    }
+                    clearDiffHighlights();
+                    setDiffCount(0);
+                    refreshDecorations();
                   }}
                 >
-                  <Undo2 className="h-3 w-3" />
-                  <span>{isUndoing ? "Undoing..." : "Undo"}</span>
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span>Accept changes</span>
                 </button>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span>Changes applied</span>
+                </>
+              )}
+              {documentId && (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <button
+                    className="inline-flex items-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={isUndoing}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const actionName = isUndone ? "Reapply" : "Undo";
+                      const message = isUndone
+                        ? "Reapply this AI edit? The document will be restored to the AI-edited state."
+                        : "Undo this AI edit? The document will be restored to its state before this change.";
+                      if (!window.confirm(message)) return;
+                      setIsUndoing(true);
+                      try {
+                        await undoAiEdit({ documentId, diffId, reapply: isUndone });
+
+                        // After reapply succeeds, restore diff highlights from saved data
+                        if (isUndone && diff?.highlightData?.length) {
+                          clearDiffHighlights();
+                          for (const fragment of diff.highlightData) {
+                            addDiffHighlight(fragment);
+                          }
+                          for (const delay of [300, 700, 1500]) {
+                            setTimeout(() => {
+                              refreshDecorations();
+                              setDiffCount(diffHighlightsState.diffs.length);
+                            }, delay);
+                          }
+                        }
+                      } catch (err) {
+                        console.error(`Failed to ${actionName.toLowerCase()}:`, err);
+                      } finally {
+                        setIsUndoing(false);
+                      }
+                    }}
+                  >
+                    {isUndone ? <Redo2 className="h-3 w-3" /> : <Undo2 className="h-3 w-3" />}
+                    <span>
+                      {isUndoing
+                        ? (isUndone ? "Reapplying..." : "Undoing...")
+                        : (isUndone ? "Reapply" : "Undo")}
+                    </span>
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="mt-1 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-3 w-3" />
+              <span>Changes applied</span>
+            </div>
+          )
         )}
       </div>
     </div>
