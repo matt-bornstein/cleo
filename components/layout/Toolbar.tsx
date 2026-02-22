@@ -23,6 +23,8 @@ import {
   FileCode,
   MessageSquare,
   Printer,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
@@ -39,6 +41,8 @@ interface ToolbarProps {
   documentContent?: string;
   onToggleComments?: () => void;
   showComments?: boolean;
+  onToggleRightPanel?: () => void;
+  showRightPanel?: boolean;
   getEditorHtml?: () => string | null;
 }
 
@@ -48,6 +52,8 @@ export function Toolbar({
   documentContent,
   onToggleComments,
   showComments,
+  onToggleRightPanel,
+  showRightPanel,
   getEditorHtml,
 }: ToolbarProps) {
   const [showShare, setShowShare] = useState(false);
@@ -243,6 +249,11 @@ ${htmlContent}
         </div>
         <div className="flex items-center gap-2">
           {documentId && <PresenceIndicator documentId={documentId} />}
+          {documentId && onToggleRightPanel && (
+            <Button variant="ghost" size="sm" onClick={onToggleRightPanel} title={showRightPanel ? "Hide panel" : "Show panel"}>
+              {showRightPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
             <Settings className="h-4 w-4" />
           </Button>

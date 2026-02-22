@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useRef, useCallback } from "react";
 import { Authenticated, Unauthenticated, AuthLoading, useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
@@ -97,10 +97,43 @@ function EditorPageContent({
 }) {
   const [showComments, setShowComments] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(true);
+  const [panelWidth, setPanelWidth] = useState(() =>
+    typeof window !== "undefined" ? Math.round(window.innerWidth / 4) : 400
+  );
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(document.title || "");
   const { getEditorHtml, getEditorJson, isSaving } = useEditorContext();
   const updateTitle = useMutation(api.documents.updateTitle);
+
+  // Drag resize logic
+  const isDragging = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    window.document.body.style.cursor = "col-resize";
+    window.document.body.style.userSelect = "none";
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newWidth = containerRect.right - e.clientX;
+      setPanelWidth(Math.max(280, Math.min(newWidth, containerRect.width * 0.6)));
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      window.document.body.style.cursor = "";
+      window.document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }, []);
 
   const handleTitleSave = async () => {
     if (editTitle.trim()) {
@@ -117,11 +150,13 @@ function EditorPageContent({
         documentContent={document.content}
         onToggleComments={() => setShowComments(!showComments)}
         showComments={showComments}
+        onToggleRightPanel={() => setShowRightPanel(!showRightPanel)}
+        showRightPanel={showRightPanel}
         getEditorHtml={getEditorHtml}
       />
-      <div className="flex flex-1 overflow-hidden">
-        {/* Editor panel — full width on mobile, 2/3 on desktop */}
-        <div className="flex min-h-0 flex-1 flex-col lg:border-r">
+      <div ref={containerRef} className="flex flex-1 overflow-hidden">
+        {/* Editor panel — fills remaining space */}
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex h-11 items-center justify-between border-b px-4">
             <div className="flex-1 min-w-0 mr-4">
               {isEditingTitle ? (
@@ -183,21 +218,35 @@ function EditorPageContent({
           />
         </div>
 
-        {/* Right side panel — hidden on mobile, shown on desktop */}
-        <div className="hidden w-1/3 flex-col lg:flex">
-          {showComments ? (
-            <div className="flex h-full flex-col">
-              <ScrollArea className="h-1/2 border-b">
-                <CommentsSidebar documentId={document._id} />
-              </ScrollArea>
-              <div className="h-1/2">
-                <AIPanel documentId={document._id} />
-              </div>
+        {/* Right side panel — resizable, hidden on mobile */}
+        {showRightPanel && (
+          <>
+            {/* Drag handle */}
+            <div
+              className="hidden lg:flex w-1.5 cursor-col-resize items-center justify-center border-x bg-muted/30 hover:bg-muted transition-colors"
+              onMouseDown={handleMouseDown}
+            >
+              <div className="h-8 w-0.5 rounded-full bg-muted-foreground/30" />
             </div>
-          ) : (
-            <AIPanel documentId={document._id} />
-          )}
-        </div>
+            <div
+              className="hidden flex-col lg:flex"
+              style={{ width: panelWidth, minWidth: 280, flexShrink: 0 }}
+            >
+              {showComments ? (
+                <div className="flex h-full flex-col">
+                  <ScrollArea className="h-1/2 border-b">
+                    <CommentsSidebar documentId={document._id} />
+                  </ScrollArea>
+                  <div className="h-1/2">
+                    <AIPanel documentId={document._id} />
+                  </div>
+                </div>
+              ) : (
+                <AIPanel documentId={document._id} />
+              )}
+            </div>
+          </>
+        )}
 
         {/* Mobile: AI panel overlay drawer */}
         {showAiPanel && (
