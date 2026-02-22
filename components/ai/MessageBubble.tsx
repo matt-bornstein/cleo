@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, User, CheckCircle2, FileEdit, Undo2, Redo2 } from "lucide-react";
+import { Bot, User, CheckCircle2, FileEdit, Undo2, Redo2, ArrowRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMemo, useState } from "react";
 import { useAction, useQuery } from "convex/react";
@@ -128,7 +128,7 @@ export function MessageBubble({
                     refreshDecorations();
                   }}
                 >
-                  <CheckCircle2 className="h-3 w-3" />
+                  <ArrowRight className="h-3 w-3" />
                   <span>Accept changes</span>
                 </button>
               ) : (
