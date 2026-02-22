@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useEditorContext } from "@/components/editor/EditorContext";
+import { clearDiffHighlights } from "@/lib/editor/diffHighlights";
 
 interface RestoreDividerProps {
   documentId: Id<"documents">;
@@ -13,6 +15,7 @@ interface RestoreDividerProps {
 export function RestoreDivider({ documentId, messageId }: RestoreDividerProps) {
   const [isRestoring, setIsRestoring] = useState(false);
   const restoreToMessage = useAction(api.undoAction.restoreToMessage);
+  const { refreshDecorations, setDiffCount } = useEditorContext();
 
   return (
     <div className="group/restore relative -mx-1 px-1 h-0 hover:h-6 overflow-visible transition-[height] duration-200">
@@ -26,6 +29,9 @@ export function RestoreDivider({ documentId, messageId }: RestoreDividerProps) {
           setIsRestoring(true);
           try {
             await restoreToMessage({ documentId, messageId });
+            clearDiffHighlights();
+            setDiffCount(0);
+            refreshDecorations();
           } catch (err) {
             console.error("Failed to restore:", err);
           } finally {
