@@ -22,8 +22,8 @@ interface AIPanelProps {
 
 export function AIPanel({ documentId }: AIPanelProps) {
   const [model, setModel] = useState(DEFAULT_MODEL);
-  const [thinkHarder, setThinkHarder] = useState(true);
-  const [verbose, setVerbose] = useState(true);
+  const [thinkHarder, setThinkHarder] = useState(false);
+  const [verbose, setVerbose] = useState(false);
   const { setIsSaving, refreshDecorations, setDiffCount } = useEditorContext();
 
   const onChangesApplied = useCallback((diffMetadata: string) => {
