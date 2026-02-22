@@ -130,7 +130,10 @@ http.route({
       // editor treats consecutive <p> elements as lines — an empty <p></p>
       // is needed to indicate a real paragraph break.
       const addParagraphSeparators = (html: string): string => {
-        const lines = html.split("\n");
+        // Normalize: ensure each </p><p> boundary is on its own line
+        // so the line-based logic below can detect consecutive paragraphs
+        const normalized = html.replace(/<\/p>\s*<p>/g, "</p>\n<p>");
+        const lines = normalized.split("\n");
         const result: string[] = [];
         for (let i = 0; i < lines.length; i++) {
           result.push(lines[i]);
