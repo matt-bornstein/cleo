@@ -55,8 +55,7 @@ export function MessageBubble({
   return (
     <>
     <div
-      className="flex gap-3 py-3 cursor-pointer rounded-md hover:bg-muted/50 -mx-1 px-1 transition-colors"
-      onClick={() => !isStreaming && setShowRaw(true)}
+      className="flex gap-3 py-3 rounded-md -mx-1 px-1"
     >
       <div
         className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${
@@ -78,6 +77,14 @@ export function MessageBubble({
           </span>
           {model && (
             <span className="text-xs text-muted-foreground">{model}</span>
+          )}
+          {!isStreaming && (
+            <button
+              className="cursor-pointer text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              onClick={() => setShowRaw(true)}
+            >
+              raw
+            </button>
           )}
         </div>
         {isUser ? (
@@ -113,7 +120,7 @@ export function MessageBubble({
                 </>
               ) : hasActiveHighlights ? (
                 <button
-                  className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
+                  className="cursor-pointer inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
                     clearDiffHighlights();
@@ -134,7 +141,7 @@ export function MessageBubble({
                 <>
                   <span className="text-muted-foreground">·</span>
                   <button
-                    className="inline-flex items-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                    className="cursor-pointer inline-flex items-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
                     disabled={isUndoing}
                     onClick={async (e) => {
                       e.stopPropagation();
