@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   FilePlus,
+  X,
   Share2,
   Settings,
   LogOut,
@@ -185,6 +186,10 @@ ${htmlContent}
           </Button>
           {documentId && (
             <>
+              <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
+                <X className="mr-1 h-4 w-4" />
+                Close
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowShare(true)}>
                 <Share2 className="mr-1 h-4 w-4" />
                 Share
