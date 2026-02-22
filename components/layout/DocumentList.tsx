@@ -37,7 +37,7 @@ export function DocumentList() {
         {documents.map((doc) => (
           <button
             key={doc._id}
-            className="flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors hover:bg-accent"
+            className="cursor-pointer flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors hover:bg-accent"
             onClick={() => router.push(`/editor/${doc._id}`)}
           >
             <div className="flex items-center gap-3 min-w-0">
