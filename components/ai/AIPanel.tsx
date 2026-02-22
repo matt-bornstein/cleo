@@ -131,18 +131,22 @@ export function AIPanel({ documentId }: AIPanelProps) {
             </div>
           )}
 
-          {messages.map((msg) => (
-            <MessageBubble
-              key={msg._id}
-              role={msg.role}
-              content={msg.content}
-              userName={msg.userName}
-              model={msg.model ?? undefined}
-              diffId={msg.diffId ?? undefined}
-              renderedPrompt={msg.renderedPrompt ?? undefined}
-              documentId={documentId}
-            />
-          ))}
+          {messages.map((msg, _idx, arr) => {
+            const latestDiffId = arr.findLast((m) => m.diffId)?.diffId;
+            return (
+              <MessageBubble
+                key={msg._id}
+                role={msg.role}
+                content={msg.content}
+                userName={msg.userName}
+                model={msg.model ?? undefined}
+                diffId={msg.diffId ?? undefined}
+                renderedPrompt={msg.renderedPrompt ?? undefined}
+                documentId={documentId}
+                showControls={!!msg.diffId && msg.diffId === latestDiffId}
+              />
+            );
+          })}
 
           {/* Streaming response */}
           {isStreaming && streamingContent && (
