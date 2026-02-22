@@ -155,8 +155,8 @@
 }
 
 .tiptap-content p {
-  margin-bottom: 0.75em;
-  line-height: 1.6;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .tiptap-content ul,

@@ -124,6 +124,37 @@ http.route({
       const schema = getServerSchema();
       const highlightFragments: string[] = [];
 
+      // Post-process AI-generated HTML to insert empty <p></p> paragraph
+      // separators between consecutive non-empty <p> elements. The AI
+      // generates standard HTML where each <p> is a paragraph, but our
+      // editor treats consecutive <p> elements as lines — an empty <p></p>
+      // is needed to indicate a real paragraph break.
+      const addParagraphSeparators = (html: string): string => {
+        const lines = html.split("\n");
+        const result: string[] = [];
+        for (let i = 0; i < lines.length; i++) {
+          result.push(lines[i]);
+          if (i < lines.length - 1) {
+            const current = lines[i].trim();
+            const next = lines[i + 1].trim();
+            const isCurrentNonEmptyP =
+              current.startsWith("<p>") &&
+              current.endsWith("</p>") &&
+              current !== "<p></p>" &&
+              current !== "<p><br></p>";
+            const isNextNonEmptyP =
+              next.startsWith("<p>") &&
+              next.endsWith("</p>") &&
+              next !== "<p></p>" &&
+              next !== "<p><br></p>";
+            if (isCurrentNonEmptyP && isNextNonEmptyP) {
+              result.push("<p></p>");
+            }
+          }
+        }
+        return result.join("\n");
+      };
+
       const applyBlockToDocument = async (search: string, replace: string) => {
         if (!runningHtml.includes(search)) {
           console.warn("Search block not found in document:", search.substring(0, 80));
@@ -196,8 +227,9 @@ http.route({
       let previousHtmlSnapshot = "";
       const applyHtmlToDocument = async (html: string) => {
         const prevHtml = previousHtmlSnapshot;
+        const processedHtml = addParagraphSeparators(html);
         try {
-          const newDocJson = htmlToProsemirrorJson(html);
+          const newDocJson = htmlToProsemirrorJson(processedHtml);
           await prosemirrorSync.transform(ctx, documentId, schema, (currentDoc) => {
             const targetDoc = Node.fromJSON(schema, newDocJson);
             const tr = new Transform(currentDoc);
@@ -205,24 +237,24 @@ http.route({
             if (tr.steps.length === 0) return null;
             return tr;
           });
-          runningHtml = html;
-          previousHtmlSnapshot = html;
-          if (html.trim()) highlightFragments.push(html);
+          runningHtml = processedHtml;
+          previousHtmlSnapshot = processedHtml;
+          if (processedHtml.trim()) highlightFragments.push(processedHtml);
           await sendEvent("changes_applied", JSON.stringify({
             diffType: "full_html",
-            newHtml: html,
+            newHtml: processedHtml,
             previousHtml: prevHtml,
           }));
         } catch (e) {
           console.error("Failed to apply incremental HTML:", e);
           try {
-            const newDocJson = htmlToProsemirrorJson(html);
+            const newDocJson = htmlToProsemirrorJson(processedHtml);
             await ctx.runMutation(internal.documents.updateContentInternal, {
               id: documentId,
               content: JSON.stringify(newDocJson),
             });
-            runningHtml = html;
-            previousHtmlSnapshot = html;
+            runningHtml = processedHtml;
+            previousHtmlSnapshot = processedHtml;
           } catch (fallbackErr) {
             console.error("HTML fallback also failed:", fallbackErr);
           }
