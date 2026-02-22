@@ -42,6 +42,18 @@ export function usePresence(documentId: Id<"documents">, userName: string) {
   const others = useQuery(api.presence.list, { documentId });
   const colorIndexRef = useRef(Math.floor(Math.random() * CURSOR_COLORS.length));
 
+  // Register presence immediately on mount
+  useEffect(() => {
+    updatePresence({
+      documentId,
+      visitorId,
+      data: {
+        color: getColor(colorIndexRef.current),
+        name: userName,
+      },
+    }).catch(() => {});
+  }, [documentId, visitorId, updatePresence, userName]);
+
   // Heartbeat
   useEffect(() => {
     const interval = setInterval(() => {
@@ -73,14 +85,18 @@ export function usePresence(documentId: Id<"documents">, userName: string) {
     [documentId, visitorId, updatePresence, userName]
   );
 
-  // Filter out our own presence
+  // Other users' presence (excludes self)
   const othersPresence = (others ?? []).filter(
     (p) => p.visitorId !== visitorId
   );
 
+  // All presence including self
+  const allPresence = others ?? [];
+
   return {
     visitorId,
     othersPresence,
+    allPresence,
     updateMyPresence,
   };
 }
