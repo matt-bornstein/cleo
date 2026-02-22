@@ -240,12 +240,12 @@ ${htmlContent}
               </DropdownMenu>
             </>
           )}
-          <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
-            <Settings className="h-4 w-4" />
-          </Button>
         </div>
         <div className="flex items-center gap-2">
           {documentId && <PresenceIndicator documentId={documentId} />}
+          <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
+            <Settings className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => void signOut()}>
             <LogOut className="h-4 w-4" />
           </Button>
