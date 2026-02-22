@@ -15,10 +15,9 @@ export function RestoreDivider({ documentId, messageId }: RestoreDividerProps) {
   const restoreToMessage = useAction(api.undoAction.restoreToMessage);
 
   return (
-    <div className="group/restore relative h-6 flex items-center -mx-1 px-1">
-      {/* Hover target area — always present but invisible */}
+    <div className="group/restore relative -mx-1 px-1 h-0 hover:h-6 overflow-visible transition-[height] duration-200">
       <button
-        className="absolute inset-0 w-full flex items-center gap-2 cursor-pointer opacity-0 group-hover/restore:opacity-100 transition-opacity duration-200"
+        className="absolute left-1 right-1 top-0 flex items-center gap-2 cursor-pointer opacity-0 group-hover/restore:opacity-100 transition-opacity duration-200 z-10 h-6"
         disabled={isRestoring}
         onClick={async () => {
           if (!window.confirm(
