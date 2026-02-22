@@ -20,16 +20,22 @@ export const diffHighlightsState = {
 };
 
 export function clearDiffHighlights() {
+  console.log("[DiffHighlights] clearDiffHighlights() — was:", diffHighlightsState.diffs.length);
   diffHighlightsState.diffs = [];
 }
 
 export function addDiffHighlight(addedText: string, deletedText?: string) {
-  if (!addedText.trim() && !deletedText?.trim()) return;
+  console.log("[DiffHighlights] addDiffHighlight called — addedText length:", addedText?.length, "deletedText length:", deletedText?.length);
+  if (!addedText.trim() && !deletedText?.trim()) {
+    console.log("[DiffHighlights] Skipped — both texts empty/whitespace");
+    return;
+  }
   diffHighlightsState.diffs.push({
     addedText,
     deletedText,
     timestamp: Date.now(),
   });
+  console.log("[DiffHighlights] Pushed entry. Total diffs:", diffHighlightsState.diffs.length);
 }
 
 function findTextInDoc(
@@ -118,6 +124,21 @@ function extractPlainText(html: string): string {
     .trim();
 }
 
+/**
+ * Wrap bare text segments in HTML with <span class="ai-diff-deleted-text">
+ * so only the actual text gets a red background highlight, not the container.
+ */
+function wrapTextNodes(html: string): string {
+  // Process text that's outside of tags — wrap each text run in a highlight span
+  return html.replace(/>([^<]+)</g, (_, text) => {
+    if (!text.trim()) return `>${text}<`;
+    return `><span class="ai-diff-deleted-text">${text}</span><`;
+  }).replace(/^([^<]+)/, (text) => {
+    if (!text.trim()) return text;
+    return `<span class="ai-diff-deleted-text">${text}</span>`;
+  });
+}
+
 export const DiffHighlightsExtension = Extension.create({
   name: "diffHighlights",
 
@@ -131,46 +152,69 @@ export const DiffHighlightsExtension = Extension.create({
           },
           apply(_tr, _old, _oldState, newState) {
             const diffs = diffHighlightsState.diffs;
+            console.log("[DiffHighlights] apply() called — diffs.length:", diffs.length, "ref:", diffHighlightsState);
             if (diffs.length === 0) return DecorationSet.empty;
 
-            const decorations: Decoration[] = [];
-            const doc = newState.doc;
-            const docSize = doc.content.size;
+            try {
+              const decorations: Decoration[] = [];
+              const doc = newState.doc;
+              const docSize = doc.content.size;
 
-            for (const diff of diffs) {
-              const fragments = extractTextFragments(diff.addedText);
-              let firstAddedPos: number | null = null;
+              console.log("[DiffHighlights] apply() — processing", diffs.length, "diffs, docSize:", docSize);
 
-              for (const fragment of fragments) {
-                const found = findTextInDoc(doc, fragment);
-                if (found && found.from >= 0 && found.to <= docSize && found.from < found.to) {
-                  decorations.push(
-                    Decoration.inline(found.from, found.to, {
-                      class: "ai-diff-added",
-                    })
-                  );
-                  if (firstAddedPos === null) {
-                    firstAddedPos = found.from;
+              for (let i = 0; i < diffs.length; i++) {
+                const diff = diffs[i];
+                const fragments = extractTextFragments(diff.addedText);
+                console.log(`[DiffHighlights] diff[${i}] — addedText fragments:`, fragments.length, "deletedText:", !!diff.deletedText);
+                let firstAddedPos: number | null = null;
+
+                for (const fragment of fragments) {
+                  const found = findTextInDoc(doc, fragment);
+                  console.log(`[DiffHighlights]   fragment "${fragment.substring(0, 50)}..." → found:`, found);
+                  if (found && found.from >= 0 && found.to <= docSize && found.from < found.to) {
+                    decorations.push(
+                      Decoration.inline(found.from, found.to, {
+                        class: "ai-diff-added",
+                      })
+                    );
+                    if (firstAddedPos === null) {
+                      firstAddedPos = found.from;
+                    }
+                  }
+                }
+
+                // Insert a widget for deleted text before the first added fragment
+                if (diff.deletedText && firstAddedPos !== null) {
+                  try {
+                    const plainDeleted = extractPlainText(diff.deletedText);
+                    console.log(`[DiffHighlights]   deleted widget at pos ${firstAddedPos}: "${plainDeleted?.substring(0, 50)}..."`);
+                    if (plainDeleted) {
+                      const isBlock = /^<(?:p|h[1-6]|li|ul|ol|blockquote|div|pre|table|tr)\b/i.test(diff.deletedText!);
+                      decorations.push(
+                        Decoration.widget(firstAddedPos, () => {
+                          const wrapper = document.createElement(isBlock ? "div" : "span");
+                          wrapper.className = "ai-diff-deleted";
+                          // Render with original HTML structure, wrapping text nodes
+                          // in spans so only the text itself gets the red background
+                          wrapper.innerHTML = wrapTextNodes(diff.deletedText!);
+                          return wrapper;
+                        }, { side: -1, key: `deleted-${diff.timestamp}` })
+                      );
+                    }
+                  } catch (e) {
+                    console.warn("[DiffHighlights] Failed to create deleted-text widget:", e);
                   }
                 }
               }
 
-              // Insert a widget for deleted text before the first added fragment
-              if (diff.deletedText && firstAddedPos !== null) {
-                const plainDeleted = extractPlainText(diff.deletedText);
-                if (plainDeleted) {
-                  const widget = Decoration.widget(firstAddedPos, () => {
-                    const span = document.createElement("span");
-                    span.className = "ai-diff-deleted";
-                    span.textContent = plainDeleted;
-                    return span;
-                  }, { side: -1 });
-                  decorations.push(widget);
-                }
-              }
+              console.log("[DiffHighlights] Total decorations:", decorations.length);
+              // Sort by position — required by DecorationSet.create
+              decorations.sort((a, b) => a.from - b.from);
+              return DecorationSet.create(doc, decorations);
+            } catch (e) {
+              console.error("[DiffHighlights] apply error:", e);
+              return DecorationSet.empty;
             }
-
-            return DecorationSet.create(doc, decorations);
           },
         },
         props: {

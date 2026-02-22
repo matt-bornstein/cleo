@@ -33,20 +33,27 @@ export function AIPanel({ documentId }: AIPanelProps) {
 
     try {
       const parsed = JSON.parse(diffMetadata);
+      console.log("[AIPanel] onChangesApplied:", { diffType: parsed.diffType, hasSearch: !!parsed.search, hasReplace: !!parsed.replace, hasNewHtml: !!parsed.newHtml });
       if (parsed.diffType === "search_replace" && parsed.replace) {
+        console.log("[AIPanel] Adding diff highlight — replace:", parsed.replace.substring(0, 80), "search:", parsed.search?.substring(0, 80));
         addDiffHighlight(parsed.replace, parsed.search);
       } else if (parsed.diffType === "full_html" && parsed.newHtml) {
+        console.log("[AIPanel] Adding full_html highlight:", parsed.newHtml.substring(0, 80));
         addDiffHighlight(parsed.newHtml);
+      } else {
+        console.log("[AIPanel] Skipped — no matching diffType or missing data");
       }
+      console.log("[AIPanel] diffHighlightsState.diffs count:", diffHighlightsState.diffs.length, "ref:", diffHighlightsState);
       const refreshAttempts = [300, 700, 1500];
       for (const delay of refreshAttempts) {
         setTimeout(() => {
+          console.log(`[AIPanel] refreshDecorations() firing at +${delay}ms — diffs:`, diffHighlightsState.diffs.length);
           refreshDecorations();
           setDiffCount(diffHighlightsState.diffs.length);
         }, delay);
       }
-    } catch {
-      // Non-JSON payload — ignore
+    } catch (e) {
+      console.log("[AIPanel] onChangesApplied parse error:", e, "raw:", diffMetadata?.substring(0, 200));
     }
   }, [setIsSaving, refreshDecorations, setDiffCount]);
 
