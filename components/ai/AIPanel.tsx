@@ -132,7 +132,10 @@ export function AIPanel({ documentId }: AIPanelProps) {
           )}
 
           {messages.map((msg, _idx, arr) => {
-            const latestDiffId = arr.findLast((m) => m.diffId)?.diffId;
+            const latestDiffIdx = arr.findLastIndex((m) => m.diffId);
+            const latestDiffId = latestDiffIdx >= 0 ? arr[latestDiffIdx].diffId : undefined;
+            const hasNewPromptAfterDiff = latestDiffIdx >= 0 &&
+              arr.slice(latestDiffIdx + 1).some((m) => m.role === "user");
             return (
               <MessageBubble
                 key={msg._id}
@@ -143,7 +146,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
                 diffId={msg.diffId ?? undefined}
                 renderedPrompt={msg.renderedPrompt ?? undefined}
                 documentId={documentId}
-                showControls={!!msg.diffId && msg.diffId === latestDiffId}
+                showControls={!!msg.diffId && msg.diffId === latestDiffId && !hasNewPromptAfterDiff}
               />
             );
           })}
