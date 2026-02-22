@@ -181,7 +181,7 @@ function SyncedEditor({
         editorProps={{
           attributes: {
             class:
-              "tiptap-content focus:outline-none px-8 py-4 max-w-5xl",
+              "tiptap-content focus:outline-none pl-12 pr-8 py-4 max-w-5xl",
           },
         }}
       >
