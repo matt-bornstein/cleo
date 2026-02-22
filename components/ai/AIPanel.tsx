@@ -34,7 +34,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
     try {
       const parsed = JSON.parse(diffMetadata);
       if (parsed.diffType === "search_replace" && parsed.replace) {
-        addDiffHighlight(parsed.replace);
+        addDiffHighlight(parsed.replace, parsed.search);
       } else if (parsed.diffType === "full_html" && parsed.newHtml) {
         addDiffHighlight(parsed.newHtml);
       }

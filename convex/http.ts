@@ -141,7 +141,7 @@ http.route({
           });
           runningHtml = updatedHtml;
           blocksApplied++;
-          if (replace.trim()) highlightFragments.push(replace);
+          if (replace.trim() || search.trim()) highlightFragments.push(JSON.stringify({ search, replace }));
           await sendEvent("changes_applied", JSON.stringify({
             diffType: "search_replace",
             search,
@@ -157,7 +157,7 @@ http.route({
             });
             runningHtml = updatedHtml;
             blocksApplied++;
-            if (replace.trim()) highlightFragments.push(replace);
+            if (replace.trim() || search.trim()) highlightFragments.push(JSON.stringify({ search, replace }));
             await sendEvent("changes_applied", JSON.stringify({
               diffType: "search_replace",
               search,

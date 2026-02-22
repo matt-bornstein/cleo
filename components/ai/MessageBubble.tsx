@@ -154,7 +154,15 @@ export function MessageBubble({
                         if (isUndone && diff?.highlightData?.length) {
                           clearDiffHighlights();
                           for (const fragment of diff.highlightData) {
-                            addDiffHighlight(fragment);
+                            // Parse JSON entries (search+replace) or fall back to plain string (replace only)
+                            try {
+                              const parsed = JSON.parse(fragment);
+                              if (parsed.replace) {
+                                addDiffHighlight(parsed.replace, parsed.search);
+                              }
+                            } catch {
+                              addDiffHighlight(fragment);
+                            }
                           }
                           for (const delay of [300, 700, 1500]) {
                             setTimeout(() => {

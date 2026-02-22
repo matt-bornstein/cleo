@@ -5,6 +5,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
 export interface DiffEntry {
   addedText: string;
+  deletedText?: string;
   timestamp: number;
 }
 
@@ -22,10 +23,11 @@ export function clearDiffHighlights() {
   diffHighlightsState.diffs = [];
 }
 
-export function addDiffHighlight(addedText: string) {
-  if (!addedText.trim()) return;
+export function addDiffHighlight(addedText: string, deletedText?: string) {
+  if (!addedText.trim() && !deletedText?.trim()) return;
   diffHighlightsState.diffs.push({
     addedText,
+    deletedText,
     timestamp: Date.now(),
   });
 }
@@ -98,6 +100,24 @@ function extractTextFragments(html: string): string[] {
     .filter((s) => s.length > 0);
 }
 
+/**
+ * Extract plain text from HTML for display in the deleted-text widget.
+ */
+function extractPlainText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<\/(?:p|h[1-6]|li|div|blockquote|tr)>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export const DiffHighlightsExtension = Extension.create({
   name: "diffHighlights",
 
@@ -119,6 +139,8 @@ export const DiffHighlightsExtension = Extension.create({
 
             for (const diff of diffs) {
               const fragments = extractTextFragments(diff.addedText);
+              let firstAddedPos: number | null = null;
+
               for (const fragment of fragments) {
                 const found = findTextInDoc(doc, fragment);
                 if (found && found.from >= 0 && found.to <= docSize && found.from < found.to) {
@@ -127,6 +149,23 @@ export const DiffHighlightsExtension = Extension.create({
                       class: "ai-diff-added",
                     })
                   );
+                  if (firstAddedPos === null) {
+                    firstAddedPos = found.from;
+                  }
+                }
+              }
+
+              // Insert a widget for deleted text before the first added fragment
+              if (diff.deletedText && firstAddedPos !== null) {
+                const plainDeleted = extractPlainText(diff.deletedText);
+                if (plainDeleted) {
+                  const widget = Decoration.widget(firstAddedPos, () => {
+                    const span = document.createElement("span");
+                    span.className = "ai-diff-deleted";
+                    span.textContent = plainDeleted;
+                    return span;
+                  }, { side: -1 });
+                  decorations.push(widget);
                 }
               }
             }
