@@ -165,6 +165,14 @@
   margin-bottom: 0.75em;
 }
 
+.tiptap-content ul {
+  list-style-type: disc;
+}
+
+.tiptap-content ol {
+  list-style-type: decimal;
+}
+
 .tiptap-content li {
   margin-bottom: 0.25em;
 }
