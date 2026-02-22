@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   FilePlus,
-  FolderOpen,
   Share2,
   Settings,
   LogOut,
@@ -24,7 +23,6 @@ import {
   MessageSquare,
   Printer,
 } from "lucide-react";
-import { OpenDocModal } from "@/components/modals/OpenDocModal";
 import { ShareModal } from "@/components/modals/ShareModal";
 import { SettingsModal } from "@/components/modals/SettingsModal";
 import { VersionHistoryModal } from "@/components/modals/VersionHistoryModal";
@@ -51,7 +49,6 @@ export function Toolbar({
   showComments,
   getEditorHtml,
 }: ToolbarProps) {
-  const [showOpenDoc, setShowOpenDoc] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -186,10 +183,6 @@ ${htmlContent}
             <FilePlus className="mr-1 h-4 w-4" />
             New
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowOpenDoc(true)}>
-            <FolderOpen className="mr-1 h-4 w-4" />
-            Open
-          </Button>
           {documentId && (
             <>
               <Button variant="ghost" size="sm" onClick={() => setShowShare(true)}>
@@ -254,8 +247,6 @@ ${htmlContent}
         </div>
       </div>
 
-     
-      <OpenDocModal open={showOpenDoc} onOpenChange={setShowOpenDoc} />
       {documentId && (
         <>
           <ShareModal
