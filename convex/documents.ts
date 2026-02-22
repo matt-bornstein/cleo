@@ -74,6 +74,34 @@ export const get = query({
   },
 });
 
+/**
+ * Extract plain text preview from ProseMirror JSON, capped at maxLength.
+ */
+function extractPreview(contentJson: string, maxLength = 500): string {
+  try {
+    const doc = JSON.parse(contentJson);
+    const text = extractText(doc);
+    return text.length > maxLength ? text.substring(0, maxLength) + "…" : text;
+  } catch {
+    return "";
+  }
+}
+
+function extractText(node: any): string {
+  if (node.text) return node.text;
+  if (node.type === "hardBreak") return " ";
+  if (!node.content) return "";
+  const blockTypes = new Set([
+    "doc", "paragraph", "heading", "bulletList", "orderedList",
+    "listItem", "blockquote", "codeBlock", "table", "tableRow",
+  ]);
+  const separator = blockTypes.has(node.type) ? " " : "";
+  return node.content
+    .map((child: any) => extractText(child))
+    .filter((t: string) => t.length > 0)
+    .join(separator);
+}
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -92,6 +120,7 @@ export const list = query({
         return {
           _id: doc._id,
           title: doc.title,
+          preview: extractPreview(doc.content),
           updatedAt: doc.updatedAt,
           createdAt: doc.createdAt,
           role: perm.role,

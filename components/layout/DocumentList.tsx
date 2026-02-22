@@ -40,11 +40,16 @@ export function DocumentList() {
             className="flex w-full items-center justify-between rounded-lg border p-4 text-left transition-colors hover:bg-accent"
             onClick={() => router.push(`/editor/${doc._id}`)}
           >
-            <div className="flex items-center gap-3">
-              <FileText className="h-5 w-5 text-muted-foreground" />
-              <div>
+            <div className="flex items-center gap-3 min-w-0">
+              <FileText className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+              <div className="min-w-0 space-y-1">
                 <p className="font-medium">{doc.title || "Untitled"}</p>
-                <p className="text-xs text-muted-foreground">
+                {doc.preview && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {doc.preview}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground/60">
                   Updated {new Date(doc.updatedAt).toLocaleDateString()}
                 </p>
               </div>
