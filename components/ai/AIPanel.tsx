@@ -34,9 +34,9 @@ export function AIPanel({ documentId }: AIPanelProps) {
     try {
       const parsed = JSON.parse(diffMetadata);
       console.log("[AIPanel] onChangesApplied:", { diffType: parsed.diffType, hasSearch: !!parsed.search, hasReplace: !!parsed.replace, hasNewHtml: !!parsed.newHtml });
-      if (parsed.diffType === "search_replace" && parsed.replace) {
-        console.log("[AIPanel] Adding diff highlight — replace:", parsed.replace.substring(0, 80), "search:", parsed.search?.substring(0, 80));
-        addDiffHighlight(parsed.replace, parsed.search);
+      if (parsed.diffType === "search_replace" && (parsed.replace || parsed.search)) {
+        console.log("[AIPanel] Adding diff highlight — replace:", parsed.replace?.substring(0, 80), "search:", parsed.search?.substring(0, 80), "contextAfter:", parsed.contextAfter?.substring(0, 80));
+        addDiffHighlight(parsed.replace || "", parsed.search, parsed.contextAfter);
       } else if (parsed.diffType === "full_html" && parsed.newHtml) {
         console.log("[AIPanel] Adding full_html highlight:", parsed.newHtml.substring(0, 80));
         addDiffHighlight(parsed.newHtml);

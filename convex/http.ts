@@ -129,7 +129,19 @@ http.route({
           console.warn("Search block not found in document:", search.substring(0, 80));
           return;
         }
+
+        // For deletions (empty replace), capture context after the deletion point
+        // so the client knows where to place the deleted-text widget
+        let contextAfter: string | undefined;
+        if (!replace.trim()) {
+          const searchIdx = runningHtml.indexOf(search);
+          const afterIdx = searchIdx + search.length;
+          // Grab up to 200 chars of HTML after the deleted section
+          contextAfter = runningHtml.substring(afterIdx, afterIdx + 200);
+        }
+
         const updatedHtml = runningHtml.replace(search, replace);
+        const eventPayload = { diffType: "search_replace", search, replace, contextAfter };
         try {
           const newDocJson = htmlToProsemirrorJson(updatedHtml);
           await prosemirrorSync.transform(ctx, documentId, schema, (currentDoc) => {
@@ -141,12 +153,8 @@ http.route({
           });
           runningHtml = updatedHtml;
           blocksApplied++;
-          if (replace.trim() || search.trim()) highlightFragments.push(JSON.stringify({ search, replace }));
-          await sendEvent("changes_applied", JSON.stringify({
-            diffType: "search_replace",
-            search,
-            replace,
-          }));
+          if (replace.trim() || search.trim()) highlightFragments.push(JSON.stringify({ search, replace, contextAfter }));
+          await sendEvent("changes_applied", JSON.stringify(eventPayload));
         } catch (e) {
           console.error("Failed to apply incremental block:", e);
           try {
@@ -157,12 +165,8 @@ http.route({
             });
             runningHtml = updatedHtml;
             blocksApplied++;
-            if (replace.trim() || search.trim()) highlightFragments.push(JSON.stringify({ search, replace }));
-            await sendEvent("changes_applied", JSON.stringify({
-              diffType: "search_replace",
-              search,
-              replace,
-            }));
+            if (replace.trim() || search.trim()) highlightFragments.push(JSON.stringify({ search, replace, contextAfter }));
+            await sendEvent("changes_applied", JSON.stringify(eventPayload));
           } catch (fallbackErr) {
             console.error("Fallback content update also failed:", fallbackErr);
           }
@@ -172,7 +176,7 @@ http.route({
       // Scan accumulated text for newly completed search/replace blocks
       let lastScannedEnd = 0;
       const tryApplyNewBlocks = async () => {
-        const regex = /<<<SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)\n>>>/g;
+        const regex = /<<<SEARCH\n([\s\S]*?)\n===\n([\s\S]*?)>>>/g;
         regex.lastIndex = lastScannedEnd;
         let match;
         while ((match = regex.exec(accumulated)) !== null) {

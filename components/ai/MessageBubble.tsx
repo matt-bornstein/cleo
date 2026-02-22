@@ -157,8 +157,8 @@ export function MessageBubble({
                             // Parse JSON entries (search+replace) or fall back to plain string (replace only)
                             try {
                               const parsed = JSON.parse(fragment);
-                              if (parsed.replace) {
-                                addDiffHighlight(parsed.replace, parsed.search);
+                              if (parsed.replace || parsed.search) {
+                                addDiffHighlight(parsed.replace || "", parsed.search, parsed.contextAfter);
                               }
                             } catch {
                               addDiffHighlight(fragment);
@@ -229,7 +229,7 @@ function renderAssistantContent(
   let lastEditEnd = -1;
   let firstEditStart = -1;
 
-  const srRegex = /<<<SEARCH\n[\s\S]*?\n===\n[\s\S]*?\n>>>/g;
+  const srRegex = /<<<SEARCH\n[\s\S]*?\n===\n[\s\S]*?>>>/g;
   let match;
   while ((match = srRegex.exec(text)) !== null) {
     if (firstEditStart === -1) firstEditStart = match.index;
@@ -245,7 +245,7 @@ function renderAssistantContent(
   }
 
   // Check for a partial (in-progress) edit block at the end
-  const partialSR = content.search(/<<<SEARCH(?!\n[\s\S]*?\n===\n[\s\S]*?\n>>>)[\s\S]*$/);
+  const partialSR = content.search(/<<<SEARCH(?!\n[\s\S]*?\n===\n[\s\S]*?>>>)[\s\S]*$/);
   const partialHTML = content.search(/```html(?!\n[\s\S]*?\n```)[\s\S]*$/);
   const hasPartialBlock =
     (partialSR !== -1 && partialSR >= lastEditEnd) ||

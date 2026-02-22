@@ -6,6 +6,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 export interface DiffEntry {
   addedText: string;
   deletedText?: string;
+  contextAfter?: string; // HTML after deletion point — used to position widget when addedText is empty
   timestamp: number;
 }
 
@@ -24,8 +25,8 @@ export function clearDiffHighlights() {
   diffHighlightsState.diffs = [];
 }
 
-export function addDiffHighlight(addedText: string, deletedText?: string) {
-  console.log("[DiffHighlights] addDiffHighlight called — addedText length:", addedText?.length, "deletedText length:", deletedText?.length);
+export function addDiffHighlight(addedText: string, deletedText?: string, contextAfter?: string) {
+  console.log("[DiffHighlights] addDiffHighlight called — addedText length:", addedText?.length, "deletedText length:", deletedText?.length, "contextAfter length:", contextAfter?.length);
   if (!addedText.trim() && !deletedText?.trim()) {
     console.log("[DiffHighlights] Skipped — both texts empty/whitespace");
     return;
@@ -33,6 +34,7 @@ export function addDiffHighlight(addedText: string, deletedText?: string) {
   diffHighlightsState.diffs.push({
     addedText,
     deletedText,
+    contextAfter,
     timestamp: Date.now(),
   });
   console.log("[DiffHighlights] Pushed entry. Total diffs:", diffHighlightsState.diffs.length);
@@ -179,6 +181,18 @@ export const DiffHighlightsExtension = Extension.create({
                     );
                     if (firstAddedPos === null) {
                       firstAddedPos = found.from;
+                    }
+                  }
+                }
+
+                // For pure deletions (no added text), find position using contextAfter
+                if (diff.deletedText && firstAddedPos === null && diff.contextAfter) {
+                  const contextFragments = extractTextFragments(diff.contextAfter);
+                  if (contextFragments.length > 0) {
+                    const found = findTextInDoc(doc, contextFragments[0]);
+                    if (found && found.from >= 0 && found.from <= docSize) {
+                      firstAddedPos = found.from;
+                      console.log(`[DiffHighlights]   deletion anchor via contextAfter at pos ${firstAddedPos}`);
                     }
                   }
                 }
