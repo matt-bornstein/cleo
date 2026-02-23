@@ -68,6 +68,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputHandle>(null);
   const document = useQuery(api.documents.get, { id: documentId });
+  const me = useQuery(api.users.me);
   const isLocked = document?.aiLockedBy != null;
 
   // Auto-scroll to bottom on new messages
@@ -142,6 +143,12 @@ export function AIPanel({ documentId }: AIPanelProps) {
             const hasNewPromptAfterDiff = latestDiffIdx >= 0 &&
               arr.slice(latestDiffIdx + 1).some((m) => m.role === "user");
 
+            // Only show Accept/Undo controls to the user who submitted the query
+            const precedingUserMsg = msg.diffId
+              ? arr.slice(0, idx).findLast((m) => m.role === "user")
+              : undefined;
+            const isMyDiff = !!me?._id && precedingUserMsg?.userId === me._id;
+
             // Show "Restore here" divider above user messages (except the first message)
             const showRestoreDivider = msg.role === "user" && idx > 0 && !isStreaming;
 
@@ -161,7 +168,8 @@ export function AIPanel({ documentId }: AIPanelProps) {
                   diffId={msg.diffId ?? undefined}
                   renderedPrompt={msg.renderedPrompt ?? undefined}
                   documentId={documentId}
-                  showControls={!!msg.diffId && msg.diffId === latestDiffId && !hasNewPromptAfterDiff}
+                  isLatestDiff={!!msg.diffId && msg.diffId === latestDiffId && !hasNewPromptAfterDiff}
+                  showControls={!!msg.diffId && msg.diffId === latestDiffId && !hasNewPromptAfterDiff && isMyDiff}
                 />
               </div>
             );

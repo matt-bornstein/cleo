@@ -23,6 +23,7 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   renderedPrompt?: string;
   documentId?: Id<"documents">;
+  isLatestDiff?: boolean;
   showControls?: boolean;
 }
 
@@ -35,6 +36,7 @@ export function MessageBubble({
   isStreaming = false,
   renderedPrompt,
   documentId,
+  isLatestDiff = false,
   showControls = false,
 }: MessageBubbleProps) {
   const isUser = role === "user";
@@ -166,10 +168,21 @@ export function MessageBubble({
                 </>
               )}
             </div>
+          ) : isLatestDiff && !isUndone && !diff?.highlightsCleared ? (
+            null
           ) : (
-            <div className="mt-1 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="h-3 w-3" />
-              <span>Changes applied</span>
+            <div className={`mt-1 flex items-center gap-1 text-xs ${isUndone ? "text-muted-foreground" : "text-emerald-600 dark:text-emerald-400"}`}>
+              {isUndone ? (
+                <>
+                  <Undo2 className="h-3 w-3" />
+                  <span>Changes undone</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span>Changes applied</span>
+                </>
+              )}
             </div>
           )
         )}
