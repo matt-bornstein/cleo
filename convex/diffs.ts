@@ -153,6 +153,69 @@ export const createAiDiffInternal = internalMutation({
   },
 });
 
+/**
+ * Return the highlight data for the most recent AI diff on this document,
+ * if it hasn't been undone or dismissed. All collaborators subscribe to
+ * this so everyone sees the same diff decorations.
+ */
+export const getActiveHighlights = query({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.documentId).eq("userId", userId)
+      )
+      .first();
+    if (!permission) return null;
+
+    const latestAiDiff = await ctx.db
+      .query("diffs")
+      .withIndex("by_document_time", (q) => q.eq("documentId", args.documentId))
+      .order("desc")
+      .filter((q) => q.eq(q.field("source"), "ai"))
+      .first();
+
+    if (!latestAiDiff) return null;
+    if (latestAiDiff.undone === true) return null;
+    if (latestAiDiff.highlightsCleared === true) return null;
+    if (!latestAiDiff.highlightData?.length) return null;
+
+    return {
+      diffId: latestAiDiff._id,
+      highlightData: latestAiDiff.highlightData,
+    };
+  },
+});
+
+/**
+ * Mark the diff's highlights as dismissed so all collaborators
+ * stop seeing the decorations.
+ */
+export const clearHighlights = mutation({
+  args: { diffId: v.id("diffs") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const diff = await ctx.db.get(args.diffId);
+    if (!diff) throw new Error("Diff not found");
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", diff.documentId).eq("userId", userId)
+      )
+      .first();
+    if (!permission) throw new Error("Not authorized");
+
+    await ctx.db.patch(args.diffId, { highlightsCleared: true });
+  },
+});
+
 export const listByDocument = query({
   args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {
@@ -307,8 +370,12 @@ export const applyUndoInternal = internalMutation({
       createdAt: now,
     });
 
-    // Mark the AI diff as undone (or not, if reapplying)
-    await ctx.db.patch(args.diffId, { undone: args.undone });
+    // Mark the AI diff as undone (or not, if reapplying).
+    // When reapplying, also reset highlightsCleared so decorations reappear.
+    await ctx.db.patch(args.diffId, {
+      undone: args.undone,
+      ...(args.undone ? {} : { highlightsCleared: false }),
+    });
 
     await ctx.db.patch(args.documentId, {
       content: args.restoreContent,

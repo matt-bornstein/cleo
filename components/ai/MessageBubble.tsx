@@ -3,10 +3,9 @@
 import { Bot, User, CheckCircle2, FileEdit, Undo2, Redo2, ArrowRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMemo, useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEditorContext } from "@/components/editor/EditorContext";
-import { clearDiffHighlights, addDiffHighlight, diffHighlightsState } from "@/lib/editor/diffHighlights";
 import {
   Dialog,
   DialogContent,
@@ -42,9 +41,10 @@ export function MessageBubble({
   const [showRaw, setShowRaw] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const undoAiEdit = useAction(api.undoAction.undoAiEdit);
+  const clearHighlightsMutation = useMutation(api.diffs.clearHighlights);
   const diff = useQuery(api.diffs.getVersion, diffId ? { diffId } : "skip");
   const isUndone = diff?.undone === true;
-  const { diffCount, setDiffCount, refreshDecorations } = useEditorContext();
+  const { diffCount } = useEditorContext();
   const hasActiveHighlights = diffCount > 0;
 
   const { html: renderedContent, isEditingNow } = useMemo(() => {
@@ -121,11 +121,11 @@ export function MessageBubble({
               ) : hasActiveHighlights ? (
                 <button
                   className="cursor-pointer inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    clearDiffHighlights();
-                    setDiffCount(0);
-                    refreshDecorations();
+                    if (diffId) {
+                      await clearHighlightsMutation({ diffId });
+                    }
                   }}
                 >
                   <ArrowRight className="h-3 w-3" />
@@ -149,28 +149,6 @@ export function MessageBubble({
                     setIsUndoing(true);
                       try {
                         await undoAiEdit({ documentId, diffId, reapply: isUndone });
-
-                        // After reapply succeeds, restore diff highlights from saved data
-                        if (isUndone && diff?.highlightData?.length) {
-                          clearDiffHighlights();
-                          for (const fragment of diff.highlightData) {
-                            // Parse JSON entries (search+replace) or fall back to plain string (replace only)
-                            try {
-                              const parsed = JSON.parse(fragment);
-                              if (parsed.replace || parsed.search) {
-                                addDiffHighlight(parsed.replace || "", parsed.search, parsed.contextAfter);
-                              }
-                            } catch {
-                              addDiffHighlight(fragment);
-                            }
-                          }
-                          for (const delay of [300, 700, 1500]) {
-                            setTimeout(() => {
-                              refreshDecorations();
-                              setDiffCount(diffHighlightsState.diffs.length);
-                            }, delay);
-                          }
-                        }
                       } catch (err) {
                         console.error(`Failed to ${actionName.toLowerCase()}:`, err);
                       } finally {

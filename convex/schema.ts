@@ -53,6 +53,7 @@ export default defineSchema({
     snapshotBefore: v.optional(v.string()), // ProseMirror JSON before AI edit (for undo)
     undone: v.optional(v.boolean()), // true when an AI edit has been undone (toggles on reapply)
     highlightData: v.optional(v.array(v.string())), // added/replaced text fragments for diff highlights
+    highlightsCleared: v.optional(v.boolean()), // true when a user has accepted/dismissed the diff highlights
     source: v.union(
       v.literal("ai"),
       v.literal("manual"),

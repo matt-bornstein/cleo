@@ -25,6 +25,32 @@ export function clearDiffHighlights() {
   diffHighlightsState.diffs = [];
 }
 
+/**
+ * Replace local diff state with entries from the database's highlightData array.
+ * Used to sync diff decorations across all collaborators.
+ */
+export function setDiffHighlightsFromData(highlightData: string[]) {
+  const entries: DiffEntry[] = [];
+  for (const fragment of highlightData) {
+    try {
+      const parsed = JSON.parse(fragment);
+      if (parsed.replace || parsed.search) {
+        entries.push({
+          addedText: parsed.replace || "",
+          deletedText: parsed.search,
+          contextAfter: parsed.contextAfter,
+          timestamp: Date.now(),
+        });
+      }
+    } catch {
+      if (fragment.trim()) {
+        entries.push({ addedText: fragment, timestamp: Date.now() });
+      }
+    }
+  }
+  diffHighlightsState.diffs = entries;
+}
+
 export function addDiffHighlight(addedText: string, deletedText?: string, contextAfter?: string) {
   console.log("[DiffHighlights] addDiffHighlight called — addedText length:", addedText?.length, "deletedText length:", deletedText?.length, "contextAfter length:", contextAfter?.length);
   if (!addedText.trim() && !deletedText?.trim()) {

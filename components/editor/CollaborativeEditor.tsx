@@ -18,7 +18,12 @@ import {
   commentHighlightsState,
   type CommentAnchor,
 } from "@/lib/editor/commentHighlights";
-import { DiffHighlightsExtension } from "@/lib/editor/diffHighlights";
+import {
+  DiffHighlightsExtension,
+  diffHighlightsState,
+  setDiffHighlightsFromData,
+  clearDiffHighlights,
+} from "@/lib/editor/diffHighlights";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { useIdleSave } from "@/hooks/useIdleSave";
 import { usePresence } from "@/hooks/usePresence";
@@ -107,10 +112,12 @@ function SyncedEditor({
   syncExtension: any;
 }) {
   const { scheduleIdleSave } = useIdleSave(documentId);
+  const { setDiffCount } = useEditorContext();
   const me = useQuery(api.users.me);
   const userName = me?.name ?? me?.email ?? "Anonymous";
   const { othersPresence, updateMyPresence } = usePresence(documentId, userName);
   const comments = useQuery(api.comments.list, { documentId });
+  const activeHighlights = useQuery(api.diffs.getActiveHighlights, { documentId });
 
   // Update the shared mutable cursor state and trigger editor refresh
   const editorRefForDecorations = useRef<any>(null);
@@ -144,6 +151,17 @@ function SyncedEditor({
     }
     triggerDecorationRefresh(editorRefForDecorations.current);
   }, [comments]);
+
+  // Sync diff highlight data from the database to all collaborators
+  useEffect(() => {
+    if (activeHighlights?.highlightData?.length) {
+      setDiffHighlightsFromData(activeHighlights.highlightData);
+    } else {
+      clearDiffHighlights();
+    }
+    setDiffCount(diffHighlightsState.diffs.length);
+    triggerDecorationRefresh(editorRefForDecorations.current);
+  }, [activeHighlights, setDiffCount]);
 
   // Extensions are stable — they don't change when cursor/comment data updates.
   // The plugins read from the shared mutable refs instead.
