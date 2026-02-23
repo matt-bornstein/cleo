@@ -51,7 +51,7 @@ export const RemoteCursorsExtension = Extension.create({
                   decorations.push(
                     Decoration.inline(from, to, {
                       class: "remote-selection",
-                      style: `background-color: ${cursor.color}30;`,
+                      style: `background-color: ${cursor.color}60;`,
                     })
                   );
                 }
