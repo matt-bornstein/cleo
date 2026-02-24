@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +21,7 @@ import {
 export function DocumentList() {
   const documents = useQuery(api.documents.list);
   const softDelete = useMutation(api.documents.softDelete);
+  const createDoc = useMutation(api.documents.create);
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<{
     id: Id<"documents">;
@@ -35,22 +36,22 @@ export function DocumentList() {
     );
   }
 
-  if (documents.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <FileText className="mb-4 h-12 w-12 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">No documents yet</h2>
-        <p className="text-sm text-muted-foreground">
-          Click &quot;New&quot; to create your first document.
-        </p>
-      </div>
-    );
-  }
+  const handleNewDoc = async () => {
+    const docId = await createDoc({ title: "Untitled" });
+    router.push(`/editor/${docId}`);
+  };
 
   return (
     <div className="mx-auto max-w-3xl">
       <h2 className="mb-4 text-lg font-semibold">Your Documents</h2>
       <div className="space-y-2">
+        <button
+          className="cursor-pointer flex w-full items-center gap-3 rounded-lg border border-dashed p-4 text-left text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          onClick={handleNewDoc}
+        >
+          <Plus className="h-5 w-5 flex-shrink-0" />
+          <span className="font-medium">New document</span>
+        </button>
         {documents.map((doc) => (
           <div
             key={doc._id}

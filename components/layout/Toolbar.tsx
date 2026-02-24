@@ -186,10 +186,12 @@ ${htmlContent}
     <>
       <div className="flex h-12 items-center justify-between border-b px-4">
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={handleNewDoc}>
-            <FilePlus className="mr-1 h-4 w-4" />
-            New
-          </Button>
+          {documentId && (
+            <Button variant="ghost" size="sm" onClick={handleNewDoc}>
+              <FilePlus className="mr-1 h-4 w-4" />
+              New
+            </Button>
+          )}
           {documentId && (
             <>
               <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
