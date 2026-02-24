@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -30,18 +40,14 @@ export function VersionHistoryModal({
   const diffs = useQuery(api.diffs.listByDocument, { documentId });
   const restore = useMutation(api.diffs.restore);
   const [previewDiffId, setPreviewDiffId] = useState<Id<"diffs"> | null>(null);
+  const [restoreTargetId, setRestoreTargetId] = useState<Id<"diffs"> | null>(null);
 
   const previewDiff = diffs?.find((d) => d._id === previewDiffId);
 
-  const handleRestore = async (diffId: Id<"diffs">) => {
-    if (
-      !window.confirm(
-        "Restore this version? Current changes will be saved as a new version."
-      )
-    ) {
-      return;
-    }
-    await restore({ documentId, diffId });
+  const handleRestore = async () => {
+    if (!restoreTargetId) return;
+    await restore({ documentId, diffId: restoreTargetId });
+    setRestoreTargetId(null);
     setPreviewDiffId(null);
     onOpenChange(false);
   };
@@ -128,7 +134,7 @@ export function VersionHistoryModal({
               </Button>
               <Button
                 size="sm"
-                onClick={() => handleRestore(previewDiff._id)}
+                onClick={() => setRestoreTargetId(previewDiff._id)}
               >
                 <RotateCcw className="mr-1 h-3 w-3" />
                 Restore this version
@@ -201,7 +207,7 @@ export function VersionHistoryModal({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRestore(diff._id)}
+                          onClick={() => setRestoreTargetId(diff._id)}
                           className="text-xs"
                         >
                           <RotateCcw className="mr-1 h-3 w-3" />
@@ -216,6 +222,27 @@ export function VersionHistoryModal({
           </ScrollArea>
         )}
       </DialogContent>
+
+      <AlertDialog
+        open={restoreTargetId !== null}
+        onOpenChange={(open) => { if (!open) setRestoreTargetId(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore this version?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The document will be reverted to this version. Your current changes
+              will be saved as a new entry in version history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRestore}>
+              Restore
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

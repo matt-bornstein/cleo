@@ -107,7 +107,6 @@ export function DocumentList() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
                 if (deleteTarget) {
                   await softDelete({ id: deleteTarget.id });
