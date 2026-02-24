@@ -14,6 +14,7 @@ export default defineSchema({
     chatClearedAt: v.optional(v.number()),
     aiLockedBy: v.optional(v.id("users")),
     aiLockedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_updatedAt", ["updatedAt"]),

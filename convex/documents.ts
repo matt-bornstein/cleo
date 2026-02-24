@@ -116,7 +116,7 @@ export const list = query({
     const docs = await Promise.all(
       permissions.map(async (perm) => {
         const doc = await ctx.db.get(perm.documentId);
-        if (!doc) return null;
+        if (!doc || doc.deletedAt) return null;
         return {
           _id: doc._id,
           title: doc.title,
@@ -186,6 +186,27 @@ export const updateContent = mutation({
       content: args.content,
       updatedAt: Date.now(),
     });
+  },
+});
+
+export const softDelete = mutation({
+  args: { id: v.id("documents") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.id).eq("userId", userId)
+      )
+      .first();
+
+    if (!permission || permission.role !== "owner") {
+      throw new Error("Only owner can delete");
+    }
+
+    await ctx.db.patch(args.id, { deletedAt: Date.now() });
   },
 });
 
