@@ -5,11 +5,19 @@ import { authTables } from "@convex-dev/auth/server";
 export default defineSchema({
   ...authTables,
 
+  // --- Folders ---
+  folders: defineTable({
+    name: v.string(),
+    userId: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   // --- Documents ---
   documents: defineTable({
     title: v.string(),
     titleSet: v.optional(v.boolean()), // false until user explicitly saves a title
     content: v.string(), // ProseMirror JSON (stringified) — cached snapshot
+    folderId: v.optional(v.id("folders")),
     lastDiffAt: v.optional(v.number()),
     chatClearedAt: v.optional(v.number()),
     aiLockedBy: v.optional(v.id("users")),

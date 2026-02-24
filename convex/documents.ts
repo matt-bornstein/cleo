@@ -13,6 +13,7 @@ const EMPTY_DOC = JSON.stringify(EMPTY_DOC_OBJ);
 export const create = mutation({
   args: {
     title: v.string(),
+    folderId: v.optional(v.id("folders")),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -23,6 +24,7 @@ export const create = mutation({
       title: args.title,
       titleSet: false,
       content: EMPTY_DOC,
+      folderId: args.folderId,
       createdAt: now,
       updatedAt: now,
     });
@@ -121,6 +123,7 @@ export const list = query({
           _id: doc._id,
           title: doc.title,
           preview: extractPreview(doc.content),
+          folderId: doc.folderId,
           updatedAt: doc.updatedAt,
           createdAt: doc.createdAt,
           role: perm.role,
@@ -273,6 +276,30 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.id);
+  },
+});
+
+export const moveToFolder = mutation({
+  args: {
+    id: v.id("documents"),
+    folderId: v.optional(v.id("folders")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const permission = await ctx.db
+      .query("permissions")
+      .withIndex("by_document_user", (q) =>
+        q.eq("documentId", args.id).eq("userId", userId)
+      )
+      .first();
+
+    if (!permission || (permission.role !== "owner" && permission.role !== "editor")) {
+      throw new Error("Not authorized");
+    }
+
+    await ctx.db.patch(args.id, { folderId: args.folderId });
   },
 });
 

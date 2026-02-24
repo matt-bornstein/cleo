@@ -14,6 +14,7 @@ import type * as comments from "../comments.js";
 import type * as crons from "../crons.js";
 import type * as diffs from "../diffs.js";
 import type * as documents from "../documents.js";
+import type * as folders from "../folders.js";
 import type * as http from "../http.js";
 import type * as lib_diffing from "../lib/diffing.js";
 import type * as lib_htmlSerializer from "../lib/htmlSerializer.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   diffs: typeof diffs;
   documents: typeof documents;
+  folders: typeof folders;
   http: typeof http;
   "lib/diffing": typeof lib_diffing;
   "lib/htmlSerializer": typeof lib_htmlSerializer;
