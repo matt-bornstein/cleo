@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,8 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  FilePlus,
-  X,
   Share2,
   Settings,
   LogOut,
@@ -60,18 +56,6 @@ export function Toolbar({
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const { signOut } = useAuthActions();
-  const createDoc = useMutation(api.documents.create);
-  const router = useRouter();
-
-  const handleNewDoc = async () => {
-    try {
-      const docId = await createDoc({ title: "Untitled" });
-      router.push(`/editor/${docId}`);
-    } catch (error) {
-      console.error("Failed to create document:", error);
-    }
-  };
-
 
   const handleExportHtml = () => {
     // Prefer live editor HTML if available, fall back to cached content
@@ -187,17 +171,7 @@ ${htmlContent}
       <div className="flex h-12 items-center justify-between border-b px-4">
         <div className="flex items-center gap-1">
           {documentId && (
-            <Button variant="ghost" size="sm" onClick={handleNewDoc}>
-              <FilePlus className="mr-1 h-4 w-4" />
-              New
-            </Button>
-          )}
-          {documentId && (
             <>
-              <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
-                <X className="mr-1 h-4 w-4" />
-                Close
-              </Button>
               <Button
                 variant="ghost"
                 size="sm"

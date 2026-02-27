@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AI_MODELS } from "@/lib/ai/models";
+import { VISIBLE_MODELS } from "@/lib/ai/models";
 
 interface ModelSelectorProps {
   value: string;
@@ -21,7 +21,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         <SelectValue placeholder="Select model" />
       </SelectTrigger>
       <SelectContent>
-        {AI_MODELS.map((model) => (
+        {VISIBLE_MODELS.map((model) => (
           <SelectItem key={model.id} value={model.id} className="text-xs">
             {model.name}
             <span className="ml-2 text-muted-foreground">

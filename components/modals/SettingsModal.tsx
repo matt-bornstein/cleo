@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AI_MODELS, DEFAULT_MODEL } from "@/lib/ai/models";
+import { VISIBLE_MODELS, DEFAULT_MODEL } from "@/lib/ai/models";
 import { Loader2 } from "lucide-react";
 
 interface SettingsModalProps {
@@ -107,7 +107,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {AI_MODELS.map((model) => (
+                  {VISIBLE_MODELS.map((model) => (
                     <SelectItem key={model.id} value={model.id}>
                       {model.name} ({model.provider})
                     </SelectItem>

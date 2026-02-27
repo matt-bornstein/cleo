@@ -165,6 +165,64 @@ npm run lint          # ESLint
 npm test
 ```
 
+## Deploying to Vercel
+
+The app has two deployment surfaces: the **Convex backend** (Convex Cloud) and the **Next.js frontend** (Vercel).
+
+### 1. Deploy Convex to Production
+
+```bash
+npx convex deploy
+```
+
+Then set the required environment variables on the production deployment:
+
+```bash
+npx convex env set SITE_URL https://<your-app>.vercel.app --prod
+npx convex env set OPENAI_API_KEY <your-key> --prod
+npx convex env set ANTHROPIC_API_KEY <your-key> --prod
+npx convex env set GEMINI_API_KEY <your-key> --prod
+```
+
+Generate auth keys for production:
+
+```bash
+node scripts/setup-auth-keys.mjs
+```
+
+If using Google OAuth, also set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` with `--prod`.
+
+### 2. Link and Deploy to Vercel
+
+```bash
+npm i -g vercel
+vercel link
+```
+
+Set the Vercel environment variables (values come from your Convex production deployment):
+
+```bash
+vercel env add CONVEX_DEPLOYMENT production       # prod:<name>
+vercel env add NEXT_PUBLIC_CONVEX_URL production   # https://<name>.convex.cloud
+vercel env add NEXT_PUBLIC_CONVEX_SITE_URL production  # https://<name>.convex.site
+```
+
+Deploy:
+
+```bash
+vercel --prod
+```
+
+### 3. Update SITE_URL
+
+After the first deploy, update the Convex `SITE_URL` to match the Vercel production URL:
+
+```bash
+npx convex env set SITE_URL https://<your-app>.vercel.app --prod
+```
+
+If using Google OAuth, also add the production URL as an authorized redirect URI in the Google Cloud Console.
+
 ## License
 
 Private
