@@ -415,8 +415,13 @@ function getModelConfig(model: string): ModelConfig | null {
     "gpt-5.2": { provider: "openai", modelId: "gpt-5.2" },
     "gpt-5-mini": { provider: "openai", modelId: "gpt-5-mini" },
     "gpt-4o": { provider: "openai", modelId: "gpt-4o" },
-    "claude-sonnet-4-20250514": { provider: "anthropic", modelId: "claude-sonnet-4-20250514" },
+    "claude-opus-4-6": { provider: "anthropic", modelId: "claude-opus-4-6" },
+    "claude-sonnet-4-6": { provider: "anthropic", modelId: "claude-sonnet-4-6" },
+    "claude-haiku-4-5": { provider: "anthropic", modelId: "claude-haiku-4-5" },
+    "gemini-3.1-pro-preview": { provider: "google", modelId: "gemini-3.1-pro-preview" },
+    "gemini-3-flash-preview": { provider: "google", modelId: "gemini-3-flash-preview" },
     "gemini-2.5-pro": { provider: "google", modelId: "gemini-2.5-pro" },
+    "gemini-2.5-flash": { provider: "google", modelId: "gemini-2.5-flash" },
   };
   return models[model] || null;
 }

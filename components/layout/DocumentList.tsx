@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { useRouter } from "next/navigation";
+
 import { Badge } from "@/components/ui/badge";
 import {
   FileText,
@@ -65,9 +65,10 @@ export function DocumentList() {
   const renameFolder = useMutation(api.folders.rename);
   const removeFolder = useMutation(api.folders.remove);
   const moveToFolder = useMutation(api.documents.moveToFolder);
-  const router = useRouter();
+
 
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "document" | "folder";
     id: Id<"documents"> | Id<"folders">;
@@ -112,7 +113,7 @@ export function DocumentList() {
 
   const handleNewDoc = async (folderId?: Id<"folders">) => {
     const docId = await createDoc({ title: "Untitled", folderId });
-    router.push(`/editor/${docId}`);
+    window.open(`/editor/${docId}`, "_blank");
   };
 
   const handleCreateFolder = async () => {
@@ -145,6 +146,28 @@ export function DocumentList() {
       await removeFolder({ id: deleteTarget.id as Id<"folders"> });
     }
     setDeleteTarget(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, folderId?: Id<"folders">) => {
+    e.preventDefault();
+    setDragOverTarget(null);
+    const docId = e.dataTransfer.getData("application/x-doc-id") as Id<"documents">;
+    if (docId) {
+      moveToFolder({ id: docId, folderId });
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetId: string) => {
+    if (e.dataTransfer.types.includes("application/x-doc-id")) {
+      e.preventDefault();
+      setDragOverTarget(targetId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverTarget(null);
+    }
   };
 
   const docsByFolder = new Map<string, Doc[]>();
@@ -221,10 +244,24 @@ export function DocumentList() {
           const isRenaming = renamingFolderId === folder._id;
 
           return (
-            <div key={folder._id} className="space-y-1">
+            <div
+              key={folder._id}
+              className={`space-y-1 rounded-lg transition-colors ${
+                dragOverTarget === folder._id
+                  ? "bg-primary/5 p-1"
+                  : ""
+              }`}
+              onDragOver={(e) => handleDragOver(e, folder._id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, folder._id)}
+            >
               {/* Folder header */}
               <button
-                className="cursor-pointer flex w-full items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2.5 text-left transition-colors hover:bg-muted/70"
+                className={`cursor-pointer flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                  dragOverTarget === folder._id
+                    ? "border-primary bg-primary/10"
+                    : "bg-muted/40 hover:bg-muted/70"
+                }`}
                 onClick={() => toggleFolder(folder._id)}
               >
                 {isCollapsed ? (
@@ -296,7 +333,7 @@ export function DocumentList() {
                       key={doc._id}
                       doc={doc}
                       folders={folders}
-                      onNavigate={() => router.push(`/editor/${doc._id}`)}
+                      onNavigate={() => window.open(`/editor/${doc._id}`, "_blank")}
                       onDelete={() =>
                         setDeleteTarget({
                           type: "document",
@@ -316,11 +353,25 @@ export function DocumentList() {
         })}
 
         {/* Unfiled documents */}
-        {unfiledDocs.length > 0 && folders.length > 0 && (
-          <div className="pt-1">
+        {folders.length > 0 && (
+          <div
+            className={`pt-1 rounded-lg transition-colors ${
+              dragOverTarget === "unfiled"
+                ? "border border-primary bg-primary/10 px-1"
+                : ""
+            }`}
+            onDragOver={(e) => handleDragOver(e, "unfiled")}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, undefined)}
+          >
             <p className="px-1 pb-1 text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
               Unfiled
             </p>
+            {unfiledDocs.length === 0 && (
+              <p className="px-3 py-2 text-xs text-muted-foreground/60 italic">
+                Drop documents here to unfile them
+              </p>
+            )}
           </div>
         )}
         {unfiledDocs.map((doc) => (
@@ -328,7 +379,7 @@ export function DocumentList() {
             key={doc._id}
             doc={doc}
             folders={folders}
-            onNavigate={() => router.push(`/editor/${doc._id}`)}
+            onNavigate={() => window.open(`/editor/${doc._id}`, "_blank")}
             onDelete={() =>
               setDeleteTarget({
                 type: "document",
@@ -397,6 +448,11 @@ function DocumentRow({
   return (
     <button
       className="cursor-pointer flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left transition-colors hover:bg-accent"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("application/x-doc-id", doc._id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
       onClick={onNavigate}
     >
       <div className="flex flex-1 items-center gap-3 min-w-0">
@@ -441,20 +497,8 @@ function DocumentRow({
                 <FolderInput className="h-4 w-4" />
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-48 p-1" align="end">
+            <PopoverContent className="w-48 p-1" align="end" onClick={(e) => e.stopPropagation()}>
               <div className="space-y-0.5">
-                <button
-                  className="cursor-pointer flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
-                  onClick={() => {
-                    onMove(undefined);
-                    setMoveOpen(false);
-                  }}
-                >
-                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className={!doc.folderId ? "font-medium" : ""}>
-                    Unfiled
-                  </span>
-                </button>
                 {folders.map((folder) => (
                   <button
                     key={folder._id}
@@ -474,6 +518,18 @@ function DocumentRow({
                     </span>
                   </button>
                 ))}
+                <button
+                  className="cursor-pointer flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
+                  onClick={() => {
+                    onMove(undefined);
+                    setMoveOpen(false);
+                  }}
+                >
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className={!doc.folderId ? "font-medium" : ""}>
+                    Unfiled
+                  </span>
+                </button>
               </div>
             </PopoverContent>
           </Popover>
