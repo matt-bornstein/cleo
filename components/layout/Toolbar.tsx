@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -170,6 +171,18 @@ ${htmlContent}
     <>
       <div className="flex h-12 items-center justify-between border-b px-4">
         <div className="flex items-center gap-1">
+          <div className="flex items-center gap-5 mr-2 self-end">
+            {documentId ? (
+              <a href="/" title="Back to documents">
+                <Image src="/logo.png" alt="Cleo" width={54} height={54} />
+              </a>
+            ) : (
+              <>
+                <Image src="/logo.png" alt="Cleo" width={84} height={84} className="-mb-3" />
+                <span className="text-sm" style={{ fontFamily: "var(--font-pixel)" }}>Cleo Editor</span>
+              </>
+            )}
+          </div>
           {documentId && (
             <>
               <Button
