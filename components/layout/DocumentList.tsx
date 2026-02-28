@@ -256,13 +256,16 @@ export function DocumentList() {
               onDrop={(e) => handleDrop(e, folder._id)}
             >
               {/* Folder header */}
-              <button
+              <div
                 className={`cursor-pointer flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors ${
                   dragOverTarget === folder._id
                     ? "border-primary bg-primary/10"
                     : "bg-muted/40 hover:bg-muted/70"
                 }`}
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleFolder(folder._id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") toggleFolder(folder._id); }}
               >
                 {isCollapsed ? (
                   <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
@@ -318,7 +321,7 @@ export function DocumentList() {
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
-              </button>
+              </div>
 
               {/* Folder documents */}
               {!isCollapsed && (
