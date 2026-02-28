@@ -446,7 +446,7 @@ function DocumentRow({
   const [moveOpen, setMoveOpen] = useState(false);
 
   return (
-    <button
+    <div
       className="cursor-pointer flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left transition-colors hover:bg-accent"
       draggable
       onDragStart={(e) => {
@@ -454,6 +454,9 @@ function DocumentRow({
         e.dataTransfer.effectAllowed = "move";
       }}
       onClick={onNavigate}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onNavigate(); }}
     >
       <div className="flex flex-1 items-center gap-3 min-w-0">
         <FileText className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
@@ -547,6 +550,6 @@ function DocumentRow({
           </button>
         )}
       </div>
-    </button>
+    </div>
   );
 }
