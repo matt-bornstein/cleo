@@ -68,6 +68,13 @@ export function DocumentList() {
 
 
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const initializedRef = useRef(false);
+  useEffect(() => {
+    if (!initializedRef.current && folders?.length) {
+      initializedRef.current = true;
+      setCollapsedFolders(new Set(folders.map((f) => f._id)));
+    }
+  }, [folders]);
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "document" | "folder";
