@@ -98,7 +98,7 @@ function EditorPageContent({
   useEffect(() => {
     const title = document.title || "Untitled";
     const truncated = title.length > 40 ? title.substring(0, 40) + "…" : title;
-    window.document.title = `Cleo: ${truncated}`;
+    window.document.title = truncated;
   }, [document.title]);
 
   const [showComments, setShowComments] = useState(false);
