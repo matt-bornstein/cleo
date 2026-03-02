@@ -82,11 +82,11 @@ ${liveHtml}
 </body>
 </html>`;
       const blob = new Blob([fullHtml], { type: "text/html" });
-      downloadBlob(blob, `${documentTitle || "document"}.html`);
+      downloadBlob(blob, `${documentTitle || "document"}-${timestamp()}.html`);
     } else if (documentContent) {
       const html = exportAsHtml(documentContent, documentTitle || "Document");
       const blob = new Blob([html], { type: "text/html" });
-      downloadBlob(blob, `${documentTitle || "document"}.html`);
+      downloadBlob(blob, `${documentTitle || "document"}-${timestamp()}.html`);
     }
   };
 
@@ -95,11 +95,11 @@ ${liveHtml}
     if (liveHtml) {
       const md = htmlToMarkdown(liveHtml);
       const blob = new Blob([md], { type: "text/markdown" });
-      downloadBlob(blob, `${documentTitle || "document"}.md`);
+      downloadBlob(blob, `${documentTitle || "document"}-${timestamp()}.md`);
     } else if (documentContent) {
       const md = exportAsMarkdown(documentContent);
       const blob = new Blob([md], { type: "text/markdown" });
-      downloadBlob(blob, `${documentTitle || "document"}.md`);
+      downloadBlob(blob, `${documentTitle || "document"}-${timestamp()}.md`);
     }
   };
 
@@ -107,7 +107,7 @@ ${liveHtml}
     if (!documentContent) return;
     const text = exportAsText(documentContent);
     const blob = new Blob([text], { type: "text/plain" });
-    downloadBlob(blob, `${documentTitle || "document"}.txt`);
+    downloadBlob(blob, `${documentTitle || "document"}-${timestamp()}.txt`);
   };
 
   const handleExportPdf = () => {
@@ -157,6 +157,11 @@ ${htmlContent}
       printWindow.print();
     }, 250);
   };
+
+  function timestamp() {
+    const d = new Date();
+    return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}-${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
+  }
 
   function downloadBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
