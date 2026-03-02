@@ -49,13 +49,7 @@ export default function SignInPage() {
       }
     } catch (err) {
       console.error("signIn error:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : isSignUp
-            ? "Failed to create account. Email may already be registered."
-            : "Invalid email or password."
-      );
+      setError("Sign-in failed. Please check your credentials and try again.");
       setLoading(false);
     }
   };
