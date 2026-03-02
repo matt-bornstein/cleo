@@ -31,7 +31,9 @@ export function clearDiffHighlights() {
  */
 export function setDiffHighlightsFromData(highlightData: string[]) {
   const entries: DiffEntry[] = [];
-  for (const fragment of highlightData) {
+  const baseTime = Date.now();
+  for (let i = 0; i < highlightData.length; i++) {
+    const fragment = highlightData[i];
     try {
       const parsed = JSON.parse(fragment);
       if (parsed.replace || parsed.search) {
@@ -39,12 +41,12 @@ export function setDiffHighlightsFromData(highlightData: string[]) {
           addedText: parsed.replace || "",
           deletedText: parsed.search,
           contextAfter: parsed.contextAfter,
-          timestamp: Date.now(),
+          timestamp: baseTime + i,
         });
       }
     } catch {
       if (fragment.trim()) {
-        entries.push({ addedText: fragment, timestamp: Date.now() });
+        entries.push({ addedText: fragment, timestamp: baseTime + i });
       }
     }
   }

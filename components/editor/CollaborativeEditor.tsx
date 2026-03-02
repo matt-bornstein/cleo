@@ -160,7 +160,12 @@ function SyncedEditor({
       clearDiffHighlights();
     }
     setDiffCount(diffHighlightsState.diffs.length);
-    triggerDecorationRefresh(editorRefForDecorations.current);
+    // Staggered refreshes to ensure the document content has settled
+    // via prosemirror-sync before the plugin resolves text positions
+    const timeouts = [0, 300, 700].map((delay) =>
+      setTimeout(() => triggerDecorationRefresh(editorRefForDecorations.current), delay)
+    );
+    return () => timeouts.forEach(clearTimeout);
   }, [activeHighlights, setDiffCount]);
 
   // Extensions are stable — they don't change when cursor/comment data updates.
