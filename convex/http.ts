@@ -76,13 +76,21 @@ http.route({
 
       // Build messages for the AI
       const systemPrompt = getSystemPrompt();
-      const chatHistory = (messages || []).slice(-5).map((m: { role: string; content: string; userName?: string }) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        // Prefix user messages with their name for multi-user context
-        content: m.role === "user" && m.userName
-          ? `[${m.userName}]: ${m.content}`
-          : m.content,
-      }));
+      const chatHistory = (messages || []).slice(-5).map((m: { role: string; content: string; attachments?: string[]; userName?: string }) => {
+        let msgContent = m.content;
+        if (m.attachments && m.attachments.length > 0) {
+          m.attachments.forEach((item, i) => {
+            msgContent += `\n\n--- Attached Data (${i + 1}) ---\n${item}`;
+          });
+        }
+        if (m.role === "user" && m.userName) {
+          msgContent = `[${m.userName}]: ${msgContent}`;
+        }
+        return {
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: msgContent,
+        };
+      });
 
       const aiMessages = [
         { role: "system", content: systemPrompt },

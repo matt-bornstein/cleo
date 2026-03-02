@@ -112,6 +112,7 @@ export default defineSchema({
       v.literal("system")
     ),
     content: v.string(),
+    attachments: v.optional(v.array(v.string())),
     model: v.optional(v.string()),
     diffId: v.optional(v.id("diffs")),
     renderedPrompt: v.optional(v.string()),

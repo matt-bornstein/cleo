@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface MessageBubbleProps {
   role: "user" | "assistant" | "system";
   content: string;
+  attachments?: string[];
   userName?: string;
   model?: string;
   diffId?: Id<"diffs">;
@@ -30,6 +31,7 @@ interface MessageBubbleProps {
 export function MessageBubble({
   role,
   content,
+  attachments,
   userName,
   model,
   diffId,
@@ -90,8 +92,24 @@ export function MessageBubble({
           )}
         </div>
         {isUser ? (
-          <div className="text-sm whitespace-pre-wrap break-words">
-            {content}
+          <div className="space-y-1.5">
+            {content && (
+              <div className="text-sm whitespace-pre-wrap break-words">{content}</div>
+            )}
+            {attachments && attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {attachments.map((item, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground"
+                  >
+                    <span className="max-w-[200px] truncate">
+                      {item.length > 50 ? item.slice(0, 50) + "..." : item}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div

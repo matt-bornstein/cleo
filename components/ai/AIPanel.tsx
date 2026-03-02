@@ -89,11 +89,11 @@ export function AIPanel({ documentId }: AIPanelProps) {
     prevStreamingRef.current = isStreaming;
   }, [isStreaming]);
 
-  const handleSubmit = (prompt: string) => {
+  const handleSubmit = (text: string, attachments: string[]) => {
     clearDiffHighlights();
     setDiffCount(0);
     refreshDecorations();
-    submitPrompt(prompt, model, { thinkHarder, verbose });
+    submitPrompt(text, attachments, model, { thinkHarder, verbose });
   };
 
   return (
@@ -163,6 +163,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
                 <MessageBubble
                   role={msg.role}
                   content={msg.content}
+                  attachments={msg.attachments ?? undefined}
                   userName={msg.userName}
                   model={msg.model ?? undefined}
                   diffId={msg.diffId ?? undefined}

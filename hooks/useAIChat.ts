@@ -33,16 +33,23 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
   const clearChat = useMutation(api.ai.clearChat);
 
   const submitPrompt = useCallback(
-    async (prompt: string, model: string, options?: { thinkHarder?: boolean; verbose?: boolean }) => {
+    async (text: string, attachments: string[], model: string, options?: { thinkHarder?: boolean; verbose?: boolean }) => {
       setError(null);
       setStreamingContent("");
 
       try {
-        // Save user message
+        // Save user message with content and attachments stored separately
         await saveMessage({
           documentId,
           role: "user",
-          content: prompt,
+          content: text,
+          attachments: attachments.length > 0 ? attachments : undefined,
+        });
+
+        // Compose the full prompt for the AI (text + attachment blocks)
+        let prompt = text;
+        attachments.forEach((item, i) => {
+          prompt += `\n\n--- Attached Data (${i + 1}) ---\n${item}`;
         });
 
         // Acquire lock
