@@ -21,7 +21,6 @@ export const diffHighlightsState = {
 };
 
 export function clearDiffHighlights() {
-  console.log("[DiffHighlights] clearDiffHighlights() — was:", diffHighlightsState.diffs.length);
   diffHighlightsState.diffs = [];
 }
 
@@ -52,18 +51,13 @@ export function setDiffHighlightsFromData(highlightData: string[]) {
 }
 
 export function addDiffHighlight(addedText: string, deletedText?: string, contextAfter?: string) {
-  console.log("[DiffHighlights] addDiffHighlight called — addedText length:", addedText?.length, "deletedText length:", deletedText?.length, "contextAfter length:", contextAfter?.length);
-  if (!addedText.trim() && !deletedText?.trim()) {
-    console.log("[DiffHighlights] Skipped — both texts empty/whitespace");
-    return;
-  }
+  if (!addedText.trim() && !deletedText?.trim()) return;
   diffHighlightsState.diffs.push({
     addedText,
     deletedText,
     contextAfter,
     timestamp: Date.now(),
   });
-  console.log("[DiffHighlights] Pushed entry. Total diffs:", diffHighlightsState.diffs.length);
 }
 
 function findTextInDoc(
@@ -180,7 +174,6 @@ export const DiffHighlightsExtension = Extension.create({
           },
           apply(_tr, _old, _oldState, newState) {
             const diffs = diffHighlightsState.diffs;
-            console.log("[DiffHighlights] apply() called — diffs.length:", diffs.length, "ref:", diffHighlightsState);
             if (diffs.length === 0) return DecorationSet.empty;
 
             try {
@@ -188,17 +181,13 @@ export const DiffHighlightsExtension = Extension.create({
               const doc = newState.doc;
               const docSize = doc.content.size;
 
-              console.log("[DiffHighlights] apply() — processing", diffs.length, "diffs, docSize:", docSize);
-
               for (let i = 0; i < diffs.length; i++) {
                 const diff = diffs[i];
                 const fragments = extractTextFragments(diff.addedText);
-                console.log(`[DiffHighlights] diff[${i}] — addedText fragments:`, fragments.length, "deletedText:", !!diff.deletedText);
                 let firstAddedPos: number | null = null;
 
                 for (const fragment of fragments) {
                   const found = findTextInDoc(doc, fragment);
-                  console.log(`[DiffHighlights]   fragment "${fragment.substring(0, 50)}..." → found:`, found);
                   if (found && found.from >= 0 && found.to <= docSize && found.from < found.to) {
                     decorations.push(
                       Decoration.inline(found.from, found.to, {
@@ -218,16 +207,13 @@ export const DiffHighlightsExtension = Extension.create({
                     const found = findTextInDoc(doc, contextFragments[0]);
                     if (found && found.from >= 0 && found.from <= docSize) {
                       firstAddedPos = found.from;
-                      console.log(`[DiffHighlights]   deletion anchor via contextAfter at pos ${firstAddedPos}`);
                     }
                   }
                 }
 
-                // Insert a widget for deleted text before the first added fragment
                 if (diff.deletedText && firstAddedPos !== null) {
                   try {
                     const plainDeleted = extractPlainText(diff.deletedText);
-                    console.log(`[DiffHighlights]   deleted widget at pos ${firstAddedPos}: "${plainDeleted?.substring(0, 50)}..."`);
                     if (plainDeleted) {
                       const isBlock = /^<(?:p|h[1-6]|li|ul|ol|blockquote|div|pre|table|tr)\b/i.test(diff.deletedText!);
                       decorations.push(
@@ -247,7 +233,6 @@ export const DiffHighlightsExtension = Extension.create({
                 }
               }
 
-              console.log("[DiffHighlights] Total decorations:", decorations.length);
               // Sort by position — required by DecorationSet.create
               decorations.sort((a, b) => a.from - b.from);
               return DecorationSet.create(doc, decorations);
