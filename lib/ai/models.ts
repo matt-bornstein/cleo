@@ -36,6 +36,7 @@ export const AI_MODELS: AIModel[] = [
     provider: "anthropic",
     maxTokens: 128000,
     contextWindow: 200000,
+    hidden: true,
   },
   {
     id: "claude-sonnet-4-6",
@@ -43,6 +44,7 @@ export const AI_MODELS: AIModel[] = [
     provider: "anthropic",
     maxTokens: 64000,
     contextWindow: 200000,
+    hidden: true,
   },
   {
     id: "claude-haiku-4-5",
@@ -58,6 +60,7 @@ export const AI_MODELS: AIModel[] = [
     provider: "google",
     maxTokens: 65536,
     contextWindow: 1048576,
+    hidden: true,
   },
   {
     id: "gemini-3-flash-preview",
@@ -65,6 +68,7 @@ export const AI_MODELS: AIModel[] = [
     provider: "google",
     maxTokens: 65536,
     contextWindow: 1048576,
+    hidden: true,
   },
   {
     id: "gemini-2.5-pro",
