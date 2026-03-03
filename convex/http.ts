@@ -387,14 +387,19 @@ function getSystemPrompt(): string {
 
 The document is provided as HTML.
 
-RESPONSE FORMAT:
-Use SEARCH/REPLACE blocks to make changes to the HTML. Each block targets one specific change:
+RESPONSE STRUCTURE (you MUST follow this exact three-part structure):
+
+1. INTRODUCTION (required): Start with 1-2 sentences explaining what you plan to change and why. This text appears to the user BEFORE edits begin, so always include it.
+
+2. EDIT BLOCKS: Use SEARCH/REPLACE blocks to make changes to the HTML. Each block targets one specific change:
 
 <<<SEARCH
 <p>exact HTML to find in the document</p>
 ===
 <p>replacement HTML</p>
 >>>
+
+3. SUMMARY (required): After ALL edit blocks, end with 1-2 sentences summarizing what was changed. This text appears to the user AFTER edits are applied, so always include it.
 
 IMPORTANT — changes are applied to the document in real time as you produce each block. Follow these rules:
 - Use one SEARCH/REPLACE block per logical change (e.g. one block per paragraph, heading, or list item being modified).
@@ -410,7 +415,7 @@ IMPORTANT — changes are applied to the document in real time as you produce ea
 
 - Always preserve the document's existing structure and formatting unless asked to change it.
 - Use standard HTML elements: <h1>-<h3>, <p>, <strong>, <em>, <u>, <s>, <ul>, <ol>, <li>, <blockquote>, <pre><code>, <a>, <img>, <table>, <tr>, <td>, <th>, <hr>.
-- Briefly explain what you will change before the blocks, then provide a short summary after.`;
+- NEVER omit the introduction or summary. The user sees only the text before and after the edit blocks, not the blocks themselves.`;
 }
 
 interface ModelConfig {
