@@ -31,6 +31,7 @@ import {
 
 import { CommentButton } from "./CommentButton";
 import { ImageUploadButton } from "./ImageUploadButton";
+import { VideoInsertButton } from "./VideoInsertButton";
 import { Id } from "@/convex/_generated/dataModel";
 
 interface FormattingToolbarProps {
@@ -225,6 +226,7 @@ export function FormattingToolbar({ editor, documentId }: FormattingToolbarProps
         tooltip="Insert Link"
       />
       <ImageUploadButton editor={editor} />
+      <VideoInsertButton editor={editor} />
       <ToolbarButton
         onClick={addTable}
         icon={<Table className="h-4 w-4" />}

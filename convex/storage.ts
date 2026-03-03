@@ -24,3 +24,16 @@ export const getFileUrl = query({
     return await ctx.storage.getUrl(args.storageId);
   },
 });
+
+/**
+ * Get the serving URL for an uploaded file (callable as a mutation
+ * so it can be used imperatively after an upload completes).
+ */
+export const getServingUrl = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});

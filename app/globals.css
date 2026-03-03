@@ -240,6 +240,22 @@
   color: var(--muted-foreground);
 }
 
+.tiptap video {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin: 0.75em 0;
+}
+
+.tiptap div[data-youtube-video] {
+  margin: 0.75em 0;
+}
+
+.tiptap div[data-youtube-video] iframe {
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+
 .tiptap pre {
   background-color: var(--muted);
   border-radius: var(--radius);

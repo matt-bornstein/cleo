@@ -6,7 +6,9 @@ import { TableHeader } from "@tiptap/extension-table";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Image from "@tiptap/extension-image";
+import Youtube from "@tiptap/extension-youtube";
 import Placeholder from "@tiptap/extension-placeholder";
+import { Video } from "./videoExtension";
 
 export const editorExtensions = [
   StarterKit.configure({
@@ -27,6 +29,12 @@ export const editorExtensions = [
   Image.configure({
     inline: false,
     allowBase64: true,
+  }),
+  Video,
+  Youtube.configure({
+    controls: true,
+    nocookie: true,
+    allowFullscreen: true,
   }),
   Placeholder.configure({
     placeholder: "Start writing...",
