@@ -286,7 +286,17 @@ function renderAssistantContent(
     }
   }
 
+  // Strip any raw edit blocks that leaked through
+  text = text.replace(/<<<SEARCH\n[\s\S]*?\n===\n[\s\S]*?>>>/g, "");
+  text = text.replace(/<<<SEARCH[\s\S]*$/g, "");
+  text = text.replace(/```html\n[\s\S]*?\n```/g, "");
+  text = text.replace(/```html[\s\S]*$/g, "");
   text = text.replace(/\n{3,}/g, "\n\n").trim();
+
+  // Fallback if no visible text remains
+  if (!text) {
+    text = "Changes applied to document.";
+  }
 
   let html = escapeHtml(text);
 
