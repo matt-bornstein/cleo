@@ -24,6 +24,7 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   renderedPrompt?: string;
   documentId?: Id<"documents">;
+  isAskMode?: boolean;
   isLatestDiff?: boolean;
   showControls?: boolean;
 }
@@ -38,6 +39,7 @@ export function MessageBubble({
   isStreaming = false,
   renderedPrompt,
   documentId,
+  isAskMode = false,
   isLatestDiff = false,
   showControls = false,
 }: MessageBubbleProps) {
@@ -53,6 +55,7 @@ export function MessageBubble({
 
   const { html: renderedContent, isEditingNow } = useMemo(() => {
     if (isUser) return { html: null, isEditingNow: false };
+    if (isAskMode) return { html: renderPlainMarkdown(content), isEditingNow: false };
     return renderAssistantContent(content, isStreaming);
   }, [content, isUser, isStreaming]);
 
@@ -130,7 +133,7 @@ export function MessageBubble({
             </span>
           </div>
         )}
-        {diffId && (
+        {diffId && !isAskMode && (
           showControls ? (
             <div className={`mt-1 flex items-center gap-1 text-xs ${isUndone ? "text-muted-foreground" : "text-emerald-600 dark:text-emerald-400"}`}>
               {isUndone ? (
@@ -295,7 +298,7 @@ function renderAssistantContent(
 
   // Fallback if no visible text remains
   if (!text) {
-    text = "Changes applied to document.";
+    text = "No summary returned by AI.";
   }
 
   let html = escapeHtml(text);
@@ -321,6 +324,21 @@ function renderAssistantContent(
   html = html.replace(/\n/g, "<br>");
 
   return { html, isEditingNow };
+}
+
+function renderPlainMarkdown(text: string): string {
+  let html = escapeHtml(text.replace(/\n{3,}/g, "\n\n").trim());
+
+  html = html.replace(
+    /```(\w*)\n([\s\S]*?)```/g,
+    (_match, _lang, code) => `<pre class="ai-code-block"><code>${code.trim()}</code></pre>`
+  );
+  html = html.replace(/`([^`]+)`/g, '<code class="ai-inline-code">$1</code>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
+  html = html.replace(/\n/g, "<br>");
+
+  return html;
 }
 
 function escapeHtml(text: string): string {

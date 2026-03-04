@@ -33,7 +33,7 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
   const clearChat = useMutation(api.ai.clearChat);
 
   const submitPrompt = useCallback(
-    async (text: string, attachments: string[], model: string, options?: { thinkHarder?: boolean; verbose?: boolean }) => {
+    async (text: string, attachments: string[], model: string, options?: { thinkHarder?: boolean; verbose?: boolean; askMode?: boolean }) => {
       setError(null);
       setStreamingContent("");
 
@@ -44,6 +44,7 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
           role: "user",
           content: text,
           attachments: attachments.length > 0 ? attachments : undefined,
+          askMode: options?.askMode || undefined,
         });
 
         // Compose the full prompt for the AI (text + attachment blocks)
@@ -75,6 +76,7 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
             model,
             thinkHarder: options?.thinkHarder ?? false,
             verbose: options?.verbose ?? false,
+            askMode: options?.askMode ?? false,
           }),
           signal: abortController.signal,
         });

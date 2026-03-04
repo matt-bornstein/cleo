@@ -75,6 +75,7 @@ export const saveMessage = mutation({
     attachments: v.optional(v.array(v.string())),
     model: v.optional(v.string()),
     diffId: v.optional(v.id("diffs")),
+    askMode: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -95,6 +96,7 @@ export const saveMessage = mutation({
       attachments: args.attachments,
       model: args.model,
       diffId: args.diffId,
+      askMode: args.askMode,
       documentSnapshot,
       createdAt: Date.now(),
     });

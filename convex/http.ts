@@ -41,7 +41,7 @@ http.route({
 
     try {
       const body = await request.json();
-      const { documentId, prompt, model, thinkHarder, verbose } = body;
+      const { documentId, prompt, model, thinkHarder, verbose, askMode } = body;
 
       if (!documentId || !prompt || !model) {
         return jsonError("Missing required fields", 400);
@@ -75,7 +75,7 @@ http.route({
       }
 
       // Build messages for the AI
-      const systemPrompt = getSystemPrompt();
+      const systemPrompt = askMode ? getAskModeSystemPrompt() : getSystemPrompt();
       const chatHistory = (messages || []).slice(-5).map((m: { role: string; content: string; attachments?: string[]; userName?: string }) => {
         let msgContent = m.content;
         if (m.attachments && m.attachments.length > 0) {
@@ -270,8 +270,10 @@ http.route({
             async (chunk: string) => {
               accumulated += chunk;
               await sendEvent("token", chunk);
-              await tryApplyNewBlocks();
-              await tryApplyHtmlElements();
+              if (!askMode) {
+                await tryApplyNewBlocks();
+                await tryApplyHtmlElements();
+              }
             }
           );
 
@@ -295,7 +297,9 @@ http.route({
           }
 
           // Final pass: apply any remaining HTML elements or full HTML fallback
-          if (inHtmlFence && fullResponse) {
+          if (askMode) {
+            // Ask mode: no edits to apply
+          } else if (inHtmlFence && fullResponse) {
             // One final element check now that streaming is complete
             await tryApplyHtmlElements();
 
@@ -416,6 +420,14 @@ IMPORTANT — changes are applied to the document in real time as you produce ea
 - Always preserve the document's existing structure and formatting unless asked to change it.
 - Use standard HTML elements: <h1>-<h3>, <p>, <strong>, <em>, <u>, <s>, <ul>, <ol>, <li>, <blockquote>, <pre><code>, <a>, <img>, <table>, <tr>, <td>, <th>, <hr>.
 - NEVER omit the introduction or summary. The user sees only the text before and after the edit blocks, not the blocks themselves.`;
+}
+
+function getAskModeSystemPrompt(): string {
+  return `You are an AI assistant helping a user with their document. The document is provided as HTML for context.
+
+The user is asking a question — they do NOT want you to edit the document. Do NOT output any SEARCH/REPLACE blocks or HTML code fences.
+
+Answer the user's question succinctly and helpfully, referencing the document content when relevant. Use plain text with basic markdown formatting (bold, italic, lists) if needed.`;
 }
 
 interface ModelConfig {

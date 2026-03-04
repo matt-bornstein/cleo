@@ -24,6 +24,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [thinkHarder, setThinkHarder] = useState(false);
   const [verbose, setVerbose] = useState(false);
+  const [askMode, setAskMode] = useState(false);
   const { setIsSaving, refreshDecorations, setDiffCount } = useEditorContext();
 
   const onChangesApplied = useCallback((diffMetadata: string) => {
@@ -90,10 +91,12 @@ export function AIPanel({ documentId }: AIPanelProps) {
   }, [isStreaming]);
 
   const handleSubmit = (text: string, attachments: string[]) => {
-    clearDiffHighlights();
-    setDiffCount(0);
-    refreshDecorations();
-    submitPrompt(text, attachments, model, { thinkHarder, verbose });
+    if (!askMode) {
+      clearDiffHighlights();
+      setDiffCount(0);
+      refreshDecorations();
+    }
+    submitPrompt(text, attachments, model, { thinkHarder, verbose, askMode });
   };
 
   return (
@@ -143,6 +146,12 @@ export function AIPanel({ documentId }: AIPanelProps) {
             const hasNewPromptAfterDiff = latestDiffIdx >= 0 &&
               arr.slice(latestDiffIdx + 1).some((m) => m.role === "user");
 
+            // Check if this assistant message is an ask-mode response
+            const precedingUserMsgForAsk = msg.role === "assistant"
+              ? arr.slice(0, idx).findLast((m) => m.role === "user")
+              : undefined;
+            const isAskModeResponse = precedingUserMsgForAsk?.askMode === true;
+
             // Only show Accept/Undo controls to the user who submitted the query
             const precedingUserMsg = msg.diffId
               ? arr.slice(0, idx).findLast((m) => m.role === "user")
@@ -169,6 +178,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
                   diffId={msg.diffId ?? undefined}
                   renderedPrompt={msg.renderedPrompt ?? undefined}
                   documentId={documentId}
+                  isAskMode={msg.askMode === true || isAskModeResponse}
                   isLatestDiff={!!msg.diffId && msg.diffId === latestDiffId && !hasNewPromptAfterDiff}
                   showControls={!!msg.diffId && msg.diffId === latestDiffId && !hasNewPromptAfterDiff && isMyDiff}
                 />
@@ -221,28 +231,39 @@ export function AIPanel({ documentId }: AIPanelProps) {
               : "Ask AI to edit your document..."
           }
           leftSlot={
-            model.startsWith("gpt-5") ? (
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <Checkbox
-                    checked={thinkHarder}
-                    onCheckedChange={(v) => setThinkHarder(v === true)}
-                    disabled={isStreaming}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs text-muted-foreground">Think harder</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <Checkbox
-                    checked={verbose}
-                    onCheckedChange={(v) => setVerbose(v === true)}
-                    disabled={isStreaming}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs text-muted-foreground">Verbose</span>
-                </label>
-              </div>
-            ) : undefined
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <Checkbox
+                  checked={askMode}
+                  onCheckedChange={(v) => setAskMode(v === true)}
+                  disabled={isStreaming}
+                  className="h-3.5 w-3.5"
+                />
+                <span className="text-xs text-muted-foreground">Ask mode</span>
+              </label>
+              {model.startsWith("gpt-5") && (
+                <>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <Checkbox
+                      checked={thinkHarder}
+                      onCheckedChange={(v) => setThinkHarder(v === true)}
+                      disabled={isStreaming}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="text-xs text-muted-foreground">Think harder</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <Checkbox
+                      checked={verbose}
+                      onCheckedChange={(v) => setVerbose(v === true)}
+                      disabled={isStreaming}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="text-xs text-muted-foreground">Verbose</span>
+                  </label>
+                </>
+              )}
+            </div>
           }
         />
       </div>
