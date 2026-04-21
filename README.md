@@ -1,8 +1,8 @@
 # Cleo: An AI-Native Collaborative Rich Text Editor
 
-⭐ Working demo here: https://cleo-editor.vercel.app/ ⭐
-
 A real-time collaborative rich text editor built with **Next.js 16**, **Convex**, **Tiptap 3**, and AI assistant capabilities from OpenAI, Anthropic, and Google.
+
+## Working demo here: https://cleo-editor.vercel.app/
 
 ## Features
 
