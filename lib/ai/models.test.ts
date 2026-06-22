@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AI_MODELS, DEFAULT_MODEL, getModel } from "./models";
+import { AI_MODELS, DEFAULT_MODEL, VISIBLE_MODELS, getModel } from "./models";
 
 describe("AI Models", () => {
   it("has at least 4 models defined", () => {
@@ -30,6 +30,24 @@ describe("AI Models", () => {
     const model = getModel("gpt-4o");
     expect(model?.name).toBe("GPT-4o");
     expect(model?.provider).toBe("openai");
+  });
+
+  it("supports GPT-5.5 and Claude Opus 4.8", () => {
+    expect(getModel("gpt-5.5")).toMatchObject({
+      name: "GPT-5.5",
+      provider: "openai",
+    });
+    expect(getModel("claude-opus-4-8")).toMatchObject({
+      name: "Claude Opus 4.8",
+      provider: "anthropic",
+    });
+  });
+
+  it("shows GPT-5.5 and Claude Opus 4.8 in the selector", () => {
+    const visibleIds = VISIBLE_MODELS.map((model) => model.id);
+
+    expect(visibleIds).toContain("gpt-5.5");
+    expect(visibleIds).toContain("claude-opus-4-8");
   });
 
   it("getModel returns undefined for invalid ID", () => {

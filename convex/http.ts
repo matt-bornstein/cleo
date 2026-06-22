@@ -437,9 +437,11 @@ interface ModelConfig {
 
 function getModelConfig(model: string): ModelConfig | null {
   const models: Record<string, ModelConfig> = {
+    "gpt-5.5": { provider: "openai", modelId: "gpt-5.5" },
     "gpt-5.2": { provider: "openai", modelId: "gpt-5.2" },
     "gpt-5-mini": { provider: "openai", modelId: "gpt-5-mini" },
     "gpt-4o": { provider: "openai", modelId: "gpt-4o" },
+    "claude-opus-4-8": { provider: "anthropic", modelId: "claude-opus-4-8" },
     "claude-opus-4-6": { provider: "anthropic", modelId: "claude-opus-4-6" },
     "claude-sonnet-4-6": { provider: "anthropic", modelId: "claude-sonnet-4-6" },
     "claude-haiku-4-5": { provider: "anthropic", modelId: "claude-haiku-4-5" },

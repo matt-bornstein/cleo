@@ -9,6 +9,13 @@ export interface AIModel {
 
 export const AI_MODELS: AIModel[] = [
   {
+    id: "gpt-5.5",
+    name: "GPT-5.5",
+    provider: "openai",
+    maxTokens: 16384,
+    contextWindow: 1047576,
+  },
+  {
     id: "gpt-5.2",
     name: "GPT-5.2",
     provider: "openai",
@@ -29,6 +36,13 @@ export const AI_MODELS: AIModel[] = [
     provider: "openai",
     maxTokens: 4096,
     contextWindow: 128000,
+  },
+  {
+    id: "claude-opus-4-8",
+    name: "Claude Opus 4.8",
+    provider: "anthropic",
+    maxTokens: 128000,
+    contextWindow: 200000,
   },
   {
     id: "claude-opus-4-6",
