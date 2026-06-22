@@ -89,37 +89,50 @@ export function useAIChat(documentId: Id<"documents">, options?: UseAIChatOption
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
         let accumulated = "";
+        let streamBuffer = "";
+
+        const processStreamLine = (line: string) => {
+          if (!line.startsWith("data: ")) return;
+
+          try {
+            const event: StreamEvent = JSON.parse(line.slice(6));
+
+            switch (event.type) {
+              case "token":
+                accumulated += event.content;
+                setStreamingContent(accumulated);
+                break;
+              case "done":
+                // AI message is saved server-side
+                break;
+              case "changes_applied":
+                onChangesAppliedRef.current?.(event.content);
+                break;
+              case "error":
+                setError(event.content);
+                break;
+            }
+          } catch {
+            // Skip malformed events
+          }
+        };
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const text = decoder.decode(value, { stream: true });
-          const lines = text.split("\n").filter((l) => l.startsWith("data: "));
+          streamBuffer += decoder.decode(value, { stream: true });
+          const lines = streamBuffer.split(/\r?\n/);
+          streamBuffer = lines.pop() ?? "";
 
           for (const line of lines) {
-            try {
-              const event: StreamEvent = JSON.parse(line.slice(6));
-
-              switch (event.type) {
-                case "token":
-                  accumulated += event.content;
-                  setStreamingContent(accumulated);
-                  break;
-                case "done":
-                  // AI message is saved server-side
-                  break;
-                case "changes_applied":
-                  onChangesAppliedRef.current?.(event.content);
-                  break;
-                case "error":
-                  setError(event.content);
-                  break;
-              }
-            } catch {
-              // Skip malformed events
-            }
+            processStreamLine(line);
           }
+        }
+
+        streamBuffer += decoder.decode();
+        if (streamBuffer) {
+          processStreamLine(streamBuffer);
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {

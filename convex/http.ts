@@ -458,6 +458,38 @@ interface AIOptions {
   verbose: boolean;
 }
 
+async function readSseStream(
+  response: Response,
+  onData: (data: string) => Promise<void>
+): Promise<void> {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  const processLine = async (line: string) => {
+    if (!line.startsWith("data: ")) return;
+    await onData(line.slice(6));
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      await processLine(line);
+    }
+  }
+
+  buffer += decoder.decode();
+  if (buffer) {
+    await processLine(buffer);
+  }
+}
+
 async function callAIProvider(
   config: ModelConfig,
   messages: { role: string; content: string }[],
@@ -517,31 +549,19 @@ async function callOpenAI(
   }
 
   let fullContent = "";
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const text = decoder.decode(value, { stream: true });
-    const lines = text.split("\n").filter((l) => l.startsWith("data: "));
-
-    for (const line of lines) {
-      const data = line.slice(6);
-      if (data === "[DONE]") continue;
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (content) {
-          fullContent += content;
-          await onChunk(content);
-        }
-      } catch {
-        // Skip malformed
+  await readSseStream(response, async (data) => {
+    if (data === "[DONE]") return;
+    try {
+      const parsed = JSON.parse(data);
+      const content = parsed.choices?.[0]?.delta?.content;
+      if (content) {
+        fullContent += content;
+        await onChunk(content);
       }
+    } catch {
+      // Skip malformed
     }
-  }
+  });
 
   return fullContent;
 }
@@ -584,32 +604,20 @@ async function callAnthropic(
   }
 
   let fullContent = "";
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const text = decoder.decode(value, { stream: true });
-    const lines = text.split("\n").filter((l) => l.startsWith("data: "));
-
-    for (const line of lines) {
-      const data = line.slice(6);
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.type === "content_block_delta") {
-          const content = parsed.delta?.text;
-          if (content) {
-            fullContent += content;
-            await onChunk(content);
-          }
+  await readSseStream(response, async (data) => {
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.type === "content_block_delta") {
+        const content = parsed.delta?.text;
+        if (content) {
+          fullContent += content;
+          await onChunk(content);
         }
-      } catch {
-        // Skip malformed
       }
+    } catch {
+      // Skip malformed
     }
-  }
+  });
 
   return fullContent;
 }
@@ -649,30 +657,18 @@ async function callGoogle(
   }
 
   let fullContent = "";
-  const reader = response.body!.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const text = decoder.decode(value, { stream: true });
-    const lines = text.split("\n").filter((l) => l.startsWith("data: "));
-
-    for (const line of lines) {
-      const data = line.slice(6);
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (content) {
-          fullContent += content;
-          await onChunk(content);
-        }
-      } catch {
-        // Skip malformed
+  await readSseStream(response, async (data) => {
+    try {
+      const parsed = JSON.parse(data);
+      const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (content) {
+        fullContent += content;
+        await onChunk(content);
       }
+    } catch {
+      // Skip malformed
     }
-  }
+  });
 
   return fullContent;
 }
