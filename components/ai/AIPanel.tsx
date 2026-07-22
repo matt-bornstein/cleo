@@ -102,7 +102,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
   return (
     <div className="flex h-full flex-col bg-muted/30">
       {/* Header */}
-      <div className="flex h-11 items-center justify-between border-b bg-background px-3">
+      <div className="flex h-10 shrink-0 items-center justify-between border-b bg-background px-3 sm:h-11">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">AI Assistant</h3>
@@ -126,10 +126,10 @@ export function AIPanel({ documentId }: AIPanelProps) {
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 overflow-hidden">
-        <div ref={scrollRef} className="p-3">
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+        <div ref={scrollRef} className="p-2 sm:p-3">
           {messages.length === 0 && !isStreaming && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex flex-col items-center justify-center py-6 text-center sm:py-12">
               <Bot className="mb-3 h-8 w-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 Ask AI to help edit your document.
@@ -216,8 +216,8 @@ export function AIPanel({ documentId }: AIPanelProps) {
       </ScrollArea>
 
       {/* Model selector and input */}
-      <div className="border-t">
-        <div className="px-3 pt-2">
+      <div className="shrink-0 border-t">
+        <div className="px-2 pt-1.5 sm:px-3 sm:pt-2">
           <ModelSelector value={model} onChange={setModel} />
         </div>
         <ChatInput
