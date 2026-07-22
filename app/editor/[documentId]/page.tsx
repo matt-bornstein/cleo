@@ -101,6 +101,7 @@ function EditorPageContent({
 
   const [showComments, setShowComments] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
+  const [mobilePanelPercent, setMobilePanelPercent] = useState(48);
   const [panelWidth, setPanelWidth] = useState(() =>
     typeof window !== "undefined" ? Math.round(window.innerWidth / 4) : 400
   );
@@ -138,6 +139,52 @@ function EditorPageContent({
     window.addEventListener("mouseup", handleMouseUp);
   }, []);
 
+  const handleMobileResizeStart = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (window.matchMedia("(min-width: 1024px)").matches) return;
+
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      window.document.body.style.cursor = "row-resize";
+      window.document.body.style.userSelect = "none";
+
+      const handlePointerMove = (event: PointerEvent) => {
+        if (!containerRef.current) return;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const newHeight = containerRect.bottom - event.clientY;
+        const nextPercent = (newHeight / containerRect.height) * 100;
+        setMobilePanelPercent(Math.max(38, Math.min(nextPercent, 70)));
+      };
+
+      const handlePointerUp = () => {
+        window.document.body.style.cursor = "";
+        window.document.body.style.userSelect = "";
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", handlePointerUp);
+        window.removeEventListener("pointercancel", handlePointerUp);
+      };
+
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", handlePointerUp);
+      window.addEventListener("pointercancel", handlePointerUp);
+    },
+    []
+  );
+
+  const handleMobileResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (window.matchMedia("(min-width: 1024px)").matches) return;
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+
+      e.preventDefault();
+      const delta = e.key === "ArrowUp" ? 5 : -5;
+      setMobilePanelPercent((current) =>
+        Math.max(38, Math.min(current + delta, 70))
+      );
+    },
+    []
+  );
+
   const handleTitleSave = async () => {
     if (editTitle.trim()) {
       await updateTitle({ id: document._id, title: editTitle.trim() });
@@ -164,8 +211,13 @@ function EditorPageContent({
         {/* Editor panel — top pane on mobile, fills remaining width on desktop */}
         <div
           className={`flex min-h-0 min-w-0 flex-col lg:basis-auto lg:flex-1 ${
-            showRightPanel ? "basis-[52%]" : "flex-1"
+            showRightPanel
+              ? "basis-[var(--mobile-editor-height)]"
+              : "flex-1"
           }`}
+          style={{
+            "--mobile-editor-height": `${100 - mobilePanelPercent}%`,
+          } as React.CSSProperties}
         >
           <div className="flex h-10 shrink-0 items-center justify-between border-b px-3 sm:h-11 sm:px-4">
             <div className="flex-1 min-w-0 mr-4">
@@ -239,9 +291,10 @@ function EditorPageContent({
               <div className="h-8 w-0.5 rounded-full bg-muted-foreground/30" />
             </div>
             <div
-              className="flex min-h-0 min-w-0 basis-[48%] flex-col border-t lg:w-[var(--desktop-panel-width)] lg:min-w-[280px] lg:shrink-0 lg:basis-auto lg:border-t-0"
+              className="flex min-h-0 min-w-0 basis-[var(--mobile-panel-height)] flex-col border-t lg:w-[var(--desktop-panel-width)] lg:min-w-[280px] lg:shrink-0 lg:basis-auto lg:border-t-0"
               style={{
                 "--desktop-panel-width": `${panelWidth}px`,
+                "--mobile-panel-height": `${mobilePanelPercent}%`,
               } as React.CSSProperties}
             >
               {showComments ? (
@@ -250,11 +303,25 @@ function EditorPageContent({
                     <CommentsSidebar documentId={document._id} />
                   </ScrollArea>
                   <div className="h-1/2">
-                    <AIPanel documentId={document._id} />
+                    <AIPanel
+                      documentId={document._id}
+                      mobileResizeHandle={{
+                        onPointerDown: handleMobileResizeStart,
+                        onKeyDown: handleMobileResizeKeyDown,
+                        valueNow: mobilePanelPercent,
+                      }}
+                    />
                   </div>
                 </div>
               ) : (
-                <AIPanel documentId={document._id} />
+                <AIPanel
+                  documentId={document._id}
+                  mobileResizeHandle={{
+                    onPointerDown: handleMobileResizeStart,
+                    onKeyDown: handleMobileResizeKeyDown,
+                    valueNow: mobilePanelPercent,
+                  }}
+                />
               )}
             </div>
           </>

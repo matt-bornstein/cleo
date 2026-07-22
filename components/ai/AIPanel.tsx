@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  type KeyboardEventHandler,
+  type PointerEventHandler,
+} from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -11,16 +18,21 @@ import { RestoreDivider } from "./RestoreDivider";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ModelSelector } from "./ModelSelector";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Bot } from "lucide-react";
+import { Loader2, Bot, GripHorizontal } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
 import { addDiffHighlight, clearDiffHighlights, diffHighlightsState } from "@/lib/editor/diffHighlights";
 
 interface AIPanelProps {
   documentId: Id<"documents">;
+  mobileResizeHandle?: {
+    onPointerDown: PointerEventHandler<HTMLDivElement>;
+    onKeyDown: KeyboardEventHandler<HTMLDivElement>;
+    valueNow: number;
+  };
 }
 
-export function AIPanel({ documentId }: AIPanelProps) {
+export function AIPanel({ documentId, mobileResizeHandle }: AIPanelProps) {
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [thinkHarder, setThinkHarder] = useState(false);
   const [verbose, setVerbose] = useState(false);
@@ -99,23 +111,56 @@ export function AIPanel({ documentId }: AIPanelProps) {
     submitPrompt(text, attachments, model, { thinkHarder, verbose, askMode });
   };
 
+  const headerContent = (
+    <>
+      <div className="flex items-center gap-2">
+        <Bot className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">AI Assistant</h3>
+      </div>
+      {messages.length > 0 && (
+        <button
+          className="cursor-pointer text-xs text-muted-foreground transition-colors hover:text-foreground"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={clearChat}
+        >
+          Clear
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div className="flex h-full flex-col bg-muted/30">
       {/* Header */}
-      <div className="flex h-10 shrink-0 items-center justify-between border-b bg-background px-3 sm:h-11">
-        <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">AI Assistant</h3>
-        </div>
-        {messages.length > 0 && (
-          <button
-            className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors"
-            onClick={clearChat}
+      {mobileResizeHandle ? (
+        <>
+          <div
+            className="relative flex h-10 shrink-0 touch-none cursor-row-resize select-none items-center justify-between border-b bg-background px-3 sm:h-11 lg:hidden"
+            role="separator"
+            aria-label="Resize editor and AI assistant"
+            aria-orientation="horizontal"
+            aria-valuemin={38}
+            aria-valuemax={70}
+            aria-valuenow={Math.round(mobileResizeHandle.valueNow)}
+            tabIndex={0}
+            onPointerDown={mobileResizeHandle.onPointerDown}
+            onKeyDown={mobileResizeHandle.onKeyDown}
           >
-            Clear
-          </button>
-        )}
-      </div>
+            {headerContent}
+            <GripHorizontal
+              className="pointer-events-none absolute left-1/2 top-0.5 h-3 w-5 -translate-x-1/2 text-muted-foreground/60"
+              aria-hidden="true"
+            />
+          </div>
+          <div className="hidden h-11 shrink-0 items-center justify-between border-b bg-background px-3 lg:flex">
+            {headerContent}
+          </div>
+        </>
+      ) : (
+        <div className="flex h-10 shrink-0 items-center justify-between border-b bg-background px-3 sm:h-11">
+          {headerContent}
+        </div>
+      )}
 
       {/* AI Lock indicator (visible to all collaborators) */}
       {isLocked && !isStreaming && (
