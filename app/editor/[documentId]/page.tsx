@@ -305,6 +305,7 @@ function EditorPageContent({
                   <div className="h-1/2">
                     <AIPanel
                       documentId={document._id}
+                      onHide={() => setShowRightPanel(false)}
                       mobileResizeHandle={{
                         onPointerDown: handleMobileResizeStart,
                         onKeyDown: handleMobileResizeKeyDown,
@@ -316,6 +317,7 @@ function EditorPageContent({
               ) : (
                 <AIPanel
                   documentId={document._id}
+                  onHide={() => setShowRightPanel(false)}
                   mobileResizeHandle={{
                     onPointerDown: handleMobileResizeStart,
                     onKeyDown: handleMobileResizeKeyDown,

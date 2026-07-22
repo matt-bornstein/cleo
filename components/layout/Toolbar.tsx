@@ -20,6 +20,8 @@ import {
   FileCode,
   MessageSquare,
   Printer,
+  PanelBottomClose,
+  PanelBottomOpen,
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
@@ -281,7 +283,17 @@ ${htmlContent}
               aria-label={showRightPanel ? "Hide AI assistant" : "Show AI assistant"}
               className="h-9 w-9 p-0 sm:h-8 sm:w-8"
             >
-              {showRightPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+              {showRightPanel ? (
+                <>
+                  <PanelBottomClose className="h-4 w-4 lg:hidden" />
+                  <PanelRightClose className="hidden h-4 w-4 lg:block" />
+                </>
+              ) : (
+                <>
+                  <PanelBottomOpen className="h-4 w-4 lg:hidden" />
+                  <PanelRightOpen className="hidden h-4 w-4 lg:block" />
+                </>
+              )}
             </Button>
           )}
           <Button

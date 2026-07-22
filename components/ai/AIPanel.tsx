@@ -18,13 +18,20 @@ import { RestoreDivider } from "./RestoreDivider";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ModelSelector } from "./ModelSelector";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Bot, GripHorizontal } from "lucide-react";
+import {
+  Loader2,
+  Bot,
+  GripHorizontal,
+  PanelBottomClose,
+  PanelRightClose,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
 import { addDiffHighlight, clearDiffHighlights, diffHighlightsState } from "@/lib/editor/diffHighlights";
 
 interface AIPanelProps {
   documentId: Id<"documents">;
+  onHide?: () => void;
   mobileResizeHandle?: {
     onPointerDown: PointerEventHandler<HTMLDivElement>;
     onKeyDown: KeyboardEventHandler<HTMLDivElement>;
@@ -32,7 +39,11 @@ interface AIPanelProps {
   };
 }
 
-export function AIPanel({ documentId, mobileResizeHandle }: AIPanelProps) {
+export function AIPanel({
+  documentId,
+  onHide,
+  mobileResizeHandle,
+}: AIPanelProps) {
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [thinkHarder, setThinkHarder] = useState(false);
   const [verbose, setVerbose] = useState(false);
@@ -117,15 +128,31 @@ export function AIPanel({ documentId, mobileResizeHandle }: AIPanelProps) {
         <Bot className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-medium">AI Assistant</h3>
       </div>
-      {messages.length > 0 && (
-        <button
-          className="cursor-pointer text-xs text-muted-foreground transition-colors hover:text-foreground"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={clearChat}
-        >
-          Clear
-        </button>
-      )}
+      <div className="flex items-center gap-1">
+        {messages.length > 0 && (
+          <button
+            type="button"
+            className="cursor-pointer px-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={clearChat}
+          >
+            Clear
+          </button>
+        )}
+        {onHide && (
+          <button
+            type="button"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onHide}
+            title="Hide AI assistant"
+            aria-label="Hide AI assistant"
+          >
+            <PanelBottomClose className="h-4 w-4 lg:hidden" />
+            <PanelRightClose className="hidden h-4 w-4 lg:block" />
+          </button>
+        )}
+      </div>
     </>
   );
 
