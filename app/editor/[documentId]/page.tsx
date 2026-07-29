@@ -15,6 +15,7 @@ import {
   EditorContextProvider,
   useEditorContext,
 } from "@/components/editor/EditorContext";
+import { useFocusToggleHotkey } from "@/hooks/useFocusToggleHotkey";
 import { Bot, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -109,8 +110,11 @@ function EditorPageContent({
   );
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState(document.title || "");
-  const { getEditorHtml, getEditorJson, isSaving } = useEditorContext();
+  const { getEditorHtml, getEditorJson, isSaving, focusEditor } = useEditorContext();
   const updateTitle = useMutation(api.documents.updateTitle);
+
+  const revealChatPanel = useCallback(() => setShowRightPanel(true), []);
+  useFocusToggleHotkey({ focusEditor, revealChatPanel });
 
   // Drag resize logic
   const isDragging = useRef(false);

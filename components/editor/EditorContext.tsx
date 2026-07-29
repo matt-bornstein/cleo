@@ -7,6 +7,8 @@ interface EditorContextType {
   setEditor: (editor: Editor | null) => void;
   getEditorHtml: () => string | null;
   getEditorJson: () => string | null;
+  /** Returns false when no editor is mounted. */
+  focusEditor: () => boolean;
   refreshDecorations: () => void;
   isSaving: boolean;
   setIsSaving: (saving: boolean) => void;
@@ -18,6 +20,7 @@ const EditorContext = createContext<EditorContextType>({
   setEditor: () => {},
   getEditorHtml: () => null,
   getEditorJson: () => null,
+  focusEditor: () => false,
   refreshDecorations: () => {},
   isSaving: false,
   setIsSaving: () => {},
@@ -44,6 +47,14 @@ export function EditorContextProvider({ children }: { children: React.ReactNode 
     return JSON.stringify(editorRef.current.getJSON());
   }, []);
 
+  const focusEditor = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor || editor.isDestroyed) return false;
+    // Restores the previous selection rather than jumping to the start.
+    editor.commands.focus();
+    return true;
+  }, []);
+
   const refreshDecorations = useCallback(() => {
     const editor = editorRef.current;
     if (editor && !editor.isDestroyed) {
@@ -53,7 +64,7 @@ export function EditorContextProvider({ children }: { children: React.ReactNode 
   }, []);
 
   return (
-    <EditorContext.Provider value={{ setEditor, getEditorHtml, getEditorJson, refreshDecorations, isSaving, setIsSaving, diffCount, setDiffCount }}>
+    <EditorContext.Provider value={{ setEditor, getEditorHtml, getEditorJson, focusEditor, refreshDecorations, isSaving, setIsSaving, diffCount, setDiffCount }}>
       {children}
     </EditorContext.Provider>
   );
