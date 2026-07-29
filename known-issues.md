@@ -6,7 +6,7 @@
 - AI edits applied via prosemirrorSync.transform() for live OT sync
 - Remote cursor decorations with name labels
 - Presence indicators in toolbar
-- AI assistant with 4 model providers (OpenAI, Anthropic, Google)
+- AI assistant with 4 model providers (OpenAI, Anthropic, Google, xAI)
 - Streaming AI responses with rich message rendering
 - Version history with preview, restore, and HTML-level diffs
 - Comment highlights with anchor remapping (text search fallback)
@@ -27,7 +27,7 @@
 - **Auth keys**: `node scripts/setup-auth-keys.mjs`
 - **Site URL**: `npx convex env set SITE_URL http://localhost:3000`
 - **Google OAuth** (optional): Set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`
-- **AI**: Set one or more of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`
+- **AI**: Set one or more of `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`
 
 ## Remaining Limitations
 1. **No offline editing** — Plan explicitly defers: "v1 is online-only."

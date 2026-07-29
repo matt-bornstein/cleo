@@ -431,16 +431,21 @@ Answer the user's question succinctly and helpfully, referencing the document co
 }
 
 interface ModelConfig {
-  provider: "openai" | "anthropic" | "google";
+  provider: "openai" | "anthropic" | "google" | "xai";
   modelId: string;
 }
 
 function getModelConfig(model: string): ModelConfig | null {
   const models: Record<string, ModelConfig> = {
+    "gpt-5.6-sol": { provider: "openai", modelId: "gpt-5.6-sol" },
+    "gpt-5.6-terra": { provider: "openai", modelId: "gpt-5.6-terra" },
     "gpt-5.5": { provider: "openai", modelId: "gpt-5.5" },
     "gpt-5.2": { provider: "openai", modelId: "gpt-5.2" },
     "gpt-5-mini": { provider: "openai", modelId: "gpt-5-mini" },
     "gpt-4o": { provider: "openai", modelId: "gpt-4o" },
+    "claude-opus-5": { provider: "anthropic", modelId: "claude-opus-5" },
+    "claude-fable-5": { provider: "anthropic", modelId: "claude-fable-5" },
+    "claude-sonnet-5": { provider: "anthropic", modelId: "claude-sonnet-5" },
     "claude-opus-4-8": { provider: "anthropic", modelId: "claude-opus-4-8" },
     "claude-opus-4-6": { provider: "anthropic", modelId: "claude-opus-4-6" },
     "claude-sonnet-4-6": { provider: "anthropic", modelId: "claude-sonnet-4-6" },
@@ -449,6 +454,7 @@ function getModelConfig(model: string): ModelConfig | null {
     "gemini-3-flash-preview": { provider: "google", modelId: "gemini-3-flash-preview" },
     "gemini-2.5-pro": { provider: "google", modelId: "gemini-2.5-pro" },
     "gemini-2.5-flash": { provider: "google", modelId: "gemini-2.5-flash" },
+    "grok-4.5": { provider: "xai", modelId: "grok-4.5" },
   };
   return models[model] || null;
 }
@@ -503,6 +509,8 @@ async function callAIProvider(
       return callAnthropic(config.modelId, messages, onChunk);
     case "google":
       return callGoogle(config.modelId, messages, onChunk);
+    case "xai":
+      return callXai(config.modelId, messages, onChunk);
     default:
       throw new Error(`Unknown provider: ${config.provider}`);
   }
@@ -661,6 +669,54 @@ async function callGoogle(
     try {
       const parsed = JSON.parse(data);
       const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (content) {
+        fullContent += content;
+        await onChunk(content);
+      }
+    } catch {
+      // Skip malformed
+    }
+  });
+
+  return fullContent;
+}
+
+async function callXai(
+  model: string,
+  messages: { role: string; content: string }[],
+  onChunk: (chunk: string) => Promise<void>
+): Promise<string> {
+  const apiKey = process.env.XAI_API_KEY;
+  if (!apiKey) throw new Error("XAI_API_KEY not configured. Set it via: npx convex env set XAI_API_KEY <key>");
+
+  const response = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: messages.map((m) => ({
+        role: m.role as "system" | "user" | "assistant",
+        content: m.content,
+      })),
+      stream: true,
+      max_tokens: 16384,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`xAI API error: ${response.status} ${err}`);
+  }
+
+  let fullContent = "";
+  await readSseStream(response, async (data) => {
+    if (data === "[DONE]") return;
+    try {
+      const parsed = JSON.parse(data);
+      const content = parsed.choices?.[0]?.delta?.content;
       if (content) {
         fullContent += content;
         await onChunk(content);

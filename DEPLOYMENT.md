@@ -80,6 +80,7 @@ Required AI provider keys live in Convex, not Vercel:
 npx convex env set OPENAI_API_KEY <your-key> --prod
 npx convex env set ANTHROPIC_API_KEY <your-key> --prod
 npx convex env set GEMINI_API_KEY <your-key> --prod
+npx convex env set XAI_API_KEY <your-key> --prod
 ```
 
 ## 5. Confirm Vercel Deployment

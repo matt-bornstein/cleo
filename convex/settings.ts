@@ -15,7 +15,7 @@ export const get = query({
 
     return settings ?? {
       theme: "system" as const,
-      defaultModel: "gpt-4o",
+      defaultModel: "gpt-5.6-sol",
       editorFontSize: 16,
       editorLineSpacing: 1.5,
     };
@@ -49,7 +49,7 @@ export const update = mutation({
       await ctx.db.insert("userSettings", {
         userId,
         theme: args.theme ?? "system",
-        defaultModel: args.defaultModel ?? "gpt-4o",
+        defaultModel: args.defaultModel ?? "gpt-5.6-sol",
         editorFontSize: args.editorFontSize ?? 16,
         editorLineSpacing: args.editorLineSpacing ?? 1.5,
       });

@@ -1,13 +1,27 @@
 export interface AIModel {
   id: string;
   name: string;
-  provider: "openai" | "anthropic" | "google";
+  provider: "openai" | "anthropic" | "google" | "xai";
   maxTokens: number;
   contextWindow: number;
   hidden?: boolean;
 }
 
 export const AI_MODELS: AIModel[] = [
+  {
+    id: "gpt-5.6-sol",
+    name: "GPT-5.6 Sol",
+    provider: "openai",
+    maxTokens: 128000,
+    contextWindow: 1050000,
+  },
+  {
+    id: "gpt-5.6-terra",
+    name: "GPT-5.6 Terra",
+    provider: "openai",
+    maxTokens: 128000,
+    contextWindow: 1050000,
+  },
   {
     id: "gpt-5.5",
     name: "GPT-5.5",
@@ -36,6 +50,27 @@ export const AI_MODELS: AIModel[] = [
     provider: "openai",
     maxTokens: 4096,
     contextWindow: 128000,
+  },
+  {
+    id: "claude-opus-5",
+    name: "Claude Opus 5",
+    provider: "anthropic",
+    maxTokens: 128000,
+    contextWindow: 1000000,
+  },
+  {
+    id: "claude-fable-5",
+    name: "Claude Fable 5",
+    provider: "anthropic",
+    maxTokens: 128000,
+    contextWindow: 1000000,
+  },
+  {
+    id: "claude-sonnet-5",
+    name: "Claude Sonnet 5",
+    provider: "anthropic",
+    maxTokens: 128000,
+    contextWindow: 1000000,
   },
   {
     id: "claude-opus-4-8",
@@ -100,11 +135,19 @@ export const AI_MODELS: AIModel[] = [
     contextWindow: 1048576,
     hidden: true,
   },
+  {
+    id: "grok-4.5",
+    name: "Grok 4.5",
+    provider: "xai",
+    // xAI publishes no separate output cap; output shares the context window.
+    maxTokens: 32768,
+    contextWindow: 500000,
+  },
 ];
 
 export const VISIBLE_MODELS = AI_MODELS.filter((m) => !m.hidden);
 
-export const DEFAULT_MODEL = "gpt-5.2";
+export const DEFAULT_MODEL = "gpt-5.6-sol";
 
 export function getModel(id: string): AIModel | undefined {
   return AI_MODELS.find((m) => m.id === id);

@@ -1,6 +1,6 @@
 # Cleo: An AI-Native Collaborative Rich Text Editor
 
-A real-time collaborative rich text editor built with **Next.js 16**, **Convex**, **Tiptap 3**, and AI assistant capabilities from OpenAI, Anthropic, and Google.
+A real-time collaborative rich text editor built with **Next.js 16**, **Convex**, **Tiptap 3**, and AI assistant capabilities from OpenAI, Anthropic, Google, and xAI.
 
 ## Working demo here: https://cleo-editor.vercel.app/
 
@@ -13,7 +13,7 @@ A real-time collaborative rich text editor built with **Next.js 16**, **Convex**
 
 ### AI Assistant
 - Chat panel with streaming responses
-- Multiple AI model support: GPT-4o, GPT-4.1, Claude Sonnet 4, Gemini 2.5 Pro
+- Multiple AI model support: GPT-5.6 Sol (default), GPT-5.6 Terra, Claude Opus 5, Claude Fable 5, Claude Sonnet 5, Grok 4.5, plus earlier GPT, Claude, and Gemini models
 - Search/replace and full-document edit formats
 - Per-document chat history with clear functionality
 - AI lock system to prevent concurrent AI requests
@@ -54,7 +54,7 @@ A real-time collaborative rich text editor built with **Next.js 16**, **Convex**
 | Auth Provider | Google OAuth (via Convex Auth) |
 | Rich Text Editor | Tiptap 3.x |
 | Real-time Collaboration | @convex-dev/prosemirror-sync |
-| AI Providers | OpenAI, Anthropic, Google |
+| AI Providers | OpenAI, Anthropic, Google, xAI |
 | Styling | Tailwind CSS 4 + shadcn/ui |
 
 ## Getting Started
@@ -104,12 +104,15 @@ The app supports two auth methods:
 
 ### AI API Keys
 
-Set one or more as Convex environment variables:
+Set one or more as Convex environment variables. Each provider's key is read at
+request time, so a model whose key is missing fails with a message naming the key
+instead of breaking the other providers:
 
 ```bash
-npx convex env set OPENAI_API_KEY <your-key>
-npx convex env set ANTHROPIC_API_KEY <your-key>
-npx convex env set GEMINI_API_KEY <your-key>
+npx convex env set OPENAI_API_KEY <your-key>      # GPT-5.6 Sol / Terra, GPT-5.x, GPT-4o
+npx convex env set ANTHROPIC_API_KEY <your-key>   # Claude Opus 5, Fable 5, Sonnet 5, Claude 4.x
+npx convex env set GEMINI_API_KEY <your-key>      # Gemini 3.x, Gemini 2.5
+npx convex env set XAI_API_KEY <your-key>         # Grok 4.5
 ```
 
 ## Project Structure
@@ -184,6 +187,7 @@ npx convex env set SITE_URL https://<your-app>.vercel.app --prod
 npx convex env set OPENAI_API_KEY <your-key> --prod
 npx convex env set ANTHROPIC_API_KEY <your-key> --prod
 npx convex env set GEMINI_API_KEY <your-key> --prod
+npx convex env set XAI_API_KEY <your-key> --prod
 ```
 
 Generate auth keys for production:
