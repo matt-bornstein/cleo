@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  type KeyboardEventHandler,
+  type PointerEventHandler,
+} from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -11,16 +18,32 @@ import { RestoreDivider } from "./RestoreDivider";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ModelSelector } from "./ModelSelector";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Bot } from "lucide-react";
+import {
+  Loader2,
+  Bot,
+  GripHorizontal,
+  PanelBottomClose,
+  PanelRightClose,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
 import { addDiffHighlight, clearDiffHighlights, diffHighlightsState } from "@/lib/editor/diffHighlights";
 
 interface AIPanelProps {
   documentId: Id<"documents">;
+  onHide?: () => void;
+  mobileResizeHandle?: {
+    onPointerDown: PointerEventHandler<HTMLDivElement>;
+    onKeyDown: KeyboardEventHandler<HTMLDivElement>;
+    valueNow: number;
+  };
 }
 
-export function AIPanel({ documentId }: AIPanelProps) {
+export function AIPanel({
+  documentId,
+  onHide,
+  mobileResizeHandle,
+}: AIPanelProps) {
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [thinkHarder, setThinkHarder] = useState(false);
   const [verbose, setVerbose] = useState(false);
@@ -99,23 +122,72 @@ export function AIPanel({ documentId }: AIPanelProps) {
     submitPrompt(text, attachments, model, { thinkHarder, verbose, askMode });
   };
 
-  return (
-    <div className="flex h-full flex-col bg-muted/30">
-      {/* Header */}
-      <div className="flex h-11 items-center justify-between border-b bg-background px-3">
-        <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">AI Assistant</h3>
-        </div>
+  const headerContent = (
+    <>
+      <div className="flex items-center gap-2">
+        <Bot className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium">AI Assistant</h3>
+      </div>
+      <div className="flex items-center gap-1">
         {messages.length > 0 && (
           <button
-            className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors"
+            type="button"
+            className="cursor-pointer px-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={clearChat}
           >
             Clear
           </button>
         )}
+        {onHide && (
+          <button
+            type="button"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onHide}
+            title="Hide AI assistant"
+            aria-label="Hide AI assistant"
+          >
+            <PanelBottomClose className="h-4 w-4 lg:hidden" />
+            <PanelRightClose className="hidden h-4 w-4 lg:block" />
+          </button>
+        )}
       </div>
+    </>
+  );
+
+  return (
+    <div className="flex h-full flex-col bg-muted/30">
+      {/* Header */}
+      {mobileResizeHandle ? (
+        <>
+          <div
+            className="relative flex h-10 shrink-0 touch-none cursor-row-resize select-none items-center justify-between border-b bg-background px-3 sm:h-11 lg:hidden"
+            role="separator"
+            aria-label="Resize editor and AI assistant"
+            aria-orientation="horizontal"
+            aria-valuemin={38}
+            aria-valuemax={70}
+            aria-valuenow={Math.round(mobileResizeHandle.valueNow)}
+            tabIndex={0}
+            onPointerDown={mobileResizeHandle.onPointerDown}
+            onKeyDown={mobileResizeHandle.onKeyDown}
+          >
+            {headerContent}
+            <GripHorizontal
+              className="pointer-events-none absolute left-1/2 top-0.5 h-3 w-5 -translate-x-1/2 text-muted-foreground/60"
+              aria-hidden="true"
+            />
+          </div>
+          <div className="hidden h-11 shrink-0 items-center justify-between border-b bg-background px-3 lg:flex">
+            {headerContent}
+          </div>
+        </>
+      ) : (
+        <div className="flex h-10 shrink-0 items-center justify-between border-b bg-background px-3 sm:h-11">
+          {headerContent}
+        </div>
+      )}
 
       {/* AI Lock indicator (visible to all collaborators) */}
       {isLocked && !isStreaming && (
@@ -126,10 +198,10 @@ export function AIPanel({ documentId }: AIPanelProps) {
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 overflow-hidden">
-        <div ref={scrollRef} className="p-3">
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+        <div ref={scrollRef} className="p-2 sm:p-3">
           {messages.length === 0 && !isStreaming && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex flex-col items-center justify-center py-6 text-center sm:py-12">
               <Bot className="mb-3 h-8 w-8 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
                 Ask AI to help edit your document.
@@ -216,8 +288,8 @@ export function AIPanel({ documentId }: AIPanelProps) {
       </ScrollArea>
 
       {/* Model selector and input */}
-      <div className="border-t">
-        <div className="px-3 pt-2">
+      <div className="shrink-0 border-t">
+        <div className="px-2 pt-1.5 sm:px-3 sm:pt-2">
           <ModelSelector value={model} onChange={setModel} />
         </div>
         <ChatInput

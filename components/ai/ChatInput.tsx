@@ -72,7 +72,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
   };
 
   return (
-    <div className="space-y-1.5 p-3">
+    <div className="space-y-1.5 p-2 sm:p-3">
       {attachedItems.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {attachedItems.map((item, i) => (
@@ -111,11 +111,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function Ch
         onPaste={handlePaste}
         placeholder={placeholder}
         disabled={disabled}
-        className="min-h-[100px] max-h-[180px] resize-none text-sm"
-        rows={4}
+        className="min-h-16 max-h-28 resize-none text-sm sm:min-h-[100px] sm:max-h-[180px]"
+        rows={2}
       />
-      <div className="flex items-center justify-between">
-        <div>{leftSlot}</div>
+      <div className="flex items-end justify-between gap-2">
+        <div className="min-w-0 flex-1 overflow-x-auto">{leftSlot}</div>
         {disabled && onCancel ? (
           <Button
             size="sm"

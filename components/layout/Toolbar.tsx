@@ -20,6 +20,8 @@ import {
   FileCode,
   MessageSquare,
   Printer,
+  PanelBottomClose,
+  PanelBottomOpen,
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
@@ -174,17 +176,23 @@ ${htmlContent}
 
   return (
     <>
-      <div className="flex h-12 items-center justify-between border-b px-4">
-        <div className="flex items-center gap-1">
-          <div className="flex items-center gap-5 mr-2 self-end">
+      <div className="flex h-12 shrink-0 items-center justify-between gap-1 overflow-hidden border-b px-2 sm:px-4">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          <div className="mr-1 flex shrink-0 items-center gap-3 self-end sm:mr-2 sm:gap-5">
             {documentId ? (
               <a href="/" title="Back to documents">
-                <Image src="/logo.png" alt="Cleo" width={54} height={54} />
+                <Image
+                  src="/logo.png"
+                  alt="Cleo"
+                  width={54}
+                  height={54}
+                  className="h-10 w-10 object-contain sm:h-[54px] sm:w-[54px]"
+                />
               </a>
             ) : (
               <>
-                <Image src="/logo.png" alt="Cleo" width={84} height={84} className="-mb-3" />
-                <span className="text-sm" style={{ fontFamily: "var(--font-pixel)" }}>Cleo Editor</span>
+                <Image src="/logo.png" alt="Cleo" width={84} height={84} className="-mb-3 h-16 w-16 object-contain sm:h-[84px] sm:w-[84px]" />
+                <span className="hidden text-sm sm:inline" style={{ fontFamily: "var(--font-pixel)" }}>Cleo Editor</span>
               </>
             )}
           </div>
@@ -194,29 +202,48 @@ ${htmlContent}
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowHistory(true)}
+                className="h-9 w-9 shrink-0 p-0 sm:h-8 sm:w-auto sm:px-3"
+                title="Version history"
+                aria-label="Version history"
               >
-                <History className="mr-1 h-4 w-4" />
-                History
+                <History className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">History</span>
               </Button>
               {onToggleComments && (
                 <Button
                   variant={showComments ? "secondary" : "ghost"}
                   size="sm"
                   onClick={onToggleComments}
+                  className="h-9 w-9 shrink-0 p-0 sm:h-8 sm:w-auto sm:px-3"
+                  title="Comments"
+                  aria-label="Comments"
                 >
-                  <MessageSquare className="mr-1 h-4 w-4" />
-                  Comments
+                  <MessageSquare className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Comments</span>
                 </Button>
               )}
-              <Button variant="ghost" size="sm" onClick={() => setShowShare(true)}>
-                <Share2 className="mr-1 h-4 w-4" />
-                Share
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowShare(true)}
+                className="h-9 w-9 shrink-0 p-0 sm:h-8 sm:w-auto sm:px-3"
+                title="Share"
+                aria-label="Share"
+              >
+                <Share2 className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Share</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <Download className="mr-1 h-4 w-4" />
-                    Export
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 shrink-0 p-0 sm:h-8 sm:w-auto sm:px-3"
+                    title="Export"
+                    aria-label="Export"
+                  >
+                    <Download className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Export</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -241,17 +268,52 @@ ${htmlContent}
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {documentId && <PresenceIndicator documentId={documentId} />}
+        <div className="flex shrink-0 items-center gap-0 bg-background sm:gap-2">
+          {documentId && (
+            <div className="hidden md:block">
+              <PresenceIndicator documentId={documentId} />
+            </div>
+          )}
           {documentId && onToggleRightPanel && (
-            <Button variant="ghost" size="sm" onClick={onToggleRightPanel} title={showRightPanel ? "Hide panel" : "Show panel"}>
-              {showRightPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleRightPanel}
+              title={showRightPanel ? "Hide AI assistant" : "Show AI assistant"}
+              aria-label={showRightPanel ? "Hide AI assistant" : "Show AI assistant"}
+              className="h-9 w-9 p-0 sm:h-8 sm:w-8"
+            >
+              {showRightPanel ? (
+                <>
+                  <PanelBottomClose className="h-4 w-4 lg:hidden" />
+                  <PanelRightClose className="hidden h-4 w-4 lg:block" />
+                </>
+              ) : (
+                <>
+                  <PanelBottomOpen className="h-4 w-4 lg:hidden" />
+                  <PanelRightOpen className="hidden h-4 w-4 lg:block" />
+                </>
+              )}
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+            aria-label="Settings"
+            className="h-9 w-9 p-0 sm:h-8 sm:w-8"
+          >
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => void signOut()}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void signOut()}
+            title="Sign out"
+            aria-label="Sign out"
+            className="h-9 w-9 p-0 sm:h-8 sm:w-8"
+          >
             <LogOut className="h-4 w-4" />
           </Button>
         </div>

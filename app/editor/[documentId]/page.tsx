@@ -10,12 +10,10 @@ import { EditorPanel } from "@/components/editor/EditorPanel";
 import { AIPanel } from "@/components/ai/AIPanel";
 import { CommentsSidebar } from "@/components/comments/CommentsSidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import {
   EditorContextProvider,
   useEditorContext,
 } from "@/components/editor/EditorContext";
-import { Bot, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 function RedirectToSignIn() {
@@ -102,8 +100,8 @@ function EditorPageContent({
   }, [document.title]);
 
   const [showComments, setShowComments] = useState(false);
-  const [showAiPanel, setShowAiPanel] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
+  const [mobilePanelPercent, setMobilePanelPercent] = useState(48);
   const [panelWidth, setPanelWidth] = useState(() =>
     typeof window !== "undefined" ? Math.round(window.innerWidth / 4) : 400
   );
@@ -141,6 +139,52 @@ function EditorPageContent({
     window.addEventListener("mouseup", handleMouseUp);
   }, []);
 
+  const handleMobileResizeStart = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (window.matchMedia("(min-width: 1024px)").matches) return;
+
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      window.document.body.style.cursor = "row-resize";
+      window.document.body.style.userSelect = "none";
+
+      const handlePointerMove = (event: PointerEvent) => {
+        if (!containerRef.current) return;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const newHeight = containerRect.bottom - event.clientY;
+        const nextPercent = (newHeight / containerRect.height) * 100;
+        setMobilePanelPercent(Math.max(38, Math.min(nextPercent, 70)));
+      };
+
+      const handlePointerUp = () => {
+        window.document.body.style.cursor = "";
+        window.document.body.style.userSelect = "";
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", handlePointerUp);
+        window.removeEventListener("pointercancel", handlePointerUp);
+      };
+
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", handlePointerUp);
+      window.addEventListener("pointercancel", handlePointerUp);
+    },
+    []
+  );
+
+  const handleMobileResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (window.matchMedia("(min-width: 1024px)").matches) return;
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+
+      e.preventDefault();
+      const delta = e.key === "ArrowUp" ? 5 : -5;
+      setMobilePanelPercent((current) =>
+        Math.max(38, Math.min(current + delta, 70))
+      );
+    },
+    []
+  );
+
   const handleTitleSave = async () => {
     if (editTitle.trim()) {
       await updateTitle({ id: document._id, title: editTitle.trim() });
@@ -149,7 +193,7 @@ function EditorPageContent({
   };
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <Toolbar
         documentId={document._id}
         documentTitle={document.title}
@@ -160,10 +204,22 @@ function EditorPageContent({
         showRightPanel={showRightPanel}
         getEditorHtml={getEditorHtml}
       />
-      <div ref={containerRef} className="flex flex-1 overflow-hidden">
-        {/* Editor panel — fills remaining space */}
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex h-11 items-center justify-between border-b px-4">
+      <div
+        ref={containerRef}
+        className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row"
+      >
+        {/* Editor panel — top pane on mobile, fills remaining width on desktop */}
+        <div
+          className={`flex min-h-0 min-w-0 flex-col lg:basis-auto lg:flex-1 ${
+            showRightPanel
+              ? "basis-[var(--mobile-editor-height)]"
+              : "flex-1"
+          }`}
+          style={{
+            "--mobile-editor-height": `${100 - mobilePanelPercent}%`,
+          } as React.CSSProperties}
+        >
+          <div className="flex h-10 shrink-0 items-center justify-between border-b px-3 sm:h-11 sm:px-4">
             <div className="flex-1 min-w-0 mr-4">
               {isEditingTitle ? (
                 <Input
@@ -179,7 +235,7 @@ function EditorPageContent({
                 />
               ) : (
                 <button
-                  className="text-lg font-semibold text-foreground hover:text-muted-foreground"
+                  className="block max-w-full truncate text-left text-base font-semibold text-foreground hover:text-muted-foreground sm:text-lg"
                   onClick={() => {
                     let title = document.title || "";
                     // Auto-populate from first line if title hasn't been set yet
@@ -224,78 +280,54 @@ function EditorPageContent({
           />
         </div>
 
-        {/* Right side panel — resizable, hidden on mobile */}
+        {/* AI panel — bottom pane on mobile, resizable side pane on desktop */}
         {showRightPanel && (
           <>
-            {/* Drag handle */}
+            {/* Desktop drag handle */}
             <div
-              className="hidden lg:flex w-1.5 cursor-col-resize items-center justify-center border-x bg-muted/30 hover:bg-muted transition-colors"
+              className="hidden w-1.5 cursor-col-resize items-center justify-center border-x bg-muted/30 transition-colors hover:bg-muted lg:flex"
               onMouseDown={handleMouseDown}
             >
               <div className="h-8 w-0.5 rounded-full bg-muted-foreground/30" />
             </div>
             <div
-              className="hidden flex-col lg:flex"
-              style={{ width: panelWidth, minWidth: 280, flexShrink: 0 }}
+              className="flex min-h-0 min-w-0 basis-[var(--mobile-panel-height)] flex-col border-t lg:w-[var(--desktop-panel-width)] lg:min-w-[280px] lg:shrink-0 lg:basis-auto lg:border-t-0"
+              style={{
+                "--desktop-panel-width": `${panelWidth}px`,
+                "--mobile-panel-height": `${mobilePanelPercent}%`,
+              } as React.CSSProperties}
             >
               {showComments ? (
-                <div className="flex h-full flex-col">
+                <div className="flex h-full min-h-0 flex-col">
                   <ScrollArea className="h-1/2 border-b">
                     <CommentsSidebar documentId={document._id} />
                   </ScrollArea>
                   <div className="h-1/2">
-                    <AIPanel documentId={document._id} />
+                    <AIPanel
+                      documentId={document._id}
+                      onHide={() => setShowRightPanel(false)}
+                      mobileResizeHandle={{
+                        onPointerDown: handleMobileResizeStart,
+                        onKeyDown: handleMobileResizeKeyDown,
+                        valueNow: mobilePanelPercent,
+                      }}
+                    />
                   </div>
                 </div>
               ) : (
-                <AIPanel documentId={document._id} />
+                <AIPanel
+                  documentId={document._id}
+                  onHide={() => setShowRightPanel(false)}
+                  mobileResizeHandle={{
+                    onPointerDown: handleMobileResizeStart,
+                    onKeyDown: handleMobileResizeKeyDown,
+                    valueNow: mobilePanelPercent,
+                  }}
+                />
               )}
             </div>
           </>
         )}
-
-        {/* Mobile: AI panel overlay drawer */}
-        {showAiPanel && (
-          <div className="fixed inset-0 z-50 bg-background/80 lg:hidden">
-            <div className="absolute right-0 top-0 h-full w-full max-w-md border-l bg-background shadow-lg">
-              <div className="flex items-center justify-between border-b p-2">
-                <span className="text-sm font-medium">AI Assistant</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAiPanel(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="h-[calc(100%-3rem)]">
-                {showComments ? (
-                  <div className="flex h-full flex-col">
-                    <ScrollArea className="h-1/2 border-b">
-                      <CommentsSidebar documentId={document._id} />
-                    </ScrollArea>
-                    <div className="h-1/2">
-                      <AIPanel documentId={document._id} />
-                    </div>
-                  </div>
-                ) : (
-                  <AIPanel documentId={document._id} />
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile: floating AI toggle button */}
-      <div className="fixed bottom-4 right-4 lg:hidden">
-        <Button
-          size="lg"
-          className="h-12 w-12 rounded-full shadow-lg"
-          onClick={() => setShowAiPanel(!showAiPanel)}
-        >
-          <Bot className="h-5 w-5" />
-        </Button>
       </div>
     </div>
   );
