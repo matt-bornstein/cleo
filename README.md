@@ -17,6 +17,7 @@ A real-time collaborative rich text editor built with **Next.js 16**, **Convex**
 - Search/replace and full-document edit formats
 - Per-document chat history with clear functionality
 - AI lock system to prevent concurrent AI requests
+- `Cmd+K` (macOS) / `Ctrl+K` (Windows, Linux) toggles focus between the document and the chat input
 
 ### Real-Time Collaboration
 - Operational transformation via `@convex-dev/prosemirror-sync`
