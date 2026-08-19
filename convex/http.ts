@@ -59,10 +59,7 @@ http.route({
       // Get the AI model configuration
       const modelConfig = getModelConfig(model);
       if (!modelConfig) {
-        return new Response(
-          JSON.stringify({ error: "Invalid model" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
+        return jsonError(`Invalid model: ${model}`, 400);
       }
 
       // Build the document HTML from ProseMirror JSON
