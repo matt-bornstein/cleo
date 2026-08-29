@@ -11,8 +11,14 @@ import { RestoreDivider } from "./RestoreDivider";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { ModelSelector } from "./ModelSelector";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Loader2, Bot } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useFocusToggleHotkeyLabel } from "@/hooks/useFocusToggleHotkey";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
 import { addDiffHighlight, clearDiffHighlights, diffHighlightsState } from "@/lib/editor/diffHighlights";
 
@@ -26,6 +32,7 @@ export function AIPanel({ documentId }: AIPanelProps) {
   const [verbose, setVerbose] = useState(false);
   const [askMode, setAskMode] = useState(false);
   const { setIsSaving, refreshDecorations, setDiffCount } = useEditorContext();
+  const focusToggleLabel = useFocusToggleHotkeyLabel();
 
   const onChangesApplied = useCallback((diffMetadata: string) => {
     setIsSaving(true);
@@ -100,12 +107,22 @@ export function AIPanel({ documentId }: AIPanelProps) {
   };
 
   return (
-    <div className="flex h-full flex-col bg-muted/30">
+    <div data-chat-panel="" className="flex h-full flex-col bg-muted/30">
       {/* Header */}
       <div className="flex h-11 items-center justify-between border-b bg-background px-3">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">AI Assistant</h3>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <kbd className="hidden rounded border bg-muted px-1.5 py-0.5 font-sans text-[10px] text-muted-foreground lg:inline">
+                {focusToggleLabel}
+              </kbd>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{focusToggleLabel} switches focus between the document and chat</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         {messages.length > 0 && (
           <button
