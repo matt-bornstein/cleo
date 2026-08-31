@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useFocusToggleHotkeyLabel } from "@/hooks/useFocusToggleHotkey";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
 import { addDiffHighlight, clearDiffHighlights, diffHighlightsState } from "@/lib/editor/diffHighlights";
+import { isScrolledToBottom } from "@/lib/scroll";
 
 interface AIPanelProps {
   documentId: Id<"documents">;
@@ -79,14 +80,38 @@ export function AIPanel({ documentId }: AIPanelProps) {
   const me = useQuery(api.users.me);
   const isLocked = document?.aiLockedBy != null;
 
-  // Auto-scroll to bottom on new messages
+  const getViewport = useCallback(
+    () =>
+      scrollRef.current
+        ?.closest("[data-slot='scroll-area']")
+        ?.querySelector("[data-slot='scroll-area-viewport']") as HTMLElement | null,
+    []
+  );
+
+  // Track whether the view is parked at the bottom. Read from a ref rather than
+  // state so the auto-scroll effect below sees the position from before the new
+  // content was rendered.
+  const pinnedToBottomRef = useRef(true);
   useEffect(() => {
-    const viewport = scrollRef.current?.closest("[data-slot='scroll-area']")
-      ?.querySelector("[data-slot='scroll-area-viewport']") as HTMLElement | null;
+    const viewport = getViewport();
+    if (!viewport) return;
+
+    const onScroll = () => {
+      pinnedToBottomRef.current = isScrolledToBottom(viewport);
+    };
+    onScroll();
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => viewport.removeEventListener("scroll", onScroll);
+  }, [getViewport]);
+
+  // Auto-scroll to bottom on new messages, unless the user scrolled up to read
+  useEffect(() => {
+    if (!pinnedToBottomRef.current) return;
+    const viewport = getViewport();
     if (viewport) {
       viewport.scrollTop = viewport.scrollHeight;
     }
-  }, [messages, streamingContent]);
+  }, [messages, streamingContent, getViewport]);
 
   // Refocus the chat input when streaming ends
   const prevStreamingRef = useRef(false);
@@ -98,6 +123,8 @@ export function AIPanel({ documentId }: AIPanelProps) {
   }, [isStreaming]);
 
   const handleSubmit = (text: string, attachments: string[]) => {
+    // Sending a message is an explicit request to follow along again
+    pinnedToBottomRef.current = true;
     if (!askMode) {
       clearDiffHighlights();
       setDiffCount(0);
