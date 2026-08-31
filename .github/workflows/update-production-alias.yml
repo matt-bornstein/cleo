@@ -52,18 +52,20 @@ jobs:
           fi
 
           deployment="${DEPLOYMENT_URL#https://}"
-          npx --yes vercel@59.3.0 alias set \
-            "${deployment}" \
-            "${PUBLIC_ALIAS}" \
-            --token "${VERCEL_TOKEN}"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${VERCEL_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{\"alias\":\"${PUBLIC_ALIAS}\"}" \
+            "https://api.vercel.com/v2/deployments/${deployment}/aliases"
 
-          inspect_output="$(
-            npx --yes vercel@59.3.0 inspect \
-              "${PUBLIC_ALIAS}" \
-              --token "${VERCEL_TOKEN}" 2>&1
+          deployment_json="$(
+            curl --fail-with-body --silent --show-error \
+              --header "Authorization: Bearer ${VERCEL_TOKEN}" \
+              "https://api.vercel.com/v13/deployments/${PUBLIC_ALIAS}"
           )"
-          echo "${inspect_output}"
-          if [[ "${inspect_output}" != *"${deployment}"* ]]; then
+          resolved_url="$(jq -r '.url // empty' <<<"${deployment_json}")"
+          if [[ "${resolved_url}" != "${deployment}" ]]; then
             echo "::error::Public alias does not resolve to ${deployment}."
             exit 1
           fi
