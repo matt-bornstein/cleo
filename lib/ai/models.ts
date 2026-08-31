@@ -23,6 +23,13 @@ export const AI_MODELS: AIModel[] = [
     contextWindow: 1050000,
   },
   {
+    id: "gpt-5.6-luna",
+    name: "GPT-5.6 Luna",
+    provider: "openai",
+    maxTokens: 128000,
+    contextWindow: 1050000,
+  },
+  {
     id: "gpt-5.5",
     name: "GPT-5.5",
     provider: "openai",
@@ -148,6 +155,29 @@ export const AI_MODELS: AIModel[] = [
 export const VISIBLE_MODELS = AI_MODELS.filter((m) => !m.hidden);
 
 export const DEFAULT_MODEL = "gpt-5.6-sol";
+
+export const DEFAULT_CHAT_MODEL_IDS = [
+  "gpt-5.6-sol",
+  "gpt-5.6-terra",
+  "gpt-5.6-luna",
+  "gpt-4o",
+] as const;
+
+const DEFAULT_CHAT_MODEL_ID_SET = new Set<string>(DEFAULT_CHAT_MODEL_IDS);
+
+/**
+ * Resolves a saved model allowlist against the current visible catalog.
+ * Missing, empty, stale, or otherwise invalid settings fall back safely.
+ */
+export function getChatModels(modelIds?: readonly string[]): AIModel[] {
+  const requestedIds =
+    modelIds && modelIds.length > 0 ? new Set(modelIds) : DEFAULT_CHAT_MODEL_ID_SET;
+  const models = VISIBLE_MODELS.filter((model) => requestedIds.has(model.id));
+
+  return models.length > 0
+    ? models
+    : VISIBLE_MODELS.filter((model) => DEFAULT_CHAT_MODEL_ID_SET.has(model.id));
+}
 
 export function getModel(id: string): AIModel | undefined {
   return AI_MODELS.find((m) => m.id === id);

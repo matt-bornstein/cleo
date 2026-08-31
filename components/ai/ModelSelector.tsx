@@ -7,21 +7,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { VISIBLE_MODELS } from "@/lib/ai/models";
+import { VISIBLE_MODELS, type AIModel } from "@/lib/ai/models";
 
 interface ModelSelectorProps {
   value: string;
   onChange: (value: string) => void;
+  models?: readonly AIModel[];
 }
 
-export function ModelSelector({ value, onChange }: ModelSelectorProps) {
+export function ModelSelector({
+  value,
+  onChange,
+  models = VISIBLE_MODELS,
+}: ModelSelectorProps) {
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger className="h-8 w-full text-xs">
         <SelectValue placeholder="Select model" />
       </SelectTrigger>
       <SelectContent>
-        {VISIBLE_MODELS.map((model) => (
+        {models.map((model) => (
           <SelectItem key={model.id} value={model.id} className="text-xs">
             {model.name}
             <span className="ml-2 text-muted-foreground">

@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
-import { AI_MODELS, DEFAULT_MODEL, VISIBLE_MODELS, getModel } from "./models";
+import {
+  AI_MODELS,
+  DEFAULT_CHAT_MODEL_IDS,
+  DEFAULT_MODEL,
+  VISIBLE_MODELS,
+  getChatModels,
+  getModel,
+} from "./models";
 
 describe("AI Models", () => {
   it("has at least 4 models defined", () => {
@@ -61,6 +68,12 @@ describe("AI Models", () => {
       name: "GPT-5.6 Terra",
       provider: "openai",
     });
+    expect(getModel("gpt-5.6-luna")).toMatchObject({
+      name: "GPT-5.6 Luna",
+      provider: "openai",
+      maxTokens: 128000,
+      contextWindow: 1050000,
+    });
     expect(getModel("claude-opus-5")).toMatchObject({
       name: "Claude Opus 5",
       provider: "anthropic",
@@ -84,6 +97,7 @@ describe("AI Models", () => {
 
     expect(visibleIds).toContain("gpt-5.6-sol");
     expect(visibleIds).toContain("gpt-5.6-terra");
+    expect(visibleIds).toContain("gpt-5.6-luna");
     expect(visibleIds).toContain("claude-opus-5");
     expect(visibleIds).toContain("claude-fable-5");
     expect(visibleIds).toContain("claude-sonnet-5");
@@ -92,6 +106,48 @@ describe("AI Models", () => {
 
   it("defaults to GPT-5.6 Sol", () => {
     expect(DEFAULT_MODEL).toBe("gpt-5.6-sol");
+  });
+
+  it("shows the GPT-5.6 family and 4o in chat by default", () => {
+    expect(DEFAULT_CHAT_MODEL_IDS).toEqual([
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-4o",
+    ]);
+    expect(getChatModels().map((model) => model.id)).toEqual([
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-4o",
+    ]);
+  });
+
+  it("resolves a saved chat model allowlist against visible models", () => {
+    expect(
+      getChatModels([
+        "gpt-5.6-luna",
+        "gpt-4o",
+        "gpt-5-mini",
+        "nonexistent",
+        "gpt-4o",
+      ]).map((model) => model.id)
+    ).toEqual(["gpt-5.6-luna", "gpt-4o"]);
+  });
+
+  it("falls back to the default chat models for an invalid allowlist", () => {
+    expect(getChatModels([]).map((model) => model.id)).toEqual([
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-4o",
+    ]);
+    expect(getChatModels(["nonexistent"]).map((model) => model.id)).toEqual([
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-5.6-luna",
+      "gpt-4o",
+    ]);
   });
 
   it("getModel returns undefined for invalid ID", () => {

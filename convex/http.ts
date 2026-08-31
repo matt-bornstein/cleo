@@ -439,6 +439,7 @@ function getModelConfig(model: string): ModelConfig | null {
   const models: Record<string, ModelConfig> = {
     "gpt-5.6-sol": { provider: "openai", modelId: "gpt-5.6-sol" },
     "gpt-5.6-terra": { provider: "openai", modelId: "gpt-5.6-terra" },
+    "gpt-5.6-luna": { provider: "openai", modelId: "gpt-5.6-luna" },
     "gpt-5.5": { provider: "openai", modelId: "gpt-5.5" },
     "gpt-5.2": { provider: "openai", modelId: "gpt-5.2" },
     "gpt-5-mini": { provider: "openai", modelId: "gpt-5-mini" },

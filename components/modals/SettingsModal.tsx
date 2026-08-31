@@ -17,8 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { VISIBLE_MODELS, DEFAULT_MODEL } from "@/lib/ai/models";
+import {
+  VISIBLE_MODELS,
+  DEFAULT_MODEL,
+  DEFAULT_CHAT_MODEL_IDS,
+  getChatModels,
+} from "@/lib/ai/models";
 import { Loader2 } from "lucide-react";
 
 interface SettingsModalProps {
@@ -32,17 +38,50 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
   const [defaultModel, setDefaultModel] = useState(DEFAULT_MODEL);
+  const [enabledModelIds, setEnabledModelIds] = useState<string[]>([
+    ...DEFAULT_CHAT_MODEL_IDS,
+  ]);
   const [fontSize, setFontSize] = useState("16");
   const [saving, setSaving] = useState(false);
 
   // Sync local state from server settings
   useEffect(() => {
-    if (settings) {
+    if (settings && open) {
+      const enabledModels = getChatModels(settings.enabledModelIds);
+      const savedEnabledModelIds = enabledModels.map((model) => model.id);
+      const savedDefaultModel = settings.defaultModel ?? DEFAULT_MODEL;
+
       setTheme((settings.theme as "light" | "dark" | "system") ?? "system");
-      setDefaultModel(settings.defaultModel ?? DEFAULT_MODEL);
+      setEnabledModelIds(savedEnabledModelIds);
+      setDefaultModel(
+        savedEnabledModelIds.includes(savedDefaultModel)
+          ? savedDefaultModel
+          : savedEnabledModelIds[0] ?? DEFAULT_MODEL
+      );
       setFontSize(String(settings.editorFontSize ?? 16));
     }
-  }, [settings]);
+  }, [settings, open]);
+
+  const enabledModels = getChatModels(enabledModelIds);
+
+  const handleModelToggle = (modelId: string, enabled: boolean) => {
+    const selectedIds = new Set(enabledModelIds);
+    if (enabled) {
+      selectedIds.add(modelId);
+    } else {
+      selectedIds.delete(modelId);
+    }
+
+    const nextModelIds = VISIBLE_MODELS
+      .filter((model) => selectedIds.has(model.id))
+      .map((model) => model.id);
+    if (nextModelIds.length === 0) return;
+
+    setEnabledModelIds(nextModelIds);
+    if (!nextModelIds.includes(defaultModel)) {
+      setDefaultModel(nextModelIds[0]);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -50,6 +89,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       await updateSettings({
         theme,
         defaultModel,
+        enabledModelIds,
         editorFontSize: parseInt(fontSize),
       });
 
@@ -71,7 +111,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
@@ -99,6 +139,52 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
             <Separator />
 
+            {/* Models shown in chat */}
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-medium">Models shown in chat</p>
+                <p className="text-xs text-muted-foreground">
+                  Choose which models appear in the chat model selector.
+                </p>
+              </div>
+              <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+                {VISIBLE_MODELS.map((model) => {
+                  const checked = enabledModelIds.includes(model.id);
+                  const isOnlyEnabledModel =
+                    checked && enabledModelIds.length === 1;
+
+                  return (
+                    <label
+                      key={model.id}
+                      className="flex cursor-pointer items-start gap-2 rounded-sm p-1.5 hover:bg-muted/50"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        disabled={isOnlyEnabledModel}
+                        onCheckedChange={(value) =>
+                          handleModelToggle(model.id, value === true)
+                        }
+                        className="mt-0.5"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm leading-tight">
+                          {model.name}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {model.provider}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                At least one model must remain enabled.
+              </p>
+            </div>
+
+            <Separator />
+
             {/* Default AI Model */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Default AI Model</label>
@@ -107,7 +193,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {VISIBLE_MODELS.map((model) => (
+                  {enabledModels.map((model) => (
                     <SelectItem key={model.id} value={model.id}>
                       {model.name} ({model.provider})
                     </SelectItem>

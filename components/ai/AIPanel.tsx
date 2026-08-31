@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -19,7 +19,7 @@ import {
 import { Loader2, Bot } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useFocusToggleHotkeyLabel } from "@/hooks/useFocusToggleHotkey";
-import { DEFAULT_MODEL } from "@/lib/ai/models";
+import { DEFAULT_MODEL, getChatModels } from "@/lib/ai/models";
 import { addDiffHighlight, clearDiffHighlights, diffHighlightsState } from "@/lib/editor/diffHighlights";
 import { isScrolledToBottom } from "@/lib/scroll";
 
@@ -76,9 +76,35 @@ export function AIPanel({ documentId }: AIPanelProps) {
   } = useAIChat(documentId, { onChangesApplied });
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputHandle>(null);
+  const hasAppliedModelSettingsRef = useRef(false);
   const document = useQuery(api.documents.get, { id: documentId });
   const me = useQuery(api.users.me);
+  const settings = useQuery(api.settings.get);
+  const chatModels = useMemo(
+    () => getChatModels(settings?.enabledModelIds),
+    [settings?.enabledModelIds]
+  );
   const isLocked = document?.aiLockedBy != null;
+
+  // Apply the saved default once, then only change the current model if the
+  // user removes it from the chat selector in Settings.
+  useEffect(() => {
+    if (settings === undefined) return;
+
+    const savedDefault = settings?.defaultModel;
+    const fallbackModel =
+      chatModels.find((candidate) => candidate.id === savedDefault)?.id ??
+      chatModels[0]?.id ??
+      DEFAULT_MODEL;
+
+    setModel((currentModel) => {
+      if (!hasAppliedModelSettingsRef.current) return fallbackModel;
+      return chatModels.some((candidate) => candidate.id === currentModel)
+        ? currentModel
+        : fallbackModel;
+    });
+    hasAppliedModelSettingsRef.current = true;
+  }, [settings, chatModels]);
 
   const getViewport = useCallback(
     () =>
@@ -262,7 +288,11 @@ export function AIPanel({ documentId }: AIPanelProps) {
       {/* Model selector and input */}
       <div className="border-t">
         <div className="px-3 pt-2">
-          <ModelSelector value={model} onChange={setModel} />
+          <ModelSelector
+            value={model}
+            onChange={setModel}
+            models={chatModels}
+          />
         </div>
         <ChatInput
           ref={chatInputRef}

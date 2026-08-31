@@ -13,7 +13,8 @@ A real-time collaborative rich text editor built with **Next.js 16**, **Convex**
 
 ### AI Assistant
 - Chat panel with streaming responses
-- Multiple AI model support: GPT-5.6 Sol (default), GPT-5.6 Terra, Claude Opus 5, Claude Fable 5, Claude Sonnet 5, Grok 4.5, plus earlier GPT, Claude, and Gemini models
+- Multiple AI model support: GPT-5.6 Sol (default), GPT-5.6 Terra, GPT-5.6 Luna, Claude Opus 5, Claude Fable 5, Claude Sonnet 5, Grok 4.5, plus earlier GPT, Claude, and Gemini models
+- Per-user model visibility settings; the chat selector defaults to GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, and GPT-4o
 - Search/replace and full-document edit formats
 - Per-document chat history with clear functionality
 - AI lock system to prevent concurrent AI requests
@@ -110,7 +111,7 @@ request time, so a model whose key is missing fails with a message naming the ke
 instead of breaking the other providers:
 
 ```bash
-npx convex env set OPENAI_API_KEY <your-key>      # GPT-5.6 Sol / Terra, GPT-5.x, GPT-4o
+npx convex env set OPENAI_API_KEY <your-key>      # GPT-5.6 Sol / Terra / Luna, GPT-5.x, GPT-4o
 npx convex env set ANTHROPIC_API_KEY <your-key>   # Claude Opus 5, Fable 5, Sonnet 5, Claude 4.x
 npx convex env set GEMINI_API_KEY <your-key>      # Gemini 3.x, Gemini 2.5
 npx convex env set XAI_API_KEY <your-key>         # Grok 4.5
