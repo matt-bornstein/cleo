@@ -98,6 +98,7 @@ export default defineSchema({
     userId: v.id("users"),
     theme: v.optional(v.union(v.literal("light"), v.literal("dark"), v.literal("system"))),
     defaultModel: v.optional(v.string()),
+    enabledModelIds: v.optional(v.array(v.string())),
     editorFontSize: v.optional(v.number()),
     editorLineSpacing: v.optional(v.number()),
   }).index("by_user", ["userId"]),
