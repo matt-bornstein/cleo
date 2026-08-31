@@ -56,12 +56,14 @@ jobs:
           npx --yes vercel@48.0.2 alias set \
             "${deployment}" \
             "${PUBLIC_ALIAS}" \
-            --scope "${VERCEL_SCOPE}"
+            --scope "${VERCEL_SCOPE}" \
+            --token "${VERCEL_TOKEN}"
 
           inspect_output="$(
             npx --yes vercel@48.0.2 inspect \
               "${PUBLIC_ALIAS}" \
-              --scope "${VERCEL_SCOPE}" 2>&1
+              --scope "${VERCEL_SCOPE}" \
+              --token "${VERCEL_TOKEN}" 2>&1
           )"
           echo "${inspect_output}"
           if [[ "${inspect_output}" != *"${deployment}"* ]]; then
