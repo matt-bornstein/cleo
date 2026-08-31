@@ -1,0 +1,73 @@
+name: Update production alias
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-production-alias
+  cancel-in-progress: false
+
+jobs:
+  update-alias:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production' &&
+      github.event.deployment.creator.login == 'vercel[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Confirm deployment matches current main
+        id: current
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOYMENT_SHA: ${{ github.event.deployment.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${DEFAULT_BRANCH}" --jq '.sha')"
+          if [[ "${DEPLOYMENT_SHA}" == "${main_sha}" ]]; then
+            echo "matches=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "matches=false" >> "${GITHUB_OUTPUT}"
+            echo "Skipping deployment ${DEPLOYMENT_SHA}; current main is ${main_sha}."
+          fi
+
+      - name: Point public alias at production deployment
+        if: steps.current.outputs.matches == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOYMENT_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+          PUBLIC_ALIAS: cleo-editor.vercel.app
+          VERCEL_SCOPE: mattbornsteins-projects
+        run: |
+          if [[ -z "${VERCEL_TOKEN}" ]]; then
+            echo "::error::Add a project-scoped VERCEL_TOKEN Actions secret."
+            exit 1
+          fi
+          if [[ -z "${DEPLOYMENT_URL}" ]]; then
+            echo "::error::Vercel did not provide a deployment URL."
+            exit 1
+          fi
+
+          deployment="${DEPLOYMENT_URL#https://}"
+          npx --yes vercel@48.0.2 alias set \
+            "${deployment}" \
+            "${PUBLIC_ALIAS}" \
+            --scope "${VERCEL_SCOPE}"
+
+          inspect_output="$(
+            npx --yes vercel@48.0.2 inspect \
+              "${PUBLIC_ALIAS}" \
+              --scope "${VERCEL_SCOPE}" 2>&1
+          )"
+          echo "${inspect_output}"
+          if [[ "${inspect_output}" != *"${deployment}"* ]]; then
+            echo "::error::Public alias does not resolve to ${deployment}."
+            exit 1
+          fi
+
+          curl --fail --silent --show-error --location \
+            --max-time 30 "https://${PUBLIC_ALIAS}" >/dev/null

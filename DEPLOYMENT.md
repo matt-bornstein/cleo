@@ -120,32 +120,37 @@ vercel login
 
 Then retry the production deploy.
 
-## 6. Update The Public Alias
+## 6. Automatic Public Alias Updates
 
-After confirming the latest deployment is ready, point `cleo-editor.vercel.app` at it:
+`.github/workflows/update-production-alias.yml` runs whenever Vercel reports a
+successful Production deployment. It updates `cleo-editor.vercel.app` only when
+the deployed SHA is the current `main` commit, so it works for merges made by
+Cursor, the GitHub UI, or any other source.
+
+### One-time setup
+
+Create a Vercel access token scoped to the `cleo` project, then save it as the
+repository Actions secret `VERCEL_TOKEN`:
 
 ```bash
-vercel alias set <latest-deployment>.vercel.app cleo-editor.vercel.app
+gh secret set VERCEL_TOKEN
 ```
 
-Example:
+The workflow leaves the current public alias untouched when a deployment fails
+or when a newer commit has already reached `main`.
+
+If the workflow itself fails, update the alias manually:
 
 ```bash
-vercel alias set cleo-l32u5tf77-mattbornsteins-projects.vercel.app cleo-editor.vercel.app
+vercel alias set <production-deployment>.vercel.app cleo-editor.vercel.app
 ```
 
 ## 7. Verify Aliases
 
-Inspect the latest deployment:
+Inspect the deployment serving the public alias:
 
 ```bash
-vercel inspect <latest-deployment>.vercel.app
-```
-
-Confirm `cleo-editor.vercel.app` appears in the alias list:
-
-```bash
-vercel alias ls
+vercel inspect https://cleo-editor.vercel.app
 ```
 
 ## 8. Final Smoke Check
