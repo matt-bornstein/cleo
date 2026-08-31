@@ -41,7 +41,6 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           DEPLOYMENT_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
           PUBLIC_ALIAS: cleo-editor.vercel.app
-          VERCEL_SCOPE: mattbornsteins-projects
         run: |
           if [[ -z "${VERCEL_TOKEN}" ]]; then
             echo "::error::Add a project-scoped VERCEL_TOKEN Actions secret."
@@ -53,16 +52,14 @@ jobs:
           fi
 
           deployment="${DEPLOYMENT_URL#https://}"
-          npx --yes vercel@48.0.2 alias set \
+          npx --yes vercel@59.3.0 alias set \
             "${deployment}" \
             "${PUBLIC_ALIAS}" \
-            --scope "${VERCEL_SCOPE}" \
             --token "${VERCEL_TOKEN}"
 
           inspect_output="$(
-            npx --yes vercel@48.0.2 inspect \
+            npx --yes vercel@59.3.0 inspect \
               "${PUBLIC_ALIAS}" \
-              --scope "${VERCEL_SCOPE}" \
               --token "${VERCEL_TOKEN}" 2>&1
           )"
           echo "${inspect_output}"
