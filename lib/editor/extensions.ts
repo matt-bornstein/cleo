@@ -29,6 +29,13 @@ export const editorExtensions = [
   Image.configure({
     inline: false,
     allowBase64: true,
+    resize: {
+      enabled: true,
+      directions: ["top-left", "top-right", "bottom-left", "bottom-right"],
+      minWidth: 80,
+      minHeight: 80,
+      alwaysPreserveAspectRatio: true,
+    },
   }),
   Video,
   Youtube.configure({

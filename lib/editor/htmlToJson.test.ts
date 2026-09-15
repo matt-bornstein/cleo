@@ -67,10 +67,22 @@ describe("htmlToProsemirrorJson", () => {
   });
 
   it("converts images", () => {
-    const doc = htmlToProsemirrorJson('<img src="test.png" alt="Test">');
+    const doc = htmlToProsemirrorJson(
+      '<img src="test.png" alt="Test" width="640" height="360">'
+    );
     expect(doc.content![0].type).toBe("image");
     expect(doc.content![0].attrs?.src).toBe("test.png");
     expect(doc.content![0].attrs?.alt).toBe("Test");
+    expect(doc.content![0].attrs?.width).toBe(640);
+    expect(doc.content![0].attrs?.height).toBe(360);
+  });
+
+  it("ignores invalid image dimensions", () => {
+    const doc = htmlToProsemirrorJson(
+      '<img src="test.png" width="full" height="-20">'
+    );
+    expect(doc.content![0].attrs?.width).toBeNull();
+    expect(doc.content![0].attrs?.height).toBeNull();
   });
 
   it("handles empty HTML", () => {

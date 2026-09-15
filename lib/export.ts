@@ -33,7 +33,7 @@ export function exportAsHtml(
     table { border-collapse: collapse; width: 100%; }
     td, th { border: 1px solid #ddd; padding: 0.5rem; }
     th { background: #f9f9f9; }
-    img { max-width: 100%; }
+    img { max-width: 100%; height: auto; }
     hr { border: none; border-top: 1px solid #ddd; margin: 1.5rem 0; }
   </style>
 </head>

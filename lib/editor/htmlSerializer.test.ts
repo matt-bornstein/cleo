@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { prosemirrorJsonToHtml } from "./htmlSerializer";
+import { prosemirrorJsonToHtml as prosemirrorJsonToServerHtml } from "../../convex/lib/htmlSerializer";
 
 describe("prosemirrorJsonToHtml", () => {
   it("converts a simple paragraph", () => {
@@ -163,12 +164,42 @@ describe("prosemirrorJsonToHtml", () => {
       content: [
         {
           type: "image",
-          attrs: { src: "https://example.com/img.png", alt: "Test image" },
+          attrs: {
+            src: "https://example.com/img.png",
+            alt: "Test image",
+            width: 640,
+            height: 360,
+          },
         },
       ],
     };
     const html = prosemirrorJsonToHtml(doc);
-    expect(html).toContain('<img src="https://example.com/img.png" alt="Test image">');
+    const expected =
+      '<img src="https://example.com/img.png" alt="Test image" width="640" height="360">';
+    expect(html).toContain(expected);
+    expect(prosemirrorJsonToServerHtml(doc)).toContain(expected);
+  });
+
+  it("omits invalid image dimensions", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: {
+            src: "https://example.com/img.png",
+            width: "not-a-size",
+            height: -10,
+          },
+        },
+      ],
+    };
+    const html = prosemirrorJsonToHtml(doc);
+    expect(html).toContain(
+      '<img src="https://example.com/img.png" alt="">'
+    );
+    expect(html).not.toContain("width=");
+    expect(html).not.toContain("height=");
   });
 
   it("converts tables", () => {

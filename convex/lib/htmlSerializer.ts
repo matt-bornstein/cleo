@@ -88,7 +88,9 @@ export function prosemirrorJsonToHtml(node: any): string {
       const title = node.attrs?.title
         ? ` title="${escapeHtml(node.attrs.title)}"`
         : "";
-      return `<img src="${src}" alt="${alt}"${title}>\n`;
+      const width = imageDimensionAttribute("width", node.attrs?.width);
+      const height = imageDimensionAttribute("height", node.attrs?.height);
+      return `<img src="${src}" alt="${alt}"${title}${width}${height}>\n`;
     }
     case "table":
       return `<table>\n<tbody>\n${children}</tbody>\n</table>\n`;
@@ -120,4 +122,20 @@ function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function imageDimensionAttribute(
+  name: "width" | "height",
+  value: unknown
+): string {
+  const dimension =
+    typeof value === "number" || typeof value === "string"
+      ? Number(value)
+      : Number.NaN;
+
+  if (!Number.isFinite(dimension) || dimension <= 0) {
+    return "";
+  }
+
+  return ` ${name}="${Math.round(dimension)}"`;
 }

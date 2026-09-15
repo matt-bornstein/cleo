@@ -88,6 +88,26 @@ describe("exportAsHtml", () => {
     expect(html).toContain("Item 1");
     expect(html).toContain("Item 2");
   });
+
+  it("preserves resized image dimensions", () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: {
+            src: "https://example.com/image.png",
+            width: 480,
+            height: 270,
+          },
+        },
+      ],
+    });
+
+    const html = exportAsHtml(content, "Test");
+    expect(html).toContain('width="480" height="270"');
+    expect(html).toContain("img { max-width: 100%; height: auto; }");
+  });
 });
 
 describe("exportAsText", () => {

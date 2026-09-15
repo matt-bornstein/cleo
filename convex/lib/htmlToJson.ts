@@ -254,14 +254,18 @@ function handleSelfClose(token: Token): ProseMirrorNode | null {
       return { type: "horizontalRule" };
     case "br":
       return { type: "hardBreak" };
-    case "img":
+    case "img": {
+      const attrs = token.attrs || "";
       return {
         type: "image",
         attrs: {
-          src: extractAttr(token.attrs || "", "src"),
-          alt: extractAttr(token.attrs || "", "alt"),
+          src: extractAttr(attrs, "src"),
+          alt: extractAttr(attrs, "alt"),
+          width: parseImageDimension(extractAttr(attrs, "width")),
+          height: parseImageDimension(extractAttr(attrs, "height")),
         },
       };
+    }
     default:
       return null;
   }
@@ -467,6 +471,17 @@ function getMarkType(tag: string): string | null {
 function extractAttr(attrsStr: string, name: string): string {
   const match = attrsStr.match(new RegExp(`${name}=["']([^"']*)["']`));
   return match ? unescapeHtml(match[1]) : "";
+}
+
+function parseImageDimension(value: string): number | null {
+  if (!/^\d+(?:\.\d+)?$/.test(value)) {
+    return null;
+  }
+
+  const dimension = Number(value);
+  return Number.isFinite(dimension) && dimension > 0
+    ? Math.round(dimension)
+    : null;
 }
 
 function unescapeHtml(text: string): string {
