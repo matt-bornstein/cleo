@@ -123,10 +123,11 @@ function imageDimensionAttribute(
     typeof value === "number" || typeof value === "string"
       ? Number(value)
       : Number.NaN;
+  const roundedDimension = Math.round(dimension);
 
-  if (!Number.isFinite(dimension) || dimension <= 0) {
+  if (!Number.isFinite(dimension) || roundedDimension <= 0) {
     return "";
   }
 
-  return ` ${name}="${Math.round(dimension)}"`;
+  return ` ${name}="${roundedDimension}"`;
 }

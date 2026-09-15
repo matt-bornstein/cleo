@@ -245,6 +245,8 @@
 
 .tiptap [data-resize-container][data-node="image"] img {
   display: block;
+  /* The node view writes an inline height; auto keeps wide images responsive. */
+  height: auto !important;
 }
 
 .tiptap [data-resize-container][data-node="image"].ProseMirror-selectednode [data-resize-wrapper] {

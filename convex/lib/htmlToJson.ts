@@ -479,8 +479,9 @@ function parseImageDimension(value: string): number | null {
   }
 
   const dimension = Number(value);
-  return Number.isFinite(dimension) && dimension > 0
-    ? Math.round(dimension)
+  const roundedDimension = Math.round(dimension);
+  return Number.isFinite(dimension) && roundedDimension > 0
+    ? roundedDimension
     : null;
 }
 
