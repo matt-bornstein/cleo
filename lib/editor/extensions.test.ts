@@ -6,8 +6,12 @@ describe("editorExtensions", () => {
     const imageExtension = editorExtensions.find(
       (extension) => extension.name === "image"
     );
+    const resizeOptions =
+      imageExtension && "resize" in imageExtension.options
+        ? imageExtension.options.resize
+        : undefined;
 
-    expect(imageExtension?.options.resize).toEqual({
+    expect(resizeOptions).toEqual({
       enabled: true,
       directions: ["top-left", "top-right", "bottom-left", "bottom-right"],
       minWidth: 80,
